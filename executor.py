@@ -33,7 +33,7 @@ def _build_client() -> ClobClient:
         key=config.PRIVATE_KEY,
         chain_id=config.CHAIN_ID,
         funder=config.POLY_PROXY_ADDRESS or None,
-        signature_type=0,  # EOA (MetaMask)
+        signature_type=2,  # Gnosis Safe / Polymarket proxy wallet
     )
     creds: ApiCreds = client.create_or_derive_api_creds()
     client.set_api_creds(creds)
