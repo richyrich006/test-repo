@@ -4,9 +4,16 @@ Automatically mirrors trades from a target Polymarket trader onto your own accou
 
 ## How it works
 
-1. Every 30 seconds (configurable), it checks the target trader's recent activity via the Polymarket API.
-2. Any new trade detected is scaled by your chosen fraction and placed as a market order on your account.
-3. It runs until you stop it with `Ctrl+C`.
+Two modes are available:
+
+| Mode | Latency | How |
+|---|---|---|
+| **live** (default) | ~2-5 seconds | Subscribes directly to the Polygon blockchain — detects the trade the moment it's confirmed on-chain |
+| **poll** (fallback) | ~10-60 seconds | Periodically asks the Polymarket API "any new trades?" |
+
+In live mode, you'll copy trades within a couple of seconds of RN1 placing them.
+Any new trade detected is scaled by your chosen fraction and placed as a market order on your account.
+It runs until you stop it with `Ctrl+C`.
 
 ---
 
@@ -53,8 +60,18 @@ Open `.env` in Notepad (or any text editor) and fill in:
 |---|---|
 | `TARGET_ADDRESS` | RN1's wallet address (see below) |
 | `PRIVATE_KEY` | Your Polygon wallet private key |
+| `WEB3_WS_URL` | Your Alchemy WebSocket URL (see below — needed for fast mode) |
 | `COPY_FRACTION` | e.g. `0.1` = copy 10% of each trade size |
 | `MAX_TRADE_SIZE_USDC` | Safety cap, e.g. `50` means never spend more than $50 per trade |
+
+#### How to get a free Alchemy WebSocket URL (for ~2-5s latency)
+
+1. Go to [dashboard.alchemy.com](https://dashboard.alchemy.com/) and sign up free.
+2. Click **Create new app** → choose **Polygon** → **Mainnet** → create.
+3. Click **View key** → copy the **WebSockets** URL (starts with `wss://`).
+4. Paste it as `WEB3_WS_URL` in your `.env`.
+
+> If you skip this step, run with `--mode poll` instead (slower but no signup needed).
 
 #### How to find RN1's wallet address
 
@@ -92,12 +109,17 @@ You should see output like:
 
 ### Step 7 — Run for real
 
+**Fast mode** (recommended — requires Alchemy URL in `.env`):
 ```
 python copier.py --username RN1
 ```
 
-Or, if you already put RN1's address in `.env`:
+**Polling fallback** (no Alchemy needed, ~10-60s slower):
+```
+python copier.py --username RN1 --mode poll
+```
 
+Or, if you already put RN1's address in `.env`:
 ```
 python copier.py
 ```
@@ -109,7 +131,8 @@ Press **Ctrl+C** to stop.
 ## Important notes & risks
 
 - **This is not financial advice.** Copying a profitable trader does not guarantee you will be profitable.
-- **You will always be slightly behind** — the copy fires after the API detects the trade, which can be 30–90 seconds after RN1 places it. Prices may move in that time.
+- **In live mode you'll be ~2-5 seconds behind** RN1 — one Polygon block. That's about as fast as it's physically possible to go.
+- **In poll mode you'll be 10-60 seconds behind** depending on your poll interval setting.
 - **Start small.** Use `COPY_FRACTION=0.05` and a low `MAX_TRADE_SIZE_USDC` until you are comfortable.
 - **Keep your `.env` file secret.** It contains your private key. Never upload it to GitHub.
 - Make sure your wallet has enough USDC on **Polygon** (not Ethereum mainnet) to cover trades + gas fees.
@@ -121,7 +144,8 @@ Press **Ctrl+C** to stop.
 | File | Purpose |
 |---|---|
 | `copier.py` | Main script — run this |
-| `monitor.py` | Polls Polymarket for new trades |
+| `blockchain_monitor.py` | Live mode: watches Polygon blockchain via WebSocket (~2-5s) |
+| `monitor.py` | Poll mode: queries Polymarket REST API (~10-60s) |
 | `executor.py` | Places copied trades via py-clob-client |
 | `config.py` | Loads settings from `.env` |
 | `.env.example` | Template for your configuration |
