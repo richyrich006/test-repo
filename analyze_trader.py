@@ -100,13 +100,16 @@ def _usdc(raw: Any) -> float:
 
 
 def _ts(raw: Any) -> datetime | None:
-    """Parse a unix timestamp or ISO string to datetime."""
+    """Parse a unix timestamp (seconds or milliseconds) or ISO string to datetime."""
     if not raw:
         return None
     try:
         ts = float(raw)
+        # Polymarket returns milliseconds; anything > year 2100 in seconds is ms
+        if ts > 4_102_444_800:
+            ts /= 1000
         return datetime.fromtimestamp(ts, tz=timezone.utc)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OSError, OverflowError):
         pass
     try:
         return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
@@ -207,6 +210,20 @@ def analyze(activity: list[dict], positions: list[dict], clob: list[dict]) -> No
     print(f"  P95                 : ${p95_size:,.2f}")
     print(f"  Max                 : ${max_size:,.2f}")
     print(f"\nTotal volume          : ${total_volume:,.2f}")
+
+    # Size distribution buckets
+    buckets = [0, 1, 10, 50, 100, 500, 1000, 5000, float("inf")]
+    labels  = ["<$1", "$1-10", "$10-50", "$50-100", "$100-500", "$500-1k", "$1k-5k", ">$5k"]
+    counts  = [0] * len(labels)
+    for s in trade_sizes:
+        for i, lo in enumerate(buckets[:-1]):
+            if lo <= s < buckets[i + 1]:
+                counts[i] += 1
+                break
+    print(f"\nTrade size buckets")
+    for label, count in zip(labels, counts):
+        bar = "█" * int(count / n * 40)
+        print(f"  {label:>10}  {count:>5} ({count/n*100:4.1f}%)  {bar}")
 
     print(f"\n{'─'*40}")
     print("OPEN POSITIONS")
