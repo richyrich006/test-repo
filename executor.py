@@ -15,9 +15,10 @@ from py_clob_client.clob_types import (
     ApiCreds,
     MarketOrderArgs,
     OrderType,
-    BUY,
-    SELL,
 )
+
+BUY = "BUY"
+SELL = "SELL"
 from py_clob_client.exceptions import PolyApiException
 
 import config
