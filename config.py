@@ -32,6 +32,11 @@ COPY_FRACTION: float = float(os.getenv("COPY_FRACTION", "0.1"))
 MAX_TRADE_SIZE_USDC: float = float(os.getenv("MAX_TRADE_SIZE_USDC", "50.0"))
 MIN_TRADE_SIZE_USDC: float = float(os.getenv("MIN_TRADE_SIZE_USDC", "1.0"))
 
+# Max slippage: how much worse than the target's fill price we're willing to accept.
+# 0.03 = 3 cents on a $1.00 outcome token, e.g. target bought at $0.44, we pay up to $0.4532.
+# Raise this on illiquid markets to get fills; lower it to protect price quality.
+MAX_SLIPPAGE_PCT: float = float(os.getenv("MAX_SLIPPAGE_PCT", "0.03"))
+
 # Polling (used in poll mode only)
 POLL_INTERVAL_SECONDS: int = int(os.getenv("POLL_INTERVAL_SECONDS", "10"))
 

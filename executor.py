@@ -13,7 +13,7 @@ from decimal import Decimal, ROUND_DOWN
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import (
     ApiCreds,
-    MarketOrderArgs,
+    LimitOrderArgs,
     OrderType,
 )
 
@@ -146,14 +146,36 @@ def copy_trade(trade: dict) -> bool:
 
     try:
         client = get_client()
-        order_args = MarketOrderArgs(
-            token_id=parsed["token_id"],
-            amount=final_size,          # USDC amount to spend
+
+        # Build an aggressive limit price so we cross the spread and fill fast,
+        # but cap the downside on thin markets.
+        #   BUY:  pay up to (target_price × (1 + slippage))  — above the ask
+        #   SELL: accept down to (target_price × (1 − slippage)) — below the bid
+        raw_price = parsed["price"]
+        if parsed["side"] == BUY:
+            limit_price = min(raw_price * (1 + config.MAX_SLIPPAGE_PCT), 0.99)
+        else:
+            limit_price = max(raw_price * (1 - config.MAX_SLIPPAGE_PCT), 0.01)
+        limit_price = round(limit_price, 4)
+
+        # Limit orders are sized in outcome tokens, not USDC
+        token_size = round(final_size / limit_price, 4)
+
+        logger.info(
+            "Limit price: %.4f (target %.4f + %.0f%% slippage), tokens: %.4f",
+            limit_price, raw_price, config.MAX_SLIPPAGE_PCT * 100, token_size,
         )
-        # Use a market order so it fills immediately at the best available price,
-        # matching what the target trader likely got.
-        signed_order = client.create_market_order(order_args)
-        resp = client.post_order(signed_order, OrderType.FOK)  # Fill-or-Kill
+
+        order_args = LimitOrderArgs(
+            token_id=parsed["token_id"],
+            price=limit_price,
+            size=token_size,
+            side=parsed["side"],
+        )
+        # FOK: fill the whole order at this price or better, or cancel.
+        # Never leaves a resting order, never overpays beyond our limit.
+        signed_order = client.create_limit_order(order_args)
+        resp = client.post_order(signed_order, OrderType.FOK)
         logger.info("Order submitted: %s", resp)
         return True
 
