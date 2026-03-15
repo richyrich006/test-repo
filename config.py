@@ -25,6 +25,11 @@ TARGET_ADDRESS: str = _require("TARGET_ADDRESS").lower()
 # Your wallet
 PRIVATE_KEY: str = _require("PRIVATE_KEY")
 
+# Polymarket API credentials (optional — if set, used directly instead of deriving)
+POLY_API_KEY: str = os.getenv("POLY_API_KEY", "")
+POLY_API_SECRET: str = os.getenv("POLY_API_SECRET", "")
+POLY_API_PASSPHRASE: str = os.getenv("POLY_API_PASSPHRASE", "")
+
 # Trade sizing
 COPY_FRACTION: float = float(os.getenv("COPY_FRACTION", "0.1"))
 MAX_TRADE_SIZE_USDC: float = float(os.getenv("MAX_TRADE_SIZE_USDC", "50.0"))

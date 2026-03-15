@@ -33,8 +33,16 @@ def _build_client() -> ClobClient:
         key=config.PRIVATE_KEY,
         chain_id=config.CHAIN_ID,
     )
-    # Derive API credentials from the private key (creates them if needed)
-    creds: ApiCreds = client.create_or_derive_api_creds()
+    if config.POLY_API_KEY and config.POLY_API_SECRET and config.POLY_API_PASSPHRASE:
+        creds = ApiCreds(
+            api_key=config.POLY_API_KEY,
+            api_secret=config.POLY_API_SECRET,
+            api_passphrase=config.POLY_API_PASSPHRASE,
+        )
+        logger.info("Using API credentials from environment.")
+    else:
+        creds = client.create_or_derive_api_creds()
+        logger.info("Derived API credentials from private key.")
     client.set_api_creds(creds)
     return client
 
