@@ -31,7 +31,11 @@ CTF_EXCHANGE = "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E"
 # NegRiskCTFExchange handles multi-outcome markets (e.g. election winners).
 NEG_RISK_CTF_EXCHANGE = "0xC5d563A36AE78145C45a50134d48A1215220f80a"
 
-EXCHANGE_ADDRESSES = [CTF_EXCHANGE, NEG_RISK_CTF_EXCHANGE]
+from web3 import Web3
+EXCHANGE_ADDRESSES = [
+    Web3.to_checksum_address(CTF_EXCHANGE),
+    Web3.to_checksum_address(NEG_RISK_CTF_EXCHANGE),
+]
 
 # ── OrderFilled ABI (only the event we care about) ───────────────────────────
 ORDER_FILLED_ABI = [
@@ -178,9 +182,10 @@ class BlockchainMonitor:
             # We subscribe to all OrderFilled events from both exchange contracts,
             # then filter in Python. This is simpler than two subscriptions.
             # The topic0 is the keccak256 hash of the event signature.
-            order_filled_topic = w3.keccak(
+            raw_topic = w3.keccak(
                 text="OrderFilled(bytes32,address,address,uint256,uint256,uint256,uint256,uint256)"
             ).hex()
+            order_filled_topic = raw_topic if raw_topic.startswith("0x") else "0x" + raw_topic
 
             # Subscribe to logs matching our event from either exchange contract
             sub_id = await w3.eth.subscribe(
