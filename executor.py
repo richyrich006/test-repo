@@ -32,6 +32,8 @@ def _build_client() -> ClobClient:
         host=config.CLOB_API_URL,
         key=config.PRIVATE_KEY,
         chain_id=config.CHAIN_ID,
+        funder=config.POLY_PROXY_ADDRESS or None,
+        signature_type=0,  # EOA (MetaMask)
     )
     creds: ApiCreds = client.create_or_derive_api_creds()
     client.set_api_creds(creds)
