@@ -24,6 +24,8 @@ TARGET_ADDRESS: str = _require("TARGET_ADDRESS").lower()
 
 # Your wallet
 PRIVATE_KEY: str = _require("PRIVATE_KEY")
+# Polymarket proxy wallet address (the one holding funds, shown on polymarket.com)
+POLY_PROXY_ADDRESS: str = os.getenv("POLY_PROXY_ADDRESS", "")
 
 # Trade sizing
 COPY_FRACTION: float = float(os.getenv("COPY_FRACTION", "0.1"))
