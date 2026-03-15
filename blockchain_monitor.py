@@ -179,6 +179,10 @@ class BlockchainMonitor:
         async with AsyncWeb3(WebSocketProvider(self.ws_url)) as w3:
             logger.info("Connected. Subscribing to OrderFilled events...")
 
+            # Record the current block so we ignore fills of pre-existing orders
+            start_block = await w3.eth.block_number
+            logger.info("Starting block: %d — fills from earlier blocks will be skipped.", start_block)
+
             # We subscribe to all OrderFilled events from both exchange contracts,
             # then filter in Python. This is simpler than two subscriptions.
             # The topic0 is the keccak256 hash of the event signature.
@@ -203,6 +207,13 @@ class BlockchainMonitor:
 
             async for message in w3.socket.process_subscriptions():
                 raw_log = message["result"] if "result" in message else message
+
+                # Skip fills from blocks that existed before we started
+                event_block = raw_log.get("blockNumber")
+                if event_block is not None and event_block <= start_block:
+                    logger.debug("Skipping fill from old block %d (start=%d)", event_block, start_block)
+                    continue
+
                 decoded = _decode_log(w3, raw_log, ORDER_FILLED_ABI)
                 if decoded is None:
                     continue
