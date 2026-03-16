@@ -9,6 +9,7 @@ import { ILRBadge } from '../components/ILRBadge';
 import { AudioButton } from '../components/AudioButton';
 import { ProgressBar } from '../components/ProgressBar';
 import { AgentMaya, AgentMayaInline } from '../components/AgentMaya';
+import { AskMaya } from '../components/AskMaya';
 import { getLessonById } from '../data/curriculum';
 import { getVocabById } from '../data/spanishVocabulary';
 import { getDrillById } from '../data/spanishDrills';
@@ -284,6 +285,26 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
             </View>
           )}
 
+          {/* ── ASK MAYA AI CHAT — available on every phase ── */}
+          {phase !== 'complete' && (
+            <View style={styles.askMayaWrapper}>
+              <AskMaya
+                lessonTitle={lesson.title}
+                lessonObjective={lesson.objective}
+                currentPhase={phase}
+                currentWord={
+                  phase === 'vocabulary' && vocabCards[vocabIndex]
+                    ? `${vocabCards[vocabIndex].spanish} (${vocabCards[vocabIndex].english})`
+                    : phase === 'drills' && drills[drillIndex]
+                    ? drills[drillIndex].title
+                    : phase === 'dialogue' && dialogues[dialogueIndex]
+                    ? dialogues[dialogueIndex].title
+                    : undefined
+                }
+              />
+            </View>
+          )}
+
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -508,8 +529,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   headerProgress: { flex: 1 },
-  content: { padding: 20, paddingTop: 8 },
+  content: { padding: 20, paddingTop: 8, paddingBottom: 20 },
   phaseContainer: { gap: 16 },
+  askMayaWrapper: { marginTop: 8 },
   phaseLabel: {
     color: Colors.accent,
     fontSize: 11,
