@@ -14,9 +14,15 @@ import os
 import sys
 
 import requests
+from eth_abi import encode as _abi_encode
 from web3 import Web3
 
 import config
+
+# Selector for redeemPositions(address,bytes32,bytes32,uint256[])
+_REDEEM_SELECTOR = Web3.keccak(
+    text="redeemPositions(address,bytes32,bytes32,uint256[])"
+)[:4]
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +169,6 @@ def redeem_all() -> int:
 
     account = w3.eth.account.from_key(config.PRIVATE_KEY)
     owner_addr = account.address
-    ctf = w3.eth.contract(address=CTF_ADDRESS, abi=CTF_ABI)
 
     redeemed = 0
     for pos in positions:
@@ -182,9 +187,10 @@ def redeem_all() -> int:
 
         # Pass both indexSets [1, 2] — CTF pays only for positions we actually hold.
         # indexSet 1 = outcome 0 (YES), indexSet 2 = outcome 1 (NO).
-        data = ctf.encode_abi(
-            fn_name="redeemPositions",
-            args=[USDC_ADDRESS, BYTES32_ZERO, cid_bytes, [1, 2]],
+        # Use eth_abi directly to avoid web3.py version differences.
+        data = _REDEEM_SELECTOR + _abi_encode(
+            ["address", "bytes32", "bytes32", "uint256[]"],
+            [USDC_ADDRESS, BYTES32_ZERO, cid_bytes, [1, 2]],
         )
 
         try:
