@@ -5,7 +5,7 @@ When a market resolves, winning conditional tokens sit idle until redeemed.
 This module finds those positions via the Polymarket API and redeems them
 through your Gnosis Safe proxy wallet on-chain.
 
-Called automatically by the copier every hour, or run manually:
+Called automatically by the copier every 10 minutes, or run manually:
     python redeemer.py
 """
 

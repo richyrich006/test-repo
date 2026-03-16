@@ -179,7 +179,7 @@ def main() -> None:
     if not args.dry_run and config.POLY_PROXY_ADDRESS:
         t = threading.Thread(target=_redemption_loop, args=(logger,), daemon=True)
         t.start()
-        logger.info("Auto-redemption enabled — will check every hour.")
+        logger.info("Auto-redemption enabled — will check every 10 minutes.")
 
     if args.mode == "live":
         # ── Live mode: blockchain WebSocket (~2-5s latency) ──────────────────
