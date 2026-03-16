@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "CIA Language Trainer",
+    "slug": "cia-language-trainer",
+    "version": "1.0.0",
+    "description": "Learn Spanish using CIA/FSI methodology: pattern drills, situational dialogues, and spaced repetition.",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1F33"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.cialanguagetrainer.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Microphone is used for pronunciation practice.",
+        "NSSpeechRecognitionUsageDescription": "Speech recognition is used for speaking exercises."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D1F33"
+      },
+      "package": "com.cialanguagetrainer.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-speech",
+        {
+          "microphonePermission": "Allow CIA Language Trainer to use the microphone for pronunciation practice."
+        }
+      ]
+    ]
+  }
+}
