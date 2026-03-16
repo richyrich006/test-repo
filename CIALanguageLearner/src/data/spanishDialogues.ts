@@ -160,7 +160,6 @@ export const spanishDialogues: Dialogue[] = [
     ],
     keyVocab: ['v220', 'v221', 'v222', 'v224', 'v226', 'v242', 'v244'],
   },
-];
 
   // ─── LEVEL 1: DAILY LIFE SITUATIONS ─────────────────────────
 
