@@ -5,6 +5,7 @@ import {
 import { Colors, Shadows } from '../theme/colors';
 import { ILRBadge } from '../components/ILRBadge';
 import { ProgressBar } from '../components/ProgressBar';
+import { AgentMayaInline, MayaMood } from '../components/AgentMaya';
 import { UserProgress } from '../types';
 import { getLevel, getDailyProgress } from '../store/progressStore';
 import { getDeckStats, getDueCards } from '../store/srsEngine';
@@ -23,6 +24,17 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
   const deckStats = getDeckStats(progress.srsCards);
   const dueCards = getDueCards(progress.srsCards);
   const nextLesson = spanishLessons.find(l => !progress.completedLessons.includes(l.id));
+
+  // Pick Maya's mood & greeting based on current progress
+  const mayaMood: MayaMood =
+    dailyProgress >= 1 ? 'celebrating' :
+    dueCards.length > 0 ? 'encouraging' :
+    progress.streak >= 3 ? 'happy' : 'neutral';
+  const mayaGreeting =
+    dailyProgress >= 1 ? `¡Misión cumplida! Daily goal done — ${progress.streak} day streak!` :
+    dueCards.length > 0 ? `You have ${dueCards.length} cards due for review. Keep it sharp, Agent!` :
+    nextLesson ? `Ready for your next mission? "${nextLesson.title}" is waiting!` :
+    '¡Hola, Agent! Let\'s train your Spanish today.';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -48,6 +60,11 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
+        {/* Agent Maya greeting */}
+        <View style={styles.mayaCard}>
+          <AgentMayaInline mood={mayaMood} message={mayaGreeting} animate />
+        </View>
 
         {/* Daily goal */}
         <View style={styles.card}>
@@ -275,6 +292,11 @@ const styles = StyleSheet.create({
   unitTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, flex: 1, marginRight: 6 },
   unitSub: { fontSize: 12, color: Colors.textSecondary },
   unitMeta: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+
+  mayaCard: {
+    backgroundColor: Colors.backgroundAlt, borderRadius: 16,
+    padding: 14, borderWidth: 1.5, borderColor: Colors.primary + '25',
+  },
 
   vocabStats: { gap: 10 },
   vocabGrid: { flexDirection: 'row', gap: 8 },

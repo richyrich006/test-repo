@@ -8,6 +8,7 @@ import { Colors } from '../theme/colors';
 import { ILRBadge } from '../components/ILRBadge';
 import { AudioButton } from '../components/AudioButton';
 import { ProgressBar } from '../components/ProgressBar';
+import { AgentMaya, AgentMayaInline } from '../components/AgentMaya';
 import { getLessonById } from '../data/curriculum';
 import { getVocabById } from '../data/spanishVocabulary';
 import { getDrillById } from '../data/spanishDrills';
@@ -156,6 +157,11 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
               <Text style={styles.phaseTitle}>{lesson.title}</Text>
               <Text style={styles.phaseSubtitle}>{lesson.subtitle}</Text>
 
+              <AgentMayaInline
+                mood="happy"
+                message={`¡Hola! I'm Agent Maya. I'll guide you through "${lesson.title}". Ready to begin?`}
+              />
+
               <View style={styles.objectiveCard}>
                 <Text style={styles.objectiveLabel}>Learning Objective</Text>
                 <Text style={styles.objectiveText}>{lesson.objective}</Text>
@@ -192,6 +198,10 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
             <View style={styles.phaseContainer}>
               <Text style={styles.phaseLabel}>🌎 CULTURAL INTELLIGENCE</Text>
               <Text style={styles.phaseTitle}>Cultural Briefing</Text>
+              <AgentMayaInline
+                mood="thinking"
+                message="Cultural knowledge is your cover. Study this carefully, Agent."
+              />
               <Text style={styles.culturalText}>{lesson.culturalBriefing}</Text>
               <TouchableOpacity style={styles.primaryBtn} onPress={advancePhase}>
                 <LinearGradient colors={[Colors.accent, Colors.accentDark]} style={styles.btnGradient}>
@@ -251,6 +261,14 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
               <Text style={styles.completeIcon}>🎖️</Text>
               <Text style={styles.phaseLabel}>MISSION COMPLETE</Text>
               <Text style={styles.phaseTitle}>{lesson.title}</Text>
+
+              <AgentMaya
+                mood="celebrating"
+                message="¡Excelente! Mission complete, Agent! Your Spanish is getting sharper."
+                size="medium"
+                animate
+              />
+
               <Text style={styles.completeDesc}>Excellent work. You've completed this training module.</Text>
 
               <View style={styles.xpCard}>

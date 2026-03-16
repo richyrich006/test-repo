@@ -18,6 +18,12 @@ export function PronunciationChecker({
   const [transcript, setTranscript] = useState('');
   const [score, setScore] = useState<number | null>(null);
   const recognitionRef = useRef<any>(null);
+  // Use ref so onend handler always reads current value (avoids stale closure)
+  const stateRef = useRef<'idle' | 'listening' | 'done' | 'unsupported'>('idle');
+  const setStateTracked = (s: typeof stateRef.current) => {
+    stateRef.current = s;
+    setState(s);
+  };
 
   // Check Web Speech API support (works in Chrome on web)
   const isSupported = Platform.OS === 'web' && (
@@ -46,7 +52,7 @@ export function PronunciationChecker({
     recognition.maxAlternatives = 3;
     recognitionRef.current = recognition;
 
-    recognition.onstart = () => setState('listening');
+    recognition.onstart = () => setStateTracked('listening');
 
     recognition.onresult = (event: any) => {
       // Try all alternatives to get best match
@@ -63,18 +69,19 @@ export function PronunciationChecker({
       setTranscript(bestTranscript);
       setScore(bestScore);
       onScore?.(bestScore);
-      setState('done');
+      setStateTracked('done');
     };
 
     recognition.onerror = () => {
-      setState('idle');
+      setStateTracked('idle');
     };
 
+    // Use ref to avoid stale closure — reads current state value
     recognition.onend = () => {
-      if (state === 'listening') setState('idle');
+      if (stateRef.current === 'listening') setStateTracked('idle');
     };
 
-    setState('listening');
+    setStateTracked('listening');
     recognition.start();
   };
 
@@ -82,7 +89,7 @@ export function PronunciationChecker({
     recognitionRef.current?.stop();
     setTranscript('');
     setScore(null);
-    setState('idle');
+    setStateTracked('idle');
   };
 
   if (!isSupported && state !== 'unsupported') {
