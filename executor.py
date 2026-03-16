@@ -8,7 +8,8 @@ Given a raw trade dict from the monitor, this module:
 """
 
 import logging
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal, ROUND_DOWN, ROUND_UP
+from math import gcd as _gcd
 
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import (
@@ -147,23 +148,30 @@ def copy_trade(trade: dict) -> bool:
     try:
         client = get_client()
 
-        # Build an aggressive limit price so we cross the spread and fill fast,
-        # but cap the downside on thin markets.
-        #   BUY:  pay up to (target_price × (1 + slippage))  — above the ask
-        #   SELL: accept down to (target_price × (1 − slippage)) — below the bid
+        # Build an aggressive limit price, rounded to 2dp (Polymarket's tick size).
+        # Polymarket only accepts prices at 0.01 increments — using 4dp prices
+        # causes the maker USDC amount (token_size * price) to have >2dp, which
+        # the API rejects.  BUY rounds up to stay aggressive; SELL rounds down.
         raw_price = parsed["price"]
+        _raw = Decimal(str(raw_price))
+        _slip = Decimal(str(config.MAX_SLIPPAGE_PCT))
         if parsed["side"] == BUY:
-            limit_price = min(raw_price * (1 + config.MAX_SLIPPAGE_PCT), 0.99)
+            _lp_dec = min(_raw * (1 + _slip), Decimal("0.99")).quantize(
+                Decimal("0.01"), rounding=ROUND_UP
+            )
         else:
-            limit_price = max(raw_price * (1 - config.MAX_SLIPPAGE_PCT), 0.01)
-        limit_price = round(limit_price, 4)
+            _lp_dec = max(_raw * (1 - _slip), Decimal("0.01")).quantize(
+                Decimal("0.01"), rounding=ROUND_DOWN
+            )
+        limit_price = float(_lp_dec)
 
-        # Polymarket requires maker (USDC) amount <= 2 decimals, taker (tokens) <= 4.
-        # Use Decimal throughout to avoid float rounding causing >2dp USDC amounts.
-        _lp = Decimal(str(limit_price))
+        # For price P/100, token_size must be a multiple of 10000/gcd(P,10000)/10000
+        # so that token_size * price is exactly 2dp.  Example: price=0.61 → P=61,
+        # gcd(61,10000)=1 → step=1 (integer tokens only).  price=0.50 → step=0.02.
+        _P = int((_lp_dec * 100).to_integral_value())
+        _step = Decimal(10000 // _gcd(_P, 10000)) / Decimal(10000)
         _usdc = Decimal(str(final_size)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
-        # ROUND_DOWN on tokens ensures token_size * price never exceeds _usdc
-        token_size = float((_usdc / _lp).quantize(Decimal("0.0001"), rounding=ROUND_DOWN))
+        token_size = float((_usdc / _lp_dec // _step) * _step)
 
         logger.info(
             "Limit price: %.4f (target %.4f + %.0f%% slippage), tokens: %.4f",
