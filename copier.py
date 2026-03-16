@@ -23,12 +23,29 @@ import argparse
 import logging
 import sys
 import threading
+import time
 
 import colorlog
 
 import config
 from monitor import TradeMonitor, lookup_address_by_username
 from executor import copy_trade
+from redeemer import redeem_all
+
+# ── Background redemption thread ───────────────────────────────────────────────
+_REDEEM_INTERVAL = 3600  # check for redeemable positions every hour
+
+def _redemption_loop(logger: logging.Logger) -> None:
+    """Periodically redeem resolved winning positions back to USDC."""
+    while True:
+        time.sleep(_REDEEM_INTERVAL)
+        try:
+            logger.info("Checking for redeemable positions...")
+            n = redeem_all()
+            if n:
+                logger.info("Auto-redeemed %d position(s) to USDC.", n)
+        except Exception as exc:
+            logger.warning("Redemption check failed: %s", exc)
 
 
 # ── Logging setup ──────────────────────────────────────────────────────────────
@@ -157,6 +174,12 @@ def main() -> None:
     logger.info("=" * 60)
 
     counters = {"copied": 0, "skipped": 0}
+
+    # Start background thread that redeems resolved positions every hour
+    if not args.dry_run and config.POLY_PROXY_ADDRESS:
+        t = threading.Thread(target=_redemption_loop, args=(logger,), daemon=True)
+        t.start()
+        logger.info("Auto-redemption enabled — will check every hour.")
 
     if args.mode == "live":
         # ── Live mode: blockchain WebSocket (~2-5s latency) ──────────────────
