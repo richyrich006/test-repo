@@ -141,6 +141,108 @@ export const spanishDrills: PatternDrill[] = [
       { id: 'd008e5', prompt: 'Ellos (estar) ___ de acuerdo si...', answer: 'Ellos estarían de acuerdo si...', audioPrompt: 'Ellos estarían de acuerdo si' },
     ],
   },
+
+  // ─── UNIT 7: FOOD & ORDERING ──────────────────────────────────
+  {
+    id: 'd009',
+    title: 'Ordering Food & Drinks',
+    instruction: 'Practice ordering at a restaurant. Use polite, professional language.',
+    pattern: 'Quisiera / Me trae / ¿Qué recomienda? + [food/drink]',
+    patternExplanation: 'Ordering food seems simple but requires specific vocabulary and register. "Quisiera" (I would like) is the polished way to order. Knowing how to handle a menu is essential in any field setting.',
+    ilrLevel: 0,
+    exercises: [
+      { id: 'd009e1', prompt: 'Order "the chicken with rice" politely.', answer: 'Quisiera el pollo con arroz.', hint: 'Use quisiera for polite ordering', audioPrompt: 'Quisiera el pollo con arroz' },
+      { id: 'd009e2', prompt: 'Ask "What do you recommend?"', answer: '¿Qué recomienda usted?', audioPrompt: '¿Qué recomienda usted?' },
+      { id: 'd009e3', prompt: 'Ask for "a coffee and the bill".', answer: 'Un café y la cuenta, por favor.', audioPrompt: 'Un café y la cuenta, por favor' },
+      { id: 'd009e4', prompt: 'Say "I am allergic to shellfish."', answer: 'Soy alérgico a los mariscos.', hint: 'Critical health information — know how to say this', audioPrompt: 'Soy alérgico a los mariscos' },
+      { id: 'd009e5', prompt: 'Ask "Is this dish spicy?"', answer: '¿Este plato es picante?', audioPrompt: '¿Este plato es picante?' },
+    ],
+  },
+
+  // ─── UNIT 8: FUTURE TENSE ────────────────────────────────────
+  {
+    id: 'd010',
+    title: 'Future Tense: Plans & Predictions',
+    instruction: 'Use IR + A + infinitive for near future, and the simple future (-é/-ás/-á) for predictions.',
+    pattern: 'Voy a [infinitive] / [Subject] + [verb stem] + -é/-ás/-á/-emos/-éis/-án',
+    patternExplanation: 'Spanish has two future forms: IR + A + infinitive (near future, planned) and the simple future (predictions, formal promises). Master both — they signal different levels of certainty and commitment.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd010e1', prompt: 'Say "I am going to call the embassy tomorrow."', answer: 'Voy a llamar a la embajada mañana.', audioPrompt: 'Voy a llamar a la embajada mañana' },
+      { id: 'd010e2', prompt: 'Say "We will arrive on Monday." (simple future)', answer: 'Llegaremos el lunes.', hint: 'LLEGAR → llegaré/llegarás/llegará/llegaremos', audioPrompt: 'Llegaremos el lunes' },
+      { id: 'd010e3', prompt: 'Say "They are going to sign the agreement."', answer: 'Van a firmar el acuerdo.', audioPrompt: 'Van a firmar el acuerdo' },
+      { id: 'd010e4', prompt: 'Say "The meeting will be at ten." (simple future)', answer: 'La reunión será a las diez.', hint: 'SER → seré/serás/será/seremos', audioPrompt: 'La reunión será a las diez' },
+      { id: 'd010e5', prompt: 'Ask "What are you going to do?"', answer: '¿Qué va a hacer usted?', audioPrompt: '¿Qué va a hacer usted?' },
+    ],
+  },
+
+  // ─── UNIT 9: COMMANDS (IMPERATIVE) ───────────────────────────
+  {
+    id: 'd011',
+    title: 'Imperative Mood: Giving Instructions',
+    instruction: 'Form commands using the imperative. Know formal (usted) vs informal (tú) commands.',
+    pattern: 'USTED: verb stem + -e (AR) / -a (ER/IR) | TÚ: third-person singular present',
+    patternExplanation: 'Commands are essential for directing action. Formal commands (usted) are used with strangers and superiors. Informal (tú) with close contacts. Negative commands use the subjunctive form.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd011e1', prompt: 'Tell someone (formal) to "wait here."', answer: 'Espere aquí.', hint: 'ESPERAR formal command: espere', audioPrompt: 'Espere aquí' },
+      { id: 'd011e2', prompt: 'Tell someone (formal) to "speak more slowly."', answer: 'Hable más despacio.', audioPrompt: 'Hable más despacio' },
+      { id: 'd011e3', prompt: 'Tell someone (formal) to "follow me."', answer: 'Sígame.', hint: 'SEGUIR formal command: siga + me', audioPrompt: 'Sígame' },
+      { id: 'd011e4', prompt: 'Tell someone (formal) "don\'t worry."', answer: 'No se preocupe.', hint: 'Negative formal: no + subjunctive form', audioPrompt: 'No se preocupe' },
+      { id: 'd011e5', prompt: 'Tell someone (formal) to "sign here."', answer: 'Firme aquí.', audioPrompt: 'Firme aquí' },
+    ],
+  },
+
+  // ─── UNIT 10: REFLEXIVE VERBS ─────────────────────────────────
+  {
+    id: 'd012',
+    title: 'Reflexive Verbs: Daily Routine',
+    instruction: 'Reflexive verbs describe actions done to oneself. The reflexive pronoun matches the subject.',
+    pattern: '[Reflexive pronoun] + [reflexive verb] — me/te/se/nos/os/se',
+    patternExplanation: 'Many daily routine verbs are reflexive: levantarse, ducharse, vestirse, llamarse. The pronoun (me/te/se) shows the action reflects back on the subject. This is a very common pattern in Spanish.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd012e1', prompt: 'Say "My name is Carlos." (using llamarse)', answer: 'Me llamo Carlos.', hint: 'LLAMARSE = to call oneself; me llamo = I call myself', audioPrompt: 'Me llamo Carlos' },
+      { id: 'd012e2', prompt: 'Say "I wake up at six."', answer: 'Me despierto a las seis.', audioPrompt: 'Me despierto a las seis' },
+      { id: 'd012e3', prompt: 'Say "He sits down."', answer: 'Él se sienta.', audioPrompt: 'Él se sienta' },
+      { id: 'd012e4', prompt: 'Say "We get ready quickly."', answer: 'Nos preparamos rápido.', audioPrompt: 'Nos preparamos rápido' },
+      { id: 'd012e5', prompt: 'Ask "What is your name?" (formal)', answer: '¿Cómo se llama usted?', audioPrompt: '¿Cómo se llama usted?' },
+    ],
+  },
+
+  // ─── UNIT 11: ADJECTIVE AGREEMENT ────────────────────────────
+  {
+    id: 'd013',
+    title: 'Adjective Agreement: Gender & Number',
+    instruction: 'Spanish adjectives agree with the noun they describe in gender (masculine/feminine) and number (singular/plural).',
+    pattern: '[Adjective-o/a/os/as] matches [noun gender/number]',
+    patternExplanation: 'Every adjective must agree with its noun. "Un hombre alto" → "Una mujer alta" → "Dos hombres altos." This is automatic for native speakers — practice until it becomes instinct.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd013e1', prompt: 'Describe "a tall woman" (alta/alto)', answer: 'una mujer alta', audioPrompt: 'una mujer alta' },
+      { id: 'd013e2', prompt: 'Describe "the important documents" (importante)', answer: 'los documentos importantes', hint: 'Adjectives ending in -e only add -s for plural', audioPrompt: 'los documentos importantes' },
+      { id: 'd013e3', prompt: 'Describe "a good trip" (bueno/buena)', answer: 'un buen viaje', hint: 'BUENO shortens to BUEN before masculine singular nouns', audioPrompt: 'un buen viaje' },
+      { id: 'd013e4', prompt: 'Describe "the new employees" (nuevo)', answer: 'los empleados nuevos', audioPrompt: 'los empleados nuevos' },
+      { id: 'd013e5', prompt: 'Describe "a difficult situation" (difícil)', answer: 'una situación difícil', audioPrompt: 'una situación difícil' },
+    ],
+  },
+
+  // ─── UNIT 12: POR vs PARA ─────────────────────────────────────
+  {
+    id: 'd014',
+    title: 'POR vs PARA: The Critical Preposition Pair',
+    instruction: 'Choose correctly between POR (cause/means/duration) and PARA (purpose/destination/deadline).',
+    pattern: 'PARA = purpose/destination/deadline | POR = cause/means/exchange/duration',
+    patternExplanation: 'POR and PARA are the most confused preposition pair in Spanish. PARA points forward (goal, destination, purpose). POR looks backward or laterally (cause, agent, exchange, period). One mnemonic: PARA = "purpose of" / POR = "because of."',
+    ilrLevel: 2,
+    exercises: [
+      { id: 'd014e1', prompt: '"I study Spanish ___ work." (purpose)', answer: 'Estudio español para el trabajo.', hint: 'Purpose/goal → PARA', audioPrompt: 'Estudio español para el trabajo' },
+      { id: 'd014e2', prompt: '"Thank you ___ your help." (because of)', answer: 'Gracias por su ayuda.', hint: 'Gratitude reason → POR', audioPrompt: 'Gracias por su ayuda' },
+      { id: 'd014e3', prompt: '"The document is ___ the director." (destination/recipient)', answer: 'El documento es para el director.', audioPrompt: 'El documento es para el director' },
+      { id: 'd014e4', prompt: '"They traveled ___ plane." (means of transport)', answer: 'Viajaron por avión.', hint: 'Means/method → POR', audioPrompt: 'Viajaron por avión' },
+      { id: 'd014e5', prompt: '"I need this ___ Monday." (deadline)', answer: 'Necesito esto para el lunes.', hint: 'Deadline → PARA', audioPrompt: 'Necesito esto para el lunes' },
+    ],
+  },
 ];
 
 export const getDrillById = (id: string): PatternDrill | undefined =>

@@ -162,6 +162,161 @@ export const spanishDialogues: Dialogue[] = [
   },
 ];
 
+  // ─── LEVEL 1: DAILY LIFE SITUATIONS ─────────────────────────
+
+  {
+    id: 'dia006',
+    title: 'At the Restaurant',
+    scenario: 'Dining Out',
+    situation: 'You are dining at a local restaurant. Practice ordering food professionally, handling dietary restrictions, and interacting with your server — a routine but operationally important social skill.',
+    ilrLevel: 0,
+    characters: [
+      { id: 'c1', name: 'Waiter (Mesero)', role: 'Restaurant Server', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Diner', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: 'Buenas noches. ¿Están listos para ordenar?', english: 'Good evening. Are you ready to order?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Sí, gracias. ¿Qué recomienda usted?', english: 'Yes, thank you. What do you recommend?', isLearnerLine: true, phonetic: 'see, GRAH-syahs. keh reh-koh-MYEHN-dah oos-TEHD' },
+      { characterId: 'c1', spanish: 'El caldo de res está muy bueno hoy. También tenemos enchiladas verdes.', english: 'The beef soup is very good today. We also have green enchiladas.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Quisiera las enchiladas, por favor. ¿Tienen algo sin gluten?', english: 'I would like the enchiladas, please. Do you have anything gluten-free?', isLearnerLine: true, phonetic: 'kee-SYEH-rah lahs ehn-chee-LAH-dahs, por fah-BOR' },
+      { characterId: 'c1', spanish: 'Sí, los tamales son sin gluten. ¿Y para tomar?', english: 'Yes, the tamales are gluten-free. And to drink?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Agua mineral, por favor. Sin hielo.', english: 'Sparkling water, please. No ice.', isLearnerLine: true, phonetic: 'AH-gwah mee-neh-RAHL, por fah-BOR. seen YEH-loh' },
+      { characterId: 'c1', spanish: 'Perfecto. ¿Algo más?', english: 'Perfect. Anything else?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'No, eso es todo por ahora. Gracias.', english: 'No, that is all for now. Thank you.', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'Enseguida le traigo su orden.', english: 'I will bring your order right away.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Me puede traer la cuenta cuando pueda?', english: 'Could you bring me the bill when you can?', isLearnerLine: true, phonetic: 'meh PWEH-deh trah-EHR lah KWEHN-tah KWAHN-doh PWEH-dah' },
+    ],
+    culturalNotes: [
+      '"Mesero" is used in Mexico; "camarero" or "mozo" in other countries — learn the local term.',
+      'In Latin America, the waiter will NOT bring your check until you ask — it is considered rude to rush diners.',
+      'Tipping (propina) is expected: 10-15% is standard; 20% is generous.',
+      'Dietary restrictions are a recent concept — explain clearly and verify, as "sin gluten" may not be well understood everywhere.',
+    ],
+    keyVocab: ['v300', 'v301', 'v302', 'v303', 'v304', 'v305', 'v306', 'v307', 'v308'],
+  },
+
+  {
+    id: 'dia007',
+    title: 'At the Doctor\'s Office',
+    scenario: 'Medical Situation',
+    situation: 'You are not feeling well and need to visit a local doctor. Describing symptoms accurately in a foreign language is a critical health and safety skill.',
+    ilrLevel: 1,
+    characters: [
+      { id: 'c1', name: 'Dr. Herrera', role: 'Physician', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Patient', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: 'Buenos días. ¿Cómo se siente?', english: 'Good morning. How are you feeling?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'No me siento bien. Me duele la cabeza y tengo fiebre desde ayer.', english: 'I don\'t feel well. My head hurts and I have had a fever since yesterday.', isLearnerLine: true, phonetic: 'noh meh SYEHN-toh byehn. meh DWEH-leh lah kah-BEH-sah ee TEHN-goh FYEH-breh' },
+      { characterId: 'c1', spanish: '¿Tiene otros síntomas? ¿Tos, dolor de garganta?', english: 'Do you have other symptoms? Cough, sore throat?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Sí, tengo un poco de tos y me duele el estómago.', english: 'Yes, I have a bit of a cough and my stomach hurts.', isLearnerLine: true },
+      { characterId: 'c1', spanish: '¿Es alérgico a algún medicamento?', english: 'Are you allergic to any medication?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Soy alérgico a la penicilina.', english: 'I am allergic to penicillin.', isLearnerLine: true, notes: 'Critical — always know how to communicate medical allergies', phonetic: 'soy ah-LEHR-hee-koh ah lah peh-nee-see-LEE-nah' },
+      { characterId: 'c1', spanish: 'De acuerdo. Voy a examinarlo. Abra la boca, por favor.', english: 'Very well. I am going to examine you. Open your mouth, please.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Es grave?', english: 'Is it serious?', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'No, es una infección leve. Le voy a recetar antibióticos y reposo.', english: 'No, it is a mild infection. I am going to prescribe antibiotics and rest.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Dónde puedo comprar la medicina?', english: 'Where can I buy the medicine?', isLearnerLine: true },
+    ],
+    culturalNotes: [
+      'In Latin America, pharmacies (farmacias) often give basic medical advice and sell many drugs without a prescription.',
+      'Private clinics (clínicas) typically have shorter wait times than public hospitals.',
+      'Always carry your blood type, known allergies, and emergency contacts in the local language.',
+      '"Me duele" = it hurts me (body part). "Tengo dolor de..." = I have pain in... Both are correct.',
+    ],
+    keyVocab: ['v400', 'v401', 'v402', 'v403', 'v404', 'v405', 'v406', 'v407'],
+  },
+
+  {
+    id: 'dia008',
+    title: 'Asking for Directions',
+    scenario: 'Navigation',
+    situation: 'You are lost and need to find your way to an important location. Practice asking for and understanding directions — a fundamental operational mobility skill.',
+    ilrLevel: 0,
+    characters: [
+      { id: 'c1', name: 'Local Resident', role: 'Passerby', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Traveler', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c2', spanish: 'Disculpe, ¿sabe usted dónde está el Banco Nacional?', english: 'Excuse me, do you know where the National Bank is?', isLearnerLine: true, phonetic: 'dees-KOOL-peh, SAH-beh oos-TEHD DON-deh ehs-TAH ehl BAN-koh nah-syoh-NAHL' },
+      { characterId: 'c1', spanish: 'Sí, claro. Siga derecho dos cuadras, luego doble a la derecha.', english: 'Yes, of course. Go straight two blocks, then turn right.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Perdone, ¿puede repetir más despacio? No entiendo bien.', english: 'Excuse me, can you repeat more slowly? I don\'t understand well.', isLearnerLine: true, phonetic: 'pehr-DOH-neh, PWEH-deh reh-peh-TEER mahs dehs-PAH-syoh' },
+      { characterId: 'c1', spanish: 'Con gusto. Siga... derecho... dos cuadras. Luego... doble... a la derecha. El banco está en la esquina.', english: 'Of course. Go... straight... two blocks. Then... turn... right. The bank is on the corner.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Está lejos de aquí?', english: 'Is it far from here?', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'No, está a unos cinco minutos caminando.', english: 'No, it is about five minutes walking.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Muchas gracias. Usted es muy amable.', english: 'Thank you very much. You are very kind.', isLearnerLine: true, phonetic: 'MOO-chahs GRAH-syahs. oos-TEHD ehs moo-ee ah-MAH-bleh' },
+      { characterId: 'c1', spanish: 'De nada. ¡Buen provecho en el banco!', english: 'You\'re welcome. Good luck at the bank!', isLearnerLine: false },
+    ],
+    culturalNotes: [
+      'Latin Americans are generally very willing to help with directions — do not hesitate to ask.',
+      'Directions often use landmarks ("at the corner past the church") rather than street names.',
+      '"Una cuadra" = one city block. Distances are often expressed in cuadras.',
+      'Always confirm by repeating back what you understood: "Entonces, ¿dos cuadras y luego a la derecha?"',
+    ],
+    keyVocab: ['v350', 'v351', 'v352', 'v353', 'v354', 'v355', 'v356'],
+  },
+
+  {
+    id: 'dia009',
+    title: 'Shopping at the Market',
+    scenario: 'Market Transaction',
+    situation: 'You are buying items at a local market. Practice negotiating prices, describing quantities, and completing transactions — key skills for operating in any local economy.',
+    ilrLevel: 1,
+    characters: [
+      { id: 'c1', name: 'Vendor (Vendedor)', role: 'Market Vendor', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Customer', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c2', spanish: 'Buenas tardes. ¿Cuánto cuesta esto?', english: 'Good afternoon. How much does this cost?', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'Ese artículo cuesta doscientos pesos, señor.', english: 'That item costs two hundred pesos, sir.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Hmm. ¿Me puede hacer un descuento?', english: 'Hmm. Can you give me a discount?', isLearnerLine: true, phonetic: 'meh PWEH-deh ah-SEHR oon dehs-KWEHN-toh', notes: 'Bargaining is expected and respected in markets' },
+      { characterId: 'c1', spanish: 'Bueno, para usted lo dejo en ciento ochenta.', english: 'Well, for you I\'ll leave it at one hundred eighty.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Está bien. Voy a llevar dos.', english: 'That\'s fine. I\'ll take two.', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'Son trescientos sesenta en total.', english: 'That is three hundred sixty total.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Aquí tiene. ¿Me da una bolsa, por favor?', english: 'Here you go. Can you give me a bag, please?', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'Por supuesto. Gracias por su compra.', english: 'Of course. Thank you for your purchase.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Gracias. ¿Acepta tarjetas de crédito?', english: 'Thank you. Do you accept credit cards?', isLearnerLine: true },
+    ],
+    culturalNotes: [
+      'Bargaining (regatear) is expected in markets but NOT in stores with fixed prices — read the context.',
+      'Asking for a discount is not rude — it is part of the social ritual of market shopping.',
+      'Always count your change before leaving a vendor — mistakes happen and this is normal practice.',
+      'Large bills may be refused for small purchases — carry small bills and coins (sencillo/feria).',
+    ],
+    keyVocab: ['v330', 'v331', 'v332', 'v333', 'v334', 'v335', 'v336', 'v337'],
+  },
+
+  {
+    id: 'dia010',
+    title: 'Making a Phone Call',
+    scenario: 'Telephone Communication',
+    situation: 'You need to make an important phone call to arrange a meeting. Phone communication removes visual cues and requires extra linguistic clarity — a significant operational challenge.',
+    ilrLevel: 1,
+    characters: [
+      { id: 'c1', name: 'Secretary (Secretaria)', role: 'Office Secretary', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Caller', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: 'Ministerio de Relaciones Exteriores, buenos días.', english: 'Ministry of Foreign Relations, good morning.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Buenos días. Quisiera hablar con el señor Reyes, por favor.', english: 'Good morning. I would like to speak with Mr. Reyes, please.', isLearnerLine: true, phonetic: 'BWEH-nohs DEE-ahs. kee-SYEH-rah ah-BLAHR kohn ehl seh-NYOR REH-yehs' },
+      { characterId: 'c1', spanish: '¿De parte de quién, por favor?', english: 'From whom, please?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'De parte del señor [nombre], de la embajada americana.', english: 'From Mr. [name], from the American embassy.', isLearnerLine: true, notes: 'Always identify yourself fully when calling an office' },
+      { characterId: 'c1', spanish: 'Un momento, por favor. Voy a comunicarle.', english: 'One moment, please. I will connect you.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Gracias.', english: 'Thank you.', isLearnerLine: true },
+      { characterId: 'c1', spanish: 'Lo siento, el señor Reyes no está disponible en este momento. ¿Desea dejar un mensaje?', english: 'I\'m sorry, Mr. Reyes is not available at this moment. Would you like to leave a message?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Sí, por favor. Dígale que llamé y que le llame cuando pueda. Mi número es el cuatro-cuatro-tres, dos-dos-ocho-uno.', english: 'Yes, please. Tell him that I called and to call me when he can. My number is 443-2281.', isLearnerLine: true, notes: 'Latin Americans often say phone numbers in pairs' },
+      { characterId: 'c1', spanish: 'Muy bien, le daré el recado.', english: 'Very well, I will give him the message.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Muchas gracias. Hasta luego.', english: 'Thank you very much. Goodbye.', isLearnerLine: true },
+    ],
+    culturalNotes: [
+      '"¿De parte de quién?" (From whom?) is the standard way to ask who is calling — always have your answer ready.',
+      'Identify your institution clearly: "de la embajada americana" opens doors that your name alone may not.',
+      'Leaving a clear message is an art: name, institution, number, and brief reason for calling.',
+      'Phone calls in Latin American offices may involve multiple transfers and waiting — patience is professional.',
+    ],
+    keyVocab: ['v420', 'v421', 'v422', 'v423', 'v424'],
+  },
+];
+
 export const getDialogueById = (id: string): Dialogue | undefined =>
   spanishDialogues.find(d => d.id === id);
 
