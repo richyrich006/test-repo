@@ -230,10 +230,15 @@ def run_stream(target_address: str, ws_url: str, on_trade_callback) -> None:
     """
     Synchronous entry point: runs the async stream and calls *on_trade_callback*
     with each new trade dict. Blocks forever (until Ctrl+C).
+
+    The callback is dispatched in a thread-pool executor so order submission
+    starts immediately without blocking the WebSocket event loop — this keeps
+    the copy in the same Polygon block as the detected trade.
     """
     async def _run():
+        loop = asyncio.get_running_loop()
         monitor = BlockchainMonitor(target_address, ws_url)
         async for trade in monitor.stream():
-            on_trade_callback(trade)
+            loop.run_in_executor(None, on_trade_callback, trade)
 
     asyncio.run(_run())
