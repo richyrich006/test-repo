@@ -158,11 +158,12 @@ def copy_trade(trade: dict) -> bool:
             limit_price = max(raw_price * (1 - config.MAX_SLIPPAGE_PCT), 0.01)
         limit_price = round(limit_price, 4)
 
-        # Limit orders are sized in outcome tokens, not USDC.
         # Polymarket requires maker (USDC) amount <= 2 decimals, taker (tokens) <= 4.
-        # Derive token_size from a USDC amount that is already rounded to 2 dp.
-        usdc_rounded = round(final_size, 2)
-        token_size = round(usdc_rounded / limit_price, 4)
+        # Use Decimal throughout to avoid float rounding causing >2dp USDC amounts.
+        _lp = Decimal(str(limit_price))
+        _usdc = Decimal(str(final_size)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+        # ROUND_DOWN on tokens ensures token_size * price never exceeds _usdc
+        token_size = float((_usdc / _lp).quantize(Decimal("0.0001"), rounding=ROUND_DOWN))
 
         logger.info(
             "Limit price: %.4f (target %.4f + %.0f%% slippage), tokens: %.4f",
