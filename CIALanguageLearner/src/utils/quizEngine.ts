@@ -101,23 +101,30 @@ export function generateQuiz(
 
 // Score a type-answer response (fuzzy match)
 export function scoreTextAnswer(userAnswer: string, correct: string): boolean {
-  const a = userAnswer.trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents for leniency
-  const b = correct.trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normalize = (s: string) =>
+    s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  if (a === b) return true;
+  const a = normalize(userAnswer);
 
-  // Allow if within 1 character edit distance (typo forgiveness)
-  if (Math.abs(a.length - b.length) > 2) return false;
-  let diff = 0;
-  const longer = a.length > b.length ? a : b;
-  const shorter = a.length > b.length ? b : a;
-  for (let i = 0; i < shorter.length; i++) {
-    if (shorter[i] !== longer[i]) diff++;
+  // Support slash-separated alternatives e.g. "Excuse me / Sorry"
+  const alternatives = correct.split('/').map(normalize).filter(Boolean);
+
+  for (const b of alternatives) {
+    if (a === b) return true;
+
+    // Allow up to 1 character edit distance (typo forgiveness)
+    if (Math.abs(a.length - b.length) <= 2) {
+      let diff = 0;
+      const longer = a.length > b.length ? a : b;
+      const shorter = a.length > b.length ? b : a;
+      for (let i = 0; i < shorter.length; i++) {
+        if (shorter[i] !== longer[i]) diff++;
+      }
+      diff += longer.length - shorter.length;
+      if (diff <= 1) return true;
+    }
   }
-  diff += longer.length - shorter.length;
-  return diff <= 1;
+  return false;
 }
 
 // Score a pronunciation attempt (0-100)

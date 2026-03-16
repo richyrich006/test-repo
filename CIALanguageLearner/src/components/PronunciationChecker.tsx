@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import * as Speech from 'expo-speech';
 import { Colors } from '../theme/colors';
 import { scorePronunciation, getScoreLabel } from '../utils/quizEngine';
 
@@ -123,13 +124,14 @@ export function PronunciationChecker({
     setStateTracked('idle');
   };
 
-  if (!isSupported && state !== 'unsupported') {
+  // Native fallback: listen + self-rate (no speech recognition available)
+  if (!isSupported) {
     return (
-      <View style={styles.unsupported}>
-        <Text style={styles.unsupportedText}>
-          🎤 Pronunciation scoring requires Chrome browser
-        </Text>
-      </View>
+      <NativePronunciationPractice
+        expectedText={expectedText}
+        expectedLanguage={expectedLanguage}
+        onScore={onScore}
+      />
     );
   }
 
@@ -206,6 +208,64 @@ export function PronunciationChecker({
             <Text style={styles.retryText}>🔄 Try Again</Text>
           </TouchableOpacity>
         </View>
+      )}
+    </View>
+  );
+}
+
+// ── Native fallback: listen and self-rate ────────────────────────────────
+
+function NativePronunciationPractice({ expectedText, expectedLanguage = 'es-MX', onScore }: {
+  expectedText: string;
+  expectedLanguage?: string;
+  onScore?: (score: number) => void;
+}) {
+  const [played, setPlayed] = useState(false);
+  const [rated, setRated] = useState<'good' | 'ok' | 'hard' | null>(null);
+
+  const hear = () => {
+    Speech.speak(expectedText, { language: expectedLanguage, rate: 0.85 });
+    setPlayed(true);
+  };
+
+  const rate = (r: 'good' | 'ok' | 'hard') => {
+    setRated(r);
+    onScore?.(r === 'good' ? 95 : r === 'ok' ? 70 : 40);
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>Pronunciation Practice</Text>
+      <Text style={styles.targetWord}>{expectedText}</Text>
+      <TouchableOpacity style={styles.micBtn} onPress={hear}>
+        <Text style={styles.micIcon}>🔊</Text>
+        <Text style={styles.micText}>{played ? 'Hear Again' : 'Hear it'}</Text>
+      </TouchableOpacity>
+      {played && !rated && (
+        <View style={{ alignItems: 'center', gap: 10, width: '100%' }}>
+          <Text style={[styles.label, { marginTop: 8 }]}>Now say it aloud — how did you do?</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={[styles.selfRateBtn, { borderColor: Colors.error }]} onPress={() => rate('hard')}>
+              <Text style={styles.selfRateIcon}>😬</Text>
+              <Text style={[styles.selfRateText, { color: Colors.error }]}>Tough</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.selfRateBtn, { borderColor: Colors.streak }]} onPress={() => rate('ok')}>
+              <Text style={styles.selfRateIcon}>🙂</Text>
+              <Text style={[styles.selfRateText, { color: Colors.streak }]}>OK</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.selfRateBtn, { borderColor: Colors.success }]} onPress={() => rate('good')}>
+              <Text style={styles.selfRateIcon}>😊</Text>
+              <Text style={[styles.selfRateText, { color: Colors.success }]}>Nailed it!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {rated && (
+        <Text style={[styles.scoreLabel, {
+          color: rated === 'good' ? Colors.success : rated === 'ok' ? Colors.streak : Colors.error
+        }]}>
+          {rated === 'good' ? 'Excellent! 🎯' : rated === 'ok' ? 'Almost! 💪' : 'Keep practicing 🔄'}
+        </Text>
       )}
     </View>
   );
@@ -307,10 +367,11 @@ const styles = StyleSheet.create({
     borderRadius: 8, borderWidth: 1.5, borderColor: Colors.border,
   },
   retryText: { color: Colors.textSecondary, fontWeight: '600', fontSize: 14 },
-  unsupported: {
-    backgroundColor: Colors.backgroundMuted,
-    borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: Colors.border,
+  selfRateBtn: {
+    flex: 1, borderRadius: 12, borderWidth: 2,
+    padding: 12, alignItems: 'center', gap: 4,
+    backgroundColor: Colors.backgroundCard,
   },
-  unsupportedText: { color: Colors.textMuted, fontSize: 13, textAlign: 'center' },
+  selfRateIcon: { fontSize: 24 },
+  selfRateText: { fontWeight: '700', fontSize: 12 },
 });

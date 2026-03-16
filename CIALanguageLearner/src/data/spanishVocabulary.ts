@@ -323,6 +323,43 @@ export const spanishVocabulary: VocabCard[] = [
   { id: 'v483', spanish: 'No entiendo.', english: 'I do not understand.', phonetic: 'noh ehn-TYEHN-doh', category: 'learning', ilrLevel: 0 },
   { id: 'v484', spanish: '¿Habla inglés?', english: 'Do you speak English?', phonetic: 'AH-blah een-GLEHS', category: 'learning', ilrLevel: 0 },
   { id: 'v485', spanish: 'Más despacio, por favor.', english: 'More slowly, please.', phonetic: 'mahs dehs-PAH-syoh', category: 'learning', ilrLevel: 0 },
+
+  // ── COLORS ───────────────────────────────────────────────────────────────
+  { id: 'v500', spanish: 'rojo / roja', english: 'red', phonetic: 'ROH-hoh / ROH-hah', category: 'adjectives', ilrLevel: 0, notes: 'Adjectives agree with gender: rojo (m) / roja (f)' },
+  { id: 'v501', spanish: 'azul', english: 'blue', phonetic: 'ah-SOOL', category: 'adjectives', ilrLevel: 0, notes: 'Azul does not change for gender — azul (m/f), azules (plural)' },
+  { id: 'v502', spanish: 'verde', english: 'green', phonetic: 'BEHR-deh', category: 'adjectives', ilrLevel: 0, notes: 'Verde is same for both genders; verdes in plural' },
+  { id: 'v503', spanish: 'amarillo / amarilla', english: 'yellow', phonetic: 'ah-mah-REE-yoh', category: 'adjectives', ilrLevel: 0, notes: 'Adjectives agree with gender: amarillo (m) / amarilla (f)' },
+  { id: 'v504', spanish: 'blanco / blanca', english: 'white', phonetic: 'BLAHN-koh / BLAHN-kah', category: 'adjectives', ilrLevel: 0, notes: 'Adjectives agree with gender: blanco (m) / blanca (f)' },
+  { id: 'v505', spanish: 'negro / negra', english: 'black', phonetic: 'NEH-groh / NEH-grah', category: 'adjectives', ilrLevel: 0, notes: 'Adjectives agree with gender: negro (m) / negra (f)' },
+
+  // ── WEATHER ──────────────────────────────────────────────────────────────
+  { id: 'v510', spanish: '¿Qué tiempo hace?', english: 'What is the weather like?', phonetic: 'keh TYEHM-poh AH-seh', category: 'culture', ilrLevel: 0, notes: 'Use HACER for weather: hace calor, hace frío, hace sol' },
+  { id: 'v511', spanish: 'hace calor / hace frío', english: 'it is hot / it is cold', phonetic: 'AH-seh kah-LOHR / AH-seh FREE-oh', category: 'culture', ilrLevel: 0, notes: 'Hace + weather noun — literally "makes heat/cold"' },
+  { id: 'v512', spanish: 'está lloviendo / está nevando', english: 'it is raining / it is snowing', phonetic: 'ehs-TAH yoh-BYEHN-doh / ehs-TAH neh-BAHN-doh', category: 'culture', ilrLevel: 0, notes: 'Use ESTAR + gerund for active weather conditions' },
+  { id: 'v513', spanish: 'hace viento / está nublado', english: 'it is windy / it is cloudy', phonetic: 'AH-seh BYEHN-toh / ehs-TAH noo-BLAH-doh', category: 'culture', ilrLevel: 0, notes: 'Mixed: HACER for wind, ESTAR for cloud cover' },
+  { id: 'v514', spanish: 'la temporada seca / la temporada de lluvias', english: 'dry season / rainy season', phonetic: 'lah tehm-poh-RAH-dah SEH-kah / deh YOO-byahs', category: 'culture', ilrLevel: 1, notes: 'Crucial for fieldwork — most of Latin America has two seasons, not four' },
+
+  // ── HOBBIES & LEISURE ────────────────────────────────────────────────────
+  { id: 'v520', spanish: 'me gusta / me gustan', english: 'I like (singular) / I like (plural)', phonetic: 'meh GOOS-tah / meh GOOS-tahn', category: 'culture', ilrLevel: 0, notes: 'GUSTAR works backwards: "me gusta el fútbol" = "football pleases me"' },
+  { id: 'v521', spanish: 'el fútbol', english: 'soccer / football', phonetic: 'el FOOT-bol', category: 'culture', ilrLevel: 0, notes: 'The most culturally important sport in Latin America — discussing it builds rapport instantly' },
+  { id: 'v522', spanish: 'leer / escuchar música', english: 'to read / to listen to music', phonetic: 'leh-EHR / ehs-koo-CHAHR MOO-see-kah', category: 'culture', ilrLevel: 0 },
+  { id: 'v523', spanish: 'cocinar / bailar', english: 'to cook / to dance', phonetic: 'koh-see-NAHR / by-LAHR', category: 'culture', ilrLevel: 0, notes: 'Baile (dance) is central to Latin American culture — salsa, cumbia, merengue vary by country' },
+  { id: 'v524', spanish: 'viajar / explorar', english: 'to travel / to explore', phonetic: 'byah-HAHR / ehks-ploh-RAHR', category: 'culture', ilrLevel: 0 },
+  { id: 'v525', spanish: 'el fin de semana', english: 'the weekend', phonetic: 'el feen deh seh-MAH-nah', category: 'culture', ilrLevel: 0, exampleSentence: '¿Qué haces el fin de semana?', exampleTranslation: 'What do you do on the weekend?' },
+  { id: 'v526', spanish: 'el pasatiempo / la afición', english: 'hobby / passion', phonetic: 'el pah-sah-TYEHM-poh / lah ah-fee-SYOHN', category: 'culture', ilrLevel: 1 },
+  { id: 'v527', spanish: 'practicar deportes', english: 'to play sports', phonetic: 'prahk-tee-KAHR deh-POHR-tehs', category: 'culture', ilrLevel: 0 },
+
+  // ── TECHNOLOGY & MODERN LIFE ─────────────────────────────────────────────
+  { id: 'v540', spanish: 'el teléfono / el celular', english: 'telephone / cell phone', phonetic: 'el teh-LEH-foh-noh / el seh-loo-LAHR', category: 'work', ilrLevel: 0, notes: '"Celular" is used across Latin America; "móvil" is the Spanish (Spain) term' },
+  { id: 'v541', spanish: 'el correo electrónico', english: 'email', phonetic: 'el koh-REH-oh eh-lehk-TROH-nee-koh', category: 'work', ilrLevel: 1, notes: 'Often shortened to "el correo" in context; "e-mail" is also widely understood' },
+  { id: 'v542', spanish: 'la contraseña', english: 'password', phonetic: 'lah kohn-trah-SEH-nyah', category: 'work', ilrLevel: 1 },
+  { id: 'v543', spanish: 'la red / el internet', english: 'network / the internet', phonetic: 'lah rehd / el een-tehr-NEHT', category: 'work', ilrLevel: 1 },
+  { id: 'v544', spanish: 'descargar / enviar', english: 'to download / to send', phonetic: 'dehs-kahr-GAHR / ehn-BYAHR', category: 'work', ilrLevel: 1 },
+  { id: 'v545', spanish: 'la aplicación / la app', english: 'the app', phonetic: 'lah ah-plee-kah-SYOHN', category: 'work', ilrLevel: 1 },
+  { id: 'v546', spanish: 'el mensaje de texto', english: 'text message', phonetic: 'el mehn-SAH-heh deh TEHKS-toh', category: 'work', ilrLevel: 0 },
+  { id: 'v547', spanish: 'en línea / fuera de línea', english: 'online / offline', phonetic: 'ehn LEE-neh-ah / FWEH-rah deh LEE-neh-ah', category: 'work', ilrLevel: 1 },
+  { id: 'v548', spanish: 'la videoconferencia', english: 'video conference', phonetic: 'lah bee-DEH-oh-kohn-feh-REHN-syah', category: 'work', ilrLevel: 2 },
+  { id: 'v549', spanish: 'compartir / guardar', english: 'to share / to save', phonetic: 'kohm-pahr-TEER / gwahr-DAHR', category: 'work', ilrLevel: 1 },
 ];
 
 export const getVocabByLevel = (maxLevel: number): VocabCard[] =>

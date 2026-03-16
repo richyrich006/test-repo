@@ -245,6 +245,40 @@ export const spanishDrills: PatternDrill[] = [
   },
 ];
 
+  // ─── UNIT 10: COLORS & ADJECTIVE AGREEMENT ─────────────────────
+  {
+    id: 'd015',
+    title: 'Adjective Gender Agreement',
+    instruction: 'Make the adjective agree with the noun in gender (masculine/feminine).',
+    pattern: '[Noun] + [adjective matching gender: -o/-a or invariable]',
+    patternExplanation: 'Most Spanish adjectives change ending to match noun gender. -o = masculine, -a = feminine. Some adjectives (azul, verde, grande) are the same for both genders. Adjectives follow the noun in Spanish.',
+    ilrLevel: 0,
+    exercises: [
+      { id: 'd015e1', prompt: '"The red car" — la/el carro ___', answer: 'el carro rojo', hint: 'Carro = masculine → rojo', audioPrompt: 'el carro rojo' },
+      { id: 'd015e2', prompt: '"The white house" — la/el casa ___', answer: 'la casa blanca', hint: 'Casa = feminine → blanca', audioPrompt: 'la casa blanca' },
+      { id: 'd015e3', prompt: '"The blue shirt" — la/el camisa ___', answer: 'la camisa azul', hint: 'Azul is invariable — same for masculine and feminine', audioPrompt: 'la camisa azul' },
+      { id: 'd015e4', prompt: '"The black shoes" — los/las zapatos ___', answer: 'los zapatos negros', hint: 'Zapatos = masculine plural → negros', audioPrompt: 'los zapatos negros' },
+      { id: 'd015e5', prompt: '"The yellow flowers" — las flores ___', answer: 'las flores amarillas', hint: 'Flores = feminine plural → amarillas', audioPrompt: 'las flores amarillas' },
+    ],
+  },
+  // ─── UNIT 10: GUSTAR + INFINITIVE ─────────────────────────────
+  {
+    id: 'd016',
+    title: 'GUSTAR: Expressing Likes & Hobbies',
+    instruction: 'Use the correct form of GUSTAR to express likes and dislikes.',
+    pattern: '(A mí/ti/él) + [indirect object pronoun] + GUSTA/GUSTAN + [noun/infinitive]',
+    patternExplanation: 'GUSTAR works in reverse: the thing liked is the subject. Use GUSTA + singular noun/infinitive, GUSTAN + plural noun. Indirect object pronouns: me (I), te (you), le (he/she), nos (we), les (they).',
+    ilrLevel: 0,
+    exercises: [
+      { id: 'd016e1', prompt: '"I like soccer."', answer: 'Me gusta el fútbol.', hint: 'Fútbol = singular → gusta', audioPrompt: 'Me gusta el fútbol' },
+      { id: 'd016e2', prompt: '"She likes to travel."', answer: 'Le gusta viajar.', hint: 'Infinitive → always gusta (singular)', audioPrompt: 'Le gusta viajar' },
+      { id: 'd016e3', prompt: '"We like the weekends."', answer: 'Nos gustan los fines de semana.', hint: 'Fines de semana = plural → gustan', audioPrompt: 'Nos gustan los fines de semana' },
+      { id: 'd016e4', prompt: '"Do you like to dance?"', answer: '¿Te gusta bailar?', hint: 'Use te for "you" (tú)', audioPrompt: '¿Te gusta bailar?' },
+      { id: 'd016e5', prompt: '"They like the movies."', answer: 'Les gustan las películas.', hint: 'Películas = plural → gustan', audioPrompt: 'Les gustan las películas' },
+    ],
+  },
+];
+
 export const getDrillById = (id: string): PatternDrill | undefined =>
   spanishDrills.find(d => d.id === id);
 

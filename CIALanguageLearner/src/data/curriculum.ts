@@ -549,6 +549,50 @@ export const spanishLessons: Lesson[] = [
     culturalBriefing: 'ILR 3 proficiency — the CIA standard for operational use — means you can operate independently in the language under stress, discuss complex topics with precision, and navigate cultural nuance without compromise. Language is not just communication; it is trust, access, and influence.',
     completionXP: 300,
   },
+
+  // ─── UNIT 10: CULTURE & CONVERSATION ─────────────────────────
+  {
+    id: 'l033',
+    unitId: 'u010',
+    title: 'Lesson 33: Colors, Weather & Environment',
+    subtitle: 'Describing the World Around You',
+    objective: 'Use colors with correct gender agreement and describe weather conditions using HACER, ESTAR, and LLOVER.',
+    ilrLevel: 0,
+    estimatedMinutes: 25,
+    vocabulary: ['v500', 'v501', 'v502', 'v503', 'v504', 'v505', 'v510', 'v511', 'v512', 'v513', 'v514'],
+    drills: ['d015'],
+    dialogues: [],
+    culturalBriefing: 'Weather is a universal conversation starter and culturally important. Latin American climates vary dramatically — tropical rainforest, high-altitude Andean cold, and desert all in the same country. Knowing seasonal patterns ("la temporada de lluvias") is operationally relevant for travel planning.',
+    completionXP: 100,
+  },
+  {
+    id: 'l034',
+    unitId: 'u010',
+    title: 'Lesson 34: Hobbies, Sports & Leisure',
+    subtitle: 'Building Rapport Through Shared Interests',
+    objective: 'Discuss hobbies, sports, and leisure activities using GUSTAR and activity vocabulary.',
+    ilrLevel: 0,
+    estimatedMinutes: 25,
+    vocabulary: ['v520', 'v521', 'v522', 'v523', 'v524', 'v525', 'v526', 'v527'],
+    drills: ['d016'],
+    dialogues: [],
+    culturalBriefing: 'Soccer (fútbol) is the single most powerful cultural touchstone across Latin America. Knowing the names of local teams and being able to discuss the sport creates immediate rapport. "¿De qué equipo eres?" (What team are you from?) is a direct path to genuine connection with most Latin American men.',
+    completionXP: 100,
+  },
+  {
+    id: 'l035',
+    unitId: 'u010',
+    title: 'Lesson 35: Technology & Modern Communication',
+    subtitle: 'Digital Spanish for the Modern World',
+    objective: 'Use vocabulary for phones, internet, email, and digital communication. Navigate modern tech situations in Spanish.',
+    ilrLevel: 1,
+    estimatedMinutes: 30,
+    vocabulary: ['v540', 'v541', 'v542', 'v543', 'v544', 'v545', 'v546', 'v547', 'v548', 'v549'],
+    drills: [],
+    dialogues: [],
+    culturalBriefing: 'Digital literacy vocabulary is now operationally essential. WhatsApp is the dominant messaging platform across Latin America — more than SMS or email. "¿Me mandas un WhatsApp?" (Send me a WhatsApp) is the standard way to share contact information. Knowing how locals actually communicate is critical.',
+    completionXP: 125,
+  },
 ];
 
 // ============================================================
@@ -645,6 +689,16 @@ export const spanishUnits: Unit[] = [
     lessons: ['l030', 'l031', 'l032'],
     icon: '🎯',
     color: '#2C3E50',
+  },
+  {
+    id: 'u010',
+    title: 'Unit 10: Culture & Conversation',
+    subtitle: 'Colors, Hobbies & Modern Life',
+    theme: 'Building genuine connection through cultural fluency',
+    ilrLevel: 0,
+    lessons: ['l033', 'l034', 'l035'],
+    icon: '🎨',
+    color: '#16A085',
   },
 ];
 

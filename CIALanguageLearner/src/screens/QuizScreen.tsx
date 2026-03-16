@@ -102,7 +102,7 @@ export function QuizScreen({ cardIds, lessonTitle, onComplete, onBack }: Props) 
 
   const advanceFromFeedback = () => {
     // For correct answers on non-flashcard types, offer pronunciation practice
-    if (lastCorrect && question.type !== 'flashcard' && Platform.OS === 'web') {
+    if (lastCorrect && question.type !== 'flashcard') {
       setPhase('pronunciation');
     } else {
       goToNext();
@@ -278,6 +278,11 @@ export function QuizScreen({ cardIds, lessonTitle, onComplete, onBack }: Props) 
                 <Text style={styles.audioBtnText}>Hear it</Text>
               </TouchableOpacity>
             </View>
+            {question.card.notes ? (
+              <View style={styles.grammarHint}>
+                <Text style={styles.grammarHintText}>💡 {question.card.notes}</Text>
+              </View>
+            ) : null}
             <Text style={styles.instruction}>Type the English translation</Text>
             <TextInput
               style={[
@@ -419,7 +424,7 @@ export function QuizScreen({ cardIds, lessonTitle, onComplete, onBack }: Props) 
           </View>
           <View style={[styles.nextBtn, { backgroundColor: lastCorrect ? Colors.success : Colors.error }]}>
             <Text style={styles.nextBtnText}>
-              {lastCorrect && Platform.OS === 'web' && question.type !== 'flashcard' ? 'Speak →' : 'Next →'}
+              {lastCorrect && question.type !== 'flashcard' ? 'Speak →' : 'Next →'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -560,6 +565,12 @@ const styles = StyleSheet.create({
   audioBtnText: { color: Colors.primary, fontWeight: '700', fontSize: 13 },
 
   instruction: { color: Colors.textSecondary, fontSize: 15, fontWeight: '600' },
+
+  grammarHint: {
+    backgroundColor: Colors.primaryLight, borderRadius: 10, padding: 12,
+    borderLeftWidth: 3, borderLeftColor: Colors.primary,
+  },
+  grammarHintText: { color: Colors.primary, fontSize: 13, lineHeight: 18 },
 
   options: { gap: 10 },
   option: {
