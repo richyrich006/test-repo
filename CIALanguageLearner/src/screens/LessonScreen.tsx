@@ -184,21 +184,51 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
         {phase === 'cultural' && lesson.culturalBriefing && (
           <View style={styles.phaseContainer}>
             <View style={[styles.phaseBadge, { backgroundColor: Colors.streakLight }]}>
-              <Text style={[styles.phaseBadgeText, { color: Colors.streak }]}>🌎 CULTURAL BRIEFING</Text>
+              <Text style={[styles.phaseBadgeText, { color: Colors.streak }]}>🌎 CULTURAL INTELLIGENCE BRIEFING</Text>
             </View>
-            <Text style={styles.phaseTitle}>Cultural Intelligence</Text>
+            <Text style={styles.phaseTitle}>Field Intelligence</Text>
+            <Text style={styles.phaseSubtitle}>
+              The CIA's Foreign Language Program treats cultural fluency as equal to
+              linguistic fluency. Language without cultural context creates operational risk.
+            </Text>
 
-            <AgentMayaInline
-              mood="thinking"
-              message="Cultural knowledge is your cover. Study this carefully."
-            />
-
+            {/* Main cultural briefing */}
             <View style={[styles.culturalCard, { borderLeftColor: Colors.streak }]}>
+              <Text style={[styles.culturalCardLabel, { color: Colors.streak }]}>SITUATION BRIEF</Text>
               <Text style={styles.culturalText}>{lesson.culturalBriefing}</Text>
             </View>
 
+            {/* Immersion simulation */}
+            <View style={styles.immersionCard}>
+              <Text style={styles.immersionTitle}>🎭 IMMERSION SIMULATION</Text>
+              <Text style={styles.immersionBody}>
+                Before starting this lesson, imagine you are in a professional setting in
+                Mexico City, Bogotá, or Buenos Aires. You are meeting a local contact for
+                the first time. You must establish rapport ("confianza") before any
+                substantive conversation.
+              </Text>
+              <View style={styles.immersionChecklist}>
+                <ImmersionItem text='Greet formally with "buenos días / buenas tardes" — NOT "hola"' />
+                <ImmersionItem text='Use "usted" unless they switch to "tú" first' />
+                <ImmersionItem text='Comment on something personal before business: their city, family, or a recent event' />
+                <ImmersionItem text='Allow pauses — don\'t rush to fill silence' />
+              </View>
+            </View>
+
+            {/* Regional note */}
+            <View style={[styles.regionalNote, { borderColor: Colors.primary + '30' }]}>
+              <Text style={styles.regionalNoteTitle}>🗺️ REGIONAL INTELLIGENCE</Text>
+              <Text style={styles.regionalNoteText}>
+                Spanish varies significantly across Latin America. Mexican Spanish (the FSI
+                standard) uses "ustedes" for all plural address. In Argentina and Uruguay,
+                "vos" replaces "tú" with different verb endings. Colombia's Bogotá accent
+                is considered the clearest and is ideal for learners. Adapt your register
+                to the local context.
+              </Text>
+            </View>
+
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: Colors.primary }]} onPress={advancePhase}>
-              <Text style={styles.btnText}>Understood →</Text>
+              <Text style={styles.btnText}>Briefing Acknowledged →</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -209,19 +239,51 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
             <View style={[styles.phaseBadge, { backgroundColor: Colors.primaryLight }]}>
               <Text style={[styles.phaseBadgeText, { color: Colors.primary }]}>📖 VOCABULARY</Text>
             </View>
-            <View style={styles.progressChipRow}>
-              <Text style={styles.progressChip}>
-                {vocabIndex + 1} / {vocabCards.length}
-              </Text>
+
+            {/* Counter */}
+            <View style={styles.vocabCounterRow}>
+              <Text style={styles.vocabCounter}>{vocabIndex + 1} of {vocabCards.length} words</Text>
             </View>
 
-            <VocabCardView card={vocabCards[vocabIndex]} />
+            <VocabCardView key={vocabIndex} card={vocabCards[vocabIndex]} />
 
-            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: Colors.primary }]} onPress={advancePhase}>
-              <Text style={styles.btnText}>
-                {vocabIndex < vocabCards.length - 1 ? 'Next Word →' : 'Continue →'}
-              </Text>
-            </TouchableOpacity>
+            {/* Prev / Next navigation */}
+            <View style={styles.vocabNavRow}>
+              <TouchableOpacity
+                style={[styles.vocabNavBtn, vocabIndex === 0 && styles.vocabNavBtnDisabled]}
+                onPress={() => { setVocabIndex(i => Math.max(0, i - 1)); }}
+                disabled={vocabIndex === 0}
+              >
+                <Text style={[styles.vocabNavText, vocabIndex === 0 && styles.vocabNavTextDisabled]}>
+                  ← Previous
+                </Text>
+              </TouchableOpacity>
+
+              {/* Dot indicators */}
+              {vocabCards.length <= 10 && (
+                <View style={styles.dotRow}>
+                  {vocabCards.map((_, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[styles.dot, i === vocabIndex && styles.dotActive]}
+                      onPress={() => setVocabIndex(i)}
+                    />
+                  ))}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.vocabNavBtn, styles.vocabNavBtnNext,
+                  vocabIndex === vocabCards.length - 1 && styles.vocabNavBtnEnd,
+                ]}
+                onPress={advancePhase}
+              >
+                <Text style={styles.vocabNavTextNext}>
+                  {vocabIndex < vocabCards.length - 1 ? 'Next →' : 'Continue →'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -321,6 +383,15 @@ function getPhaseName(phase: LessonPhase): string {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────
+
+function ImmersionItem({ text }: { text: string }) {
+  return (
+    <View style={styles.immersionItem}>
+      <Text style={styles.immersionBullet}>▸</Text>
+      <Text style={styles.immersionItemText}>{text}</Text>
+    </View>
+  );
+}
 
 function ContentItem({ icon, text }: { icon: string; text: string }) {
   return (
@@ -537,6 +608,34 @@ const styles = StyleSheet.create({
     fontSize: 13, color: Colors.textMuted, fontWeight: '600',
   },
 
+  // ── Vocab navigation ──
+  vocabCounterRow: { flexDirection: 'row', justifyContent: 'center' },
+  vocabCounter: { color: Colors.textMuted, fontSize: 13, fontWeight: '600' },
+  vocabNavRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  vocabNavBtn: {
+    borderRadius: 12, paddingHorizontal: 18, paddingVertical: 12,
+    backgroundColor: Colors.backgroundMuted,
+    borderWidth: 1.5, borderColor: Colors.border,
+  },
+  vocabNavBtnDisabled: { opacity: 0.3 },
+  vocabNavBtnNext: {
+    backgroundColor: Colors.primary, borderColor: Colors.primary,
+    ...Shadows.button,
+  },
+  vocabNavBtnEnd: { backgroundColor: Colors.success, borderColor: Colors.success },
+  vocabNavText: { color: Colors.textSecondary, fontWeight: '700', fontSize: 14 },
+  vocabNavTextDisabled: { color: Colors.textMuted },
+  vocabNavTextNext: { color: Colors.textWhite, fontWeight: '800', fontSize: 14 },
+  dotRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  dot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: Colors.border,
+  },
+  dotActive: { backgroundColor: Colors.primary, width: 10, height: 10, borderRadius: 5 },
+
   // Objective / intro cards
   objectiveCard: {
     backgroundColor: Colors.backgroundCard,
@@ -566,9 +665,39 @@ const styles = StyleSheet.create({
   culturalCard: {
     backgroundColor: Colors.backgroundCard,
     borderRadius: 14, padding: 18,
-    borderLeftWidth: 4, ...Shadows.card,
+    borderLeftWidth: 4, gap: 8, ...Shadows.card,
+  },
+  culturalCardLabel: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 1,
   },
   culturalText: { color: Colors.textPrimary, fontSize: 15, lineHeight: 25 },
+
+  // Immersion simulation card
+  immersionCard: {
+    backgroundColor: '#1A1A2E',
+    borderRadius: 14, padding: 18, gap: 12,
+  },
+  immersionTitle: {
+    color: '#F59E0B', fontSize: 12, fontWeight: '800', letterSpacing: 1,
+  },
+  immersionBody: {
+    color: '#D1D5DB', fontSize: 14, lineHeight: 22,
+  },
+  immersionChecklist: { gap: 8 },
+  immersionItem: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  immersionBullet: { color: '#F59E0B', fontSize: 14, marginTop: 1 },
+  immersionItemText: { color: '#E5E7EB', fontSize: 13, lineHeight: 20, flex: 1 },
+
+  // Regional note
+  regionalNote: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 12, padding: 14,
+    borderWidth: 1.5, gap: 6, ...Shadows.card,
+  },
+  regionalNoteTitle: {
+    color: Colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 0.8,
+  },
+  regionalNoteText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 20 },
 
   // ── Vocab Card — white, high contrast ──
   vocabCard: {

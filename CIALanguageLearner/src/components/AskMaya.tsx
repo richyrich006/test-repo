@@ -1,131 +1,190 @@
-import React, { useState, useRef } from 'react';
-import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform,
-} from 'react-native';
+/**
+ * CIA Field Notes — replaces the broken API-based "Ask Maya" chat.
+ *
+ * Displays context-sensitive FSI method tips, cultural intelligence,
+ * and grammar notes based on the current lesson phase and word.
+ * Requires NO API key — all content is built-in.
+ */
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Colors, Shadows } from '../theme/colors';
-import { AgentMayaInline, MayaMood } from './AgentMaya';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+interface Note {
+  icon: string;
+  title: string;
+  body: string;
 }
 
 interface Props {
   lessonTitle: string;
   lessonObjective?: string;
   currentPhase?: string;
-  currentWord?: string;  // Vocab/drill word currently on screen
+  currentWord?: string;
 }
 
-const API_KEY = (process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '').trim();
+// ── Built-in FSI / CIA knowledge base ─────────────────────────────
 
-const SYSTEM_PROMPT = (lessonTitle: string, objective: string, phase: string) =>
-  `You are Agent Maya, a friendly CIA/FSI Spanish language training assistant inside the app "CIA Language Learner".
-You are currently helping a student in the lesson: "${lessonTitle}".
-Lesson objective: ${objective || 'Learn Spanish vocabulary and phrases'}.
-Current lesson phase: ${phase || 'vocabulary study'}.
+const VOCAB_NOTES: Note[] = [
+  {
+    icon: '🎯',
+    title: 'FSI Audio-Lingual Method',
+    body: 'Say each new word aloud 5× before advancing. The FSI audio-lingual method builds speaking automaticity — muscle memory in your mouth, not just recognition in your mind.',
+  },
+  {
+    icon: '🧠',
+    title: 'CIA Memory Technique',
+    body: 'Create a vivid mental image linking the Spanish word\'s sound to an English scene. Example: "hablar" (to speak) → imagine a HABlative person BLARing a trumpet. The weirder the image, the better it sticks.',
+  },
+  {
+    icon: '⏱️',
+    title: 'Spaced Repetition (SRS)',
+    body: 'CIA linguists review words at optimal intervals: 1 hour → 1 day → 3 days → 1 week → 2 weeks → 1 month. This follows the Ebbinghaus curve. Your Review deck is built on this science.',
+  },
+  {
+    icon: '🔊',
+    title: 'Mimicry Drill',
+    body: 'Tap the audio, listen once, then repeat immediately while trying to match tone, rhythm, and mouth position exactly. The CIA calls this "acoustic mimicry" — it\'s the fastest path to a native accent.',
+  },
+  {
+    icon: '📻',
+    title: 'Immersion Prescription',
+    body: 'Listen to Radio Nacional de México or Radio Caracol Colombia during any non-mental task (commute, cooking). 1hr passive exposure/day accelerates comprehension by 30% over classroom-only learners.',
+  },
+  {
+    icon: '✍️',
+    title: 'Write-It Method',
+    body: 'After each new word, write a sentence using it in a real context you might face — not a textbook example. CIA candidates write situational sentences: "Necesito hablar con el embajador." (I need to speak with the ambassador.)',
+  },
+];
 
-Your role:
-- Answer questions about Spanish vocabulary, grammar, pronunciation, and culture
-- Explain words, phrases, or concepts from the lesson
-- Give example sentences
-- Offer memory tips and mnemonics
-- Stay encouraging and concise (2-4 sentences unless more detail is needed)
-- Occasionally say something in Spanish with an English translation
-- Never break character — you are always Agent Maya
+const DRILL_NOTES: Note[] = [
+  {
+    icon: '🔄',
+    title: 'Why Pattern Drills?',
+    body: 'The FSI estimates 600–750 classroom hours to reach ILR-3 in Spanish. Pattern drills automate grammar so your working memory is freed to focus on meaning, not structure. This is called "proceduralization."',
+  },
+  {
+    icon: '⚡',
+    title: 'The 3-Second Rule',
+    body: 'Respond within 3 seconds in every drill. If you hesitate longer, the pattern isn\'t automatic yet — that\'s the point of the drill. FSI instructors call hesitation "the learning signal." Repeat until instant.',
+  },
+  {
+    icon: '🎙️',
+    title: 'Speak Every Response',
+    body: 'Never just think the answer — say it aloud. Research shows spoken practice has 40% better retention than silent practice. FSI courses are conducted almost entirely orally for this reason.',
+  },
+  {
+    icon: '🔁',
+    title: 'Substitution Drills',
+    body: 'The core FSI technique: take a pattern and substitute one element at a time. "Yo hablo" → "Tú hablas" → "Él habla." Mastering substitution drills internalizes all verb conjugations without memorizing tables.',
+  },
+  {
+    icon: '↔️',
+    title: 'Transformation Drills',
+    body: 'Convert statements to questions, positive to negative, present to past. "Ella habla español" → "¿Habla ella español?" These transformations reveal how Spanish grammar WORKS rather than just what it IS.',
+  },
+];
 
-Keep responses SHORT and helpful. Use simple language since the student is a beginner.`;
+const DIALOGUE_NOTES: Note[] = [
+  {
+    icon: '🎭',
+    title: 'FSI Dialogue Memorization',
+    body: 'The FSI teaches complete dialogue scripts before analyzing them. Memorize the full script, then break it apart. This mirrors how children learn language — whole utterances first, grammar analysis later.',
+  },
+  {
+    icon: '👔',
+    title: 'Tú vs. Usted — Field Critical',
+    body: 'In professional and field settings, always default to "usted" until explicitly invited to use "tú." Incorrect register is an immediate credibility red flag. Educated Latin Americans notice immediately.',
+  },
+  {
+    icon: '🌎',
+    title: 'Regional Variance',
+    body: 'Spanish varies significantly by country. Mexican "ahorita" = "right now" (or maybe never). Argentine "vos" replaces "tú" with different conjugations. Colombian speech is considered the clearest for learners. Know your operational region.',
+  },
+  {
+    icon: '🤐',
+    title: 'What NOT to Say',
+    body: 'Avoid Americanisms: "Estoy embarazada" means "I\'m pregnant," not embarrassed. "Coger el tren" is fine in Spain but vulgar in Mexico. "Manejar" vs "conducir" — regional preference matters for authenticity.',
+  },
+  {
+    icon: '⏸️',
+    title: 'Silence & Pause',
+    body: 'Latin American conversational pace often has longer pauses than American English. Filling every silence feels aggressive. CIA operatives learn to sit comfortably in pauses — it signals confidence and cultural competency.',
+  },
+];
 
-export function AskMaya({ lessonTitle, lessonObjective, currentPhase, currentWord }: Props) {
+const CULTURAL_NOTES: Note[] = [
+  {
+    icon: '🤝',
+    title: 'Confianza — Trust First',
+    body: 'Latin American culture is high-context and relationship-driven. "Confianza" (mutual trust) must be established BEFORE business can happen. Jumping straight to agenda is seen as rude and counterproductive.',
+  },
+  {
+    icon: '🏢',
+    title: 'Time & Meetings',
+    body: 'Meetings often start 15–30 minutes after scheduled time in social contexts, but arriving late to formal appointments signals disrespect. Adapt: arrive on time, expect others to be late, never show irritation.',
+  },
+  {
+    icon: '🍽️',
+    title: 'Food as Trust Signal',
+    body: 'Sharing food is a critical trust ritual. Refusing offered food is often offensive. Learn "¡Qué rico!" (How delicious!), ask about ingredients, and never decline a home-cooked meal without a serious reason.',
+  },
+  {
+    icon: '👨‍👩‍👧',
+    title: 'Family is Everything',
+    body: 'Ask about family early — it signals genuine interest. Knowing someone\'s family background (hometown, siblings, parents\' professions) is valued intelligence. People share much more after you express authentic interest in their family.',
+  },
+  {
+    icon: '🏛️',
+    title: 'Class & Education Signals',
+    body: 'Vocabulary choice, grammar accuracy, and pronunciation signal education level and social class in Spanish-speaking countries. Speaking correctly communicates respect and competence. Slang is fine socially but damages professional credibility.',
+  },
+  {
+    icon: '📞',
+    title: 'Communication Style',
+    body: 'Direct "no" is often avoided in favor of indirect refusals: "Qué difícil" or "Lo voy a pensar" often mean no. Learn to read these signals — pressing for a direct answer is a faux pas and damages trust.',
+  },
+];
+
+const PHASE_MAP: Record<string, Note[]> = {
+  intro: VOCAB_NOTES,
+  cultural: CULTURAL_NOTES,
+  vocabulary: VOCAB_NOTES,
+  drills: DRILL_NOTES,
+  dialogue: DIALOGUE_NOTES,
+  complete: VOCAB_NOTES,
+};
+
+// ── Component ──────────────────────────────────────────────────────
+
+export function AskMaya({ currentPhase = 'vocabulary' }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const [noteIndex, setNoteIndex] = useState(0);
 
-  const mayaMood: MayaMood = loading ? 'thinking' : messages.length === 0 ? 'happy' : 'encouraging';
+  const notes = PHASE_MAP[currentPhase] ?? VOCAB_NOTES;
+  const note = notes[noteIndex % notes.length];
 
-  const sendMessage = async () => {
-    const question = input.trim();
-    if (!question || loading) return;
-
-    if (!API_KEY) {
-      setError('No API key set. Add EXPO_PUBLIC_ANTHROPIC_API_KEY to your .env file.');
-      return;
-    }
-
-    setError(null);
-    const userMsg: Message = { role: 'user', content: question };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
-    setInput('');
-    setLoading(true);
-
-    // Scroll to bottom
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-
-    // Build context hint if a word is active
-    const contextHint = currentWord
-      ? `\n\n[The student is currently looking at the word/phrase: "${currentWord}"]`
-      : '';
-
-    try {
-      const apiMessages = updatedMessages.map(m => ({
-        role: m.role,
-        content: m.content,
-      }));
-      // Prepend context hint to first user message if this is the first question
-      if (apiMessages.length === 1 && contextHint) {
-        apiMessages[0].content = apiMessages[0].content + contextHint;
-      }
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: 512,
-          system: SYSTEM_PROMPT(
-            lessonTitle,
-            lessonObjective ?? '',
-            currentPhase ?? 'vocabulary'
-          ),
-          messages: apiMessages,
-        }),
-      });
-
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        const msg = (errBody as any)?.error?.message ?? `HTTP ${response.status}`;
-        throw new Error(msg);
-      }
-
-      const data = await response.json();
-      const replyText: string =
-        data?.content?.find((b: any) => b.type === 'text')?.text ?? '(no response)';
-
-      setMessages(prev => [...prev, { role: 'assistant', content: replyText }]);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-    } catch (err: any) {
-      setError(err?.message ?? 'Something went wrong. Try again.');
-    } finally {
-      setLoading(false);
-    }
+  const phaseColors: Record<string, string> = {
+    vocabulary: Colors.primary,
+    drills: Colors.success,
+    dialogue: '#7C3AED',
+    cultural: Colors.streak,
+    intro: Colors.brand,
+    complete: Colors.success,
   };
+  const accentColor = phaseColors[currentPhase] ?? Colors.primary;
 
   if (!isOpen) {
     return (
-      <TouchableOpacity style={styles.toggleBtn} onPress={() => setIsOpen(true)} activeOpacity={0.85}>
-        <Text style={styles.toggleIcon}>💬</Text>
+      <TouchableOpacity
+        style={[styles.toggleBtn, { borderColor: accentColor + '30' }]}
+        onPress={() => setIsOpen(true)}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.toggleIcon}>📋</Text>
         <View style={styles.toggleTextBlock}>
-          <Text style={styles.toggleTitle}>Ask Agent Maya</Text>
-          <Text style={styles.toggleSub}>Questions about this lesson?</Text>
+          <Text style={[styles.toggleTitle, { color: accentColor }]}>CIA Field Notes</Text>
+          <Text style={styles.toggleSub}>FSI techniques · Cultural intel · Method tips</Text>
         </View>
         <Text style={styles.toggleArrow}>›</Text>
       </TouchableOpacity>
@@ -133,219 +192,131 @@ export function AskMaya({ lessonTitle, lessonObjective, currentPhase, currentWor
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerIcon}>💬</Text>
-          <Text style={styles.headerTitle}>Ask Agent Maya</Text>
+    <View style={[styles.container, { borderColor: accentColor + '30' }]}>
+      {/* ── Header ── */}
+      <View style={[styles.header, { backgroundColor: accentColor + '12' }]}>
+        <Text style={styles.headerIcon}>📋</Text>
+        <View style={styles.headerMiddle}>
+          <Text style={[styles.headerTitle, { color: accentColor }]}>CIA Field Notes</Text>
+          <Text style={styles.headerSub}>{noteIndex + 1} of {notes.length}</Text>
         </View>
         <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeBtn}>
-          <Text style={styles.closeText}>✕</Text>
+          <Text style={[styles.closeText, { color: accentColor }]}>✕</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Chat area */}
-      <ScrollView
-        ref={scrollRef}
-        style={styles.chat}
-        contentContainerStyle={styles.chatContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Welcome message if no messages yet */}
-        {messages.length === 0 && !loading && (
-          <View style={styles.welcomeRow}>
-            <AgentMayaInline
-              mood="happy"
-              message={`¡Hola! Ask me anything about "${lessonTitle}". I can explain words, grammar, or culture!`}
-              animate
-            />
+      {/* ── Current note ── */}
+      <View style={styles.noteArea}>
+        <View style={[styles.noteCard, { borderLeftColor: accentColor }]}>
+          <View style={styles.noteTitleRow}>
+            <Text style={styles.noteIcon}>{note.icon}</Text>
+            <Text style={[styles.noteTitle, { color: accentColor }]}>{note.title}</Text>
           </View>
-        )}
+          <Text style={styles.noteBody}>{note.body}</Text>
+        </View>
 
-        {/* Message bubbles */}
-        {messages.map((msg, i) => (
-          <View
-            key={i}
-            style={[
-              styles.messageRow,
-              msg.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant,
-            ]}
+        {/* ── Navigation ── */}
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            style={[styles.navBtn, noteIndex === 0 && styles.navBtnDisabled]}
+            onPress={() => setNoteIndex(i => Math.max(0, i - 1))}
+            disabled={noteIndex === 0}
           >
-            {msg.role === 'assistant' && (
-              <View style={styles.avatarSmall}>
-                <Text style={styles.avatarEmoji}>😊</Text>
-              </View>
-            )}
-            <View style={[
-              styles.bubble,
-              msg.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant,
-            ]}>
-              <Text style={[
-                styles.bubbleText,
-                msg.role === 'user' ? styles.bubbleTextUser : styles.bubbleTextAssistant,
-              ]}>
-                {msg.content}
-              </Text>
-            </View>
-          </View>
-        ))}
+            <Text style={[styles.navBtnText, noteIndex === 0 && styles.navBtnTextDisabled]}>
+              ← Prev
+            </Text>
+          </TouchableOpacity>
 
-        {/* Loading indicator */}
-        {loading && (
-          <View style={styles.messageRowAssistant}>
-            <View style={styles.avatarSmall}>
-              <Text style={styles.avatarEmoji}>🤔</Text>
-            </View>
-            <View style={[styles.bubble, styles.bubbleAssistant, styles.bubbleLoading]}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.loadingText}>Maya is thinking...</Text>
-            </View>
+          <View style={styles.dotRow}>
+            {notes.map((_, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.dot, i === noteIndex && { backgroundColor: accentColor }]}
+                onPress={() => setNoteIndex(i)}
+              />
+            ))}
           </View>
-        )}
 
-        {/* Error */}
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Input row */}
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Ask Maya anything..."
-          placeholderTextColor={Colors.textMuted}
-          onSubmitEditing={sendMessage}
-          returnKeyType="send"
-          editable={!loading}
-          multiline={false}
-          autoCorrect={false}
-        />
-        <TouchableOpacity
-          style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
-          onPress={sendMessage}
-          disabled={!input.trim() || loading}
-        >
-          <Text style={styles.sendIcon}>➤</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navBtn, { backgroundColor: accentColor }, noteIndex === notes.length - 1 && styles.navBtnLast]}
+            onPress={() => setNoteIndex(i => Math.min(notes.length - 1, i + 1))}
+            disabled={noteIndex === notes.length - 1}
+          >
+            <Text style={styles.navBtnTextPrimary}>
+              Next →
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
+// ── Styles ─────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  // Collapsed toggle button
   toggleBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: Colors.backgroundAlt,
+    backgroundColor: Colors.backgroundCard,
     borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: Colors.primary + '30',
-    ...Shadows.card,
+    borderWidth: 1.5, ...Shadows.card,
   },
-  toggleIcon: { fontSize: 22 },
+  toggleIcon: { fontSize: 20 },
   toggleTextBlock: { flex: 1 },
-  toggleTitle: { fontWeight: '700', fontSize: 14, color: Colors.primary },
+  toggleTitle: { fontWeight: '800', fontSize: 14 },
   toggleSub: { color: Colors.textMuted, fontSize: 12, marginTop: 1 },
-  toggleArrow: { color: Colors.textMuted, fontSize: 22, fontWeight: '300' },
+  toggleArrow: { color: Colors.textMuted, fontSize: 22 },
 
-  // Expanded container
   container: {
     backgroundColor: Colors.backgroundCard,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.primary + '30',
-    overflow: 'hidden',
-    ...Shadows.card,
+    borderRadius: 16, borderWidth: 1.5,
+    overflow: 'hidden', ...Shadows.card,
   },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.primaryLight,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: Colors.primary + '20',
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerIcon: { fontSize: 18 },
-  headerTitle: { fontWeight: '800', fontSize: 14, color: Colors.primary },
+  headerIcon: { fontSize: 16 },
+  headerMiddle: { flex: 1 },
+  headerTitle: { fontWeight: '800', fontSize: 14 },
+  headerSub: { color: Colors.textMuted, fontSize: 11, marginTop: 1 },
   closeBtn: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: Colors.backgroundMuted,
     justifyContent: 'center', alignItems: 'center',
   },
-  closeText: { color: Colors.primary, fontSize: 13, fontWeight: '700' },
+  closeText: { fontSize: 13, fontWeight: '800' },
 
-  // Chat area
-  chat: { maxHeight: 280 },
-  chatContent: { padding: 12, gap: 10 },
-
-  welcomeRow: { marginBottom: 4 },
-
-  messageRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, maxWidth: '90%' },
-  messageRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
-  messageRowAssistant: { alignSelf: 'flex-start' },
-
-  avatarSmall: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 1.5, borderColor: Colors.primary + '40',
-    justifyContent: 'center', alignItems: 'center',
-    flexShrink: 0,
-  },
-  avatarEmoji: { fontSize: 16 },
-
-  bubble: {
-    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8,
-    maxWidth: 260, flexShrink: 1,
-  },
-  bubbleUser: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleAssistant: {
+  noteArea: { padding: 14, gap: 12 },
+  noteCard: {
     backgroundColor: Colors.backgroundAlt,
-    borderWidth: 1, borderColor: Colors.border,
-    borderBottomLeftRadius: 4,
+    borderRadius: 12, padding: 14,
+    borderLeftWidth: 3, gap: 8,
   },
-  bubbleLoading: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 10,
+  noteTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  noteIcon: { fontSize: 18 },
+  noteTitle: { fontWeight: '800', fontSize: 14, flex: 1 },
+  noteBody: {
+    color: Colors.textSecondary, fontSize: 14, lineHeight: 21,
   },
-  bubbleText: { fontSize: 14, lineHeight: 20 },
-  bubbleTextUser: { color: Colors.textWhite, fontWeight: '500' },
-  bubbleTextAssistant: { color: Colors.textPrimary },
-  loadingText: { color: Colors.textMuted, fontSize: 13 },
 
-  errorBox: {
-    backgroundColor: Colors.errorLight, borderRadius: 10,
-    padding: 10, borderWidth: 1, borderColor: Colors.error + '40',
+  navRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  errorText: { color: Colors.errorDark, fontSize: 13 },
+  navBtn: {
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: Colors.backgroundMuted,
+  },
+  navBtnDisabled: { opacity: 0.3 },
+  navBtnLast: { opacity: 0.3 },
+  navBtnText: { color: Colors.textSecondary, fontWeight: '700', fontSize: 13 },
+  navBtnTextDisabled: { color: Colors.textMuted },
+  navBtnTextPrimary: { color: Colors.textWhite, fontWeight: '800', fontSize: 13 },
 
-  // Input row
-  inputRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    padding: 10, borderTopWidth: 1, borderTopColor: Colors.border,
-    backgroundColor: Colors.backgroundCard,
+  dotRow: { flexDirection: 'row', gap: 5, alignItems: 'center' },
+  dot: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: Colors.border,
   },
-  input: {
-    flex: 1, backgroundColor: Colors.backgroundMuted,
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-    fontSize: 14, color: Colors.textPrimary,
-    borderWidth: 1.5, borderColor: Colors.border,
-  },
-  sendBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  sendBtnDisabled: { backgroundColor: Colors.border },
-  sendIcon: { color: Colors.textWhite, fontSize: 14, fontWeight: '700' },
 });

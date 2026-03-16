@@ -1,96 +1,96 @@
-// CIA Language Learner — Rosetta Stone-inspired clean theme
+// CIA Language Learner — Clean, high-contrast theme
+// Inspired by Rosetta Stone: white backgrounds, bold yellow accent, readable dark text
 
 export const Colors = {
-  // ── Core Brand ──────────────────────────────────────────────
-  // Rosetta Stone yellow/amber — used for headers, highlights
-  brand: '#F0B429',
-  brandDark: '#C88F1A',
-  brandLight: '#FFF9E6',
-  brandBorder: '#F0B42940',
+  // ── Core Brand ────────────────────────────────────────────────
+  brand: '#F59E0B',          // Amber-400 — header, highlights, accents
+  brandDark: '#B45309',      // Amber-700 — text on yellow bg
+  brandLight: '#FFFBEB',     // Amber-50  — tinted backgrounds
+  brandBorder: '#FCD34D',    // Amber-300 — borders
 
-  // Blue — CTAs, buttons, links
-  primary: '#1C4BCC',
-  primaryDark: '#153A9E',
-  primaryLight: '#EBF0FF',
+  // Blue — CTAs, buttons, links, primary interactions
+  primary: '#2563EB',        // Blue-600 — strong readable blue
+  primaryDark: '#1D4ED8',    // Blue-700
+  primaryLight: '#EFF6FF',   // Blue-50
 
-  // ── Backgrounds ─────────────────────────────────────────────
+  // ── Backgrounds ────────────────────────────────────────────────
   background: '#FFFFFF',
-  backgroundAlt: '#F7F8FA',
+  backgroundAlt: '#F9FAFB',   // Gray-50
   backgroundCard: '#FFFFFF',
-  backgroundMuted: '#F0F2F5',
+  backgroundMuted: '#F3F4F6', // Gray-100
 
-  // ── Status ──────────────────────────────────────────────────
-  success: '#58CC02',
-  successDark: '#3E9900',
-  successLight: '#E8FFD0',
-  successBg: '#F3FFF0',
+  // ── Status ─────────────────────────────────────────────────────
+  success: '#059669',         // Emerald-600
+  successDark: '#047857',
+  successLight: '#D1FAE5',    // Emerald-100
+  successBg: '#ECFDF5',
 
-  error: '#FF4B4B',
-  errorDark: '#CC2E2E',
-  errorLight: '#FFE8E8',
-  errorBg: '#FFF5F5',
+  error: '#DC2626',           // Red-600
+  errorDark: '#B91C1C',
+  errorLight: '#FEE2E2',      // Red-100
+  errorBg: '#FEF2F2',
 
-  streak: '#FF9600',
-  streakLight: '#FFF3E0',
+  streak: '#EA580C',          // Orange-600
+  streakLight: '#FFF7ED',     // Orange-50
 
-  gold: '#F0B429',
-  goldLight: '#FFF9E6',
+  gold: '#D97706',            // Amber-600
+  goldLight: '#FFFBEB',
 
-  // ── Text ────────────────────────────────────────────────────
-  textPrimary: '#1A1A1A',
-  textSecondary: '#555555',
-  textMuted: '#999999',
+  // ── Text (high contrast) ────────────────────────────────────────
+  textPrimary: '#111827',     // Gray-900 — nearly black, max contrast
+  textSecondary: '#374151',   // Gray-700 — strong secondary
+  textMuted: '#6B7280',       // Gray-500 — subdued but readable
   textWhite: '#FFFFFF',
-  textBrand: '#1A1A1A',   // text on brand/yellow bg
+  textBrand: '#111827',       // Dark text ON yellow brand header
 
-  // ── Borders ─────────────────────────────────────────────────
-  border: '#E5E7EB',
-  borderFocus: '#1C4BCC',
+  // ── Borders ─────────────────────────────────────────────────────
+  border: '#E5E7EB',          // Gray-200
+  borderFocus: '#2563EB',
 
-  // ── Quiz Options ─────────────────────────────────────────────
+  // ── Quiz Options ─────────────────────────────────────────────────
   optionDefault: '#FFFFFF',
-  optionSelected: '#EBF0FF',
-  optionCorrect: '#E8FFD0',
-  optionWrong: '#FFE8E8',
+  optionSelected: '#EFF6FF',
+  optionCorrect: '#D1FAE5',
+  optionWrong: '#FEE2E2',
 
-  // ── Unit tile colors (Rosetta Stone–style bold tiles) ────────
-  unit1: '#1C9BF0',   // blue
-  unit2: '#E05555',   // red
-  unit3: '#3DB462',   // green
-  unit4: '#9B59B6',   // purple
-  unit5: '#F0922B',   // orange
-  unit6: '#1ABC9C',   // teal
-  unit7: '#E67E22',   // warm orange
-  unit8: '#E74C3C',   // red (danger/health)
-  unit9: '#2C3E50',   // dark navy (advanced)
+  // ── Unit tile colors ─────────────────────────────────────────────
+  unit1: '#2563EB',   // blue
+  unit2: '#DC2626',   // red
+  unit3: '#059669',   // green
+  unit4: '#7C3AED',   // violet
+  unit5: '#EA580C',   // orange
+  unit6: '#0891B2',   // cyan
+  unit7: '#D97706',   // amber
+  unit8: '#DB2777',   // pink
+  unit9: '#1F2937',   // slate
 
-  // ── ILR Level colors ─────────────────────────────────────────
-  ilr0: '#AAAAAA',
-  ilr1: '#1C4BCC',
-  ilr2: '#3DB462',
-  ilr3: '#FF9600',
-  ilr4: '#9B59B6',
-  ilr5: '#F0B429',
+  // ── ILR Level colors ─────────────────────────────────────────────
+  ilr0: '#9CA3AF',
+  ilr1: '#2563EB',
+  ilr2: '#059669',
+  ilr3: '#EA580C',
+  ilr4: '#7C3AED',
+  ilr5: '#D97706',
 
-  // ── Misc aliases (for backwards compat) ─────────────────────
-  navy: '#1A3A5C',
-  navyLight: '#EBF0FF',
-  accent: '#F0B429',
-  accentDark: '#C88F1A',
-  accentLight: '#FFF9E6',
-  warning: '#FF9600',
-  warningLight: '#FFF3E0',
-  textDark: '#1A1A1A',
-  backgroundLight: '#F7F8FA',
-  backgroundCard2: '#F0F2F5',
+  // ── Legacy aliases (keep existing code working) ──────────────────
+  navy: '#1E3A5F',
+  navyLight: '#EFF6FF',
+  accent: '#F59E0B',
+  accentDark: '#B45309',
+  accentLight: '#FFFBEB',
+  warning: '#EA580C',
+  warningLight: '#FFF7ED',
+  textDark: '#111827',
+  backgroundLight: '#F9FAFB',
+  backgroundCard2: '#F3F4F6',
   overlay: 'rgba(0,0,0,0.5)',
-  drillDialogue: '#FF9600',
-  drillVocab: '#1C4BCC',
-  drillPattern: '#9B59B6',
-  drillListening: '#1ABC9C',
-  drillPronunciation: '#FF4B4B',
-  info: '#1C4BCC',
-  shadow: '#00000012',
+  drillDialogue: '#EA580C',
+  drillVocab: '#2563EB',
+  drillPattern: '#7C3AED',
+  drillListening: '#0891B2',
+  drillPronunciation: '#DC2626',
+  info: '#2563EB',
+  shadow: '#00000010',
 };
 
 export const Shadows = {
@@ -98,21 +98,21 @@ export const Shadows = {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowRadius: 4,
     elevation: 2,
   },
   button: {
-    shadowColor: '#1C4BCC',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
   tile: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 3,
   },
 };

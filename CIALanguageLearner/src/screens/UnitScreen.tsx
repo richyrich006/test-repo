@@ -2,9 +2,8 @@ import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../theme/colors';
+import { Colors, Shadows } from '../theme/colors';
 import { ILRBadge } from '../components/ILRBadge';
 import { ProgressBar } from '../components/ProgressBar';
 import { UserProgress } from '../types';
@@ -23,182 +22,226 @@ export function UnitScreen({ unitId, progress, onPressLesson, onBack }: Props) {
 
   if (!unit) return null;
 
+  const completedCount = lessons.filter(l => progress.completedLessons.includes(l.id)).length;
+  const unitProgress = lessons.length > 0 ? completedCount / lessons.length : 0;
+
   return (
-    <LinearGradient colors={[Colors.primaryDark, Colors.background]} style={styles.container}>
-      <SafeAreaView style={styles.safe}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{unit.title}</Text>
+    <SafeAreaView style={styles.safe}>
+      {/* ── Colored header band ── */}
+      <View style={[styles.header, { backgroundColor: unit.color }]}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{unit.title}</Text>
+          <Text style={styles.headerSub}>{unit.subtitle}</Text>
+        </View>
+        <ILRBadge level={unit.ilrLevel} size="small" />
+      </View>
+
+      {/* ── Progress bar below header ── */}
+      <View style={styles.progressStrip}>
+        <ProgressBar progress={unitProgress} color={unit.color} height={6} />
+        <View style={styles.progressRow}>
+          <Text style={styles.progressText}>
+            {completedCount} / {lessons.length} lessons complete
+          </Text>
+          <Text style={[styles.progressPct, { color: unit.color }]}>
+            {Math.round(unitProgress * 100)}%
+          </Text>
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {/* ── Unit banner ── */}
+        <View style={[styles.banner, { borderLeftColor: unit.color }]}>
+          <Text style={styles.bannerIcon}>{unit.icon}</Text>
+          <View style={styles.bannerText}>
+            <Text style={styles.bannerTheme}>{unit.theme}</Text>
+            <Text style={styles.bannerIlr}>
+              Target: ILR Level {unit.ilrLevel} proficiency
+            </Text>
           </View>
-          <ILRBadge level={unit.ilrLevel} size="small" />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Unit Banner */}
-          <View style={[styles.banner, { backgroundColor: unit.color + '20', borderColor: unit.color + '40' }]}>
-            <Text style={styles.bannerIcon}>{unit.icon}</Text>
-            <View style={styles.bannerText}>
-              <Text style={styles.bannerSubtitle}>{unit.subtitle}</Text>
-              <Text style={styles.bannerTheme}>{unit.theme}</Text>
-            </View>
-          </View>
+        {/* ── Lessons ── */}
+        <Text style={styles.sectionTitle}>Lessons</Text>
+        {lessons.map((lesson, index) => {
+          const isCompleted = progress.completedLessons.includes(lesson.id);
+          const isPreviousCompleted = index === 0 ||
+            progress.completedLessons.includes(lessons[index - 1]?.id);
+          const isAvailable = isPreviousCompleted;
 
-          {/* Lessons */}
-          <View style={styles.lessonsSection}>
-            <Text style={styles.sectionTitle}>Lessons</Text>
-            {lessons.map((lesson, index) => {
-              const isCompleted = progress.completedLessons.includes(lesson.id);
-              const isPreviousCompleted = index === 0 || progress.completedLessons.includes(lessons[index - 1]?.id);
-              const isAvailable = isPreviousCompleted;
+          return (
+            <TouchableOpacity
+              key={lesson.id}
+              style={[
+                styles.lessonCard,
+                isCompleted && styles.lessonCompleted,
+                !isAvailable && styles.lessonLocked,
+              ]}
+              onPress={() => isAvailable && onPressLesson(lesson.id)}
+              activeOpacity={isAvailable ? 0.82 : 1}
+            >
+              {/* Status circle */}
+              <View style={[
+                styles.statusCircle,
+                isCompleted && { backgroundColor: Colors.success + '20', borderColor: Colors.success },
+                !isAvailable && { backgroundColor: Colors.backgroundMuted, borderColor: Colors.border },
+                isAvailable && !isCompleted && { backgroundColor: unit.color + '15', borderColor: unit.color },
+              ]}>
+                {isCompleted ? (
+                  <Ionicons name="checkmark" size={18} color={Colors.success} />
+                ) : !isAvailable ? (
+                  <Ionicons name="lock-closed" size={14} color={Colors.textMuted} />
+                ) : (
+                  <Text style={[styles.statusNum, { color: unit.color }]}>{index + 1}</Text>
+                )}
+              </View>
 
-              return (
-                <TouchableOpacity
-                  key={lesson.id}
-                  style={[
-                    styles.lessonCard,
-                    isCompleted && styles.lessonCompleted,
-                    !isAvailable && styles.lessonLocked,
-                  ]}
-                  onPress={() => isAvailable && onPressLesson(lesson.id)}
-                  activeOpacity={isAvailable ? 0.8 : 1}
-                >
-                  <View style={[
-                    styles.lessonNumber,
-                    isCompleted && styles.lessonNumberCompleted,
-                    !isAvailable && styles.lessonNumberLocked,
+              {/* Lesson info */}
+              <View style={styles.lessonContent}>
+                <View style={styles.lessonTitleRow}>
+                  <Text style={[
+                    styles.lessonTitle,
+                    !isAvailable && styles.textMuted,
+                    isCompleted && styles.textSuccess,
                   ]}>
-                    {isCompleted ? (
-                      <Ionicons name="checkmark" size={16} color={Colors.success} />
-                    ) : !isAvailable ? (
-                      <Ionicons name="lock-closed" size={14} color={Colors.textMuted} />
-                    ) : (
-                      <Text style={styles.lessonNumberText}>{index + 1}</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.lessonContent}>
-                    <View style={styles.lessonTitleRow}>
-                      <Text style={[styles.lessonTitle, !isAvailable && styles.textMuted]}>
-                        {lesson.title}
-                      </Text>
-                      <ILRBadge level={lesson.ilrLevel} size="small" />
-                    </View>
-                    <Text style={[styles.lessonObjective, !isAvailable && styles.textMuted]}>
-                      {lesson.objective}
-                    </Text>
-                    <View style={styles.lessonMeta}>
-                      <View style={styles.metaItem}>
-                        <Ionicons name="time-outline" size={12} color={Colors.textMuted} />
-                        <Text style={styles.metaText}>{lesson.estimatedMinutes} min</Text>
-                      </View>
-                      <View style={styles.metaItem}>
-                        <Ionicons name="library-outline" size={12} color={Colors.textMuted} />
-                        <Text style={styles.metaText}>{lesson.vocabulary.length} words</Text>
-                      </View>
-                      {lesson.drills.length > 0 && (
-                        <View style={styles.metaItem}>
-                          <Ionicons name="repeat-outline" size={12} color={Colors.textMuted} />
-                          <Text style={styles.metaText}>{lesson.drills.length} drills</Text>
-                        </View>
-                      )}
-                      {lesson.dialogues.length > 0 && (
-                        <View style={styles.metaItem}>
-                          <Ionicons name="chatbubbles-outline" size={12} color={Colors.textMuted} />
-                          <Text style={styles.metaText}>{lesson.dialogues.length} dialogues</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-
+                    {lesson.title}
+                  </Text>
                   {isAvailable && !isCompleted && (
-                    <View style={styles.xpBadge}>
-                      <Text style={styles.xpText}>+{lesson.completionXP}</Text>
-                      <Text style={styles.xpLabel}>XP</Text>
+                    <View style={[styles.xpBadge, { backgroundColor: unit.color + '15', borderColor: unit.color + '50' }]}>
+                      <Text style={[styles.xpText, { color: unit.color }]}>+{lesson.completionXP} XP</Text>
                     </View>
                   )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                </View>
+                <Text style={[styles.lessonObjective, !isAvailable && styles.textMuted]}>
+                  {lesson.objective}
+                </Text>
+                <View style={styles.metaRow}>
+                  <MetaItem icon="time-outline" text={`${lesson.estimatedMinutes} min`} />
+                  <MetaItem icon="library-outline" text={`${lesson.vocabulary.length} words`} />
+                  {lesson.drills.length > 0 && (
+                    <MetaItem icon="repeat-outline" text={`${lesson.drills.length} drills`} />
+                  )}
+                  {lesson.dialogues.length > 0 && (
+                    <MetaItem icon="chatbubbles-outline" text={`${lesson.dialogues.length} dialogues`} />
+                  )}
+                </View>
+              </View>
 
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+              {isAvailable && !isCompleted && (
+                <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function MetaItem({ icon, text }: { icon: any; text: string }) {
+  return (
+    <View style={styles.metaItem}>
+      <Ionicons name={icon} size={12} color={Colors.textMuted} />
+      <Text style={styles.metaText}>{text}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safe: { flex: 1 },
+  safe: { flex: 1, backgroundColor: Colors.backgroundAlt },
+
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12,
   },
   backBtn: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: Colors.backgroundCard,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center', alignItems: 'center',
   },
   headerCenter: { flex: 1 },
-  headerTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 17 },
+  headerTitle: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  headerSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
+
+  progressStrip: {
+    backgroundColor: Colors.backgroundCard,
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    gap: 6,
+  },
+  progressRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  progressText: { color: Colors.textMuted, fontSize: 12 },
+  progressPct: { fontWeight: '700', fontSize: 12 },
+
+  scroll: { paddingHorizontal: 16, paddingTop: 12, gap: 0 },
 
   banner: {
-    margin: 16, borderRadius: 14, padding: 18,
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderWidth: 1,
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 14, padding: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderLeftWidth: 4, marginBottom: 16,
+    ...Shadows.card,
   },
   bannerIcon: { fontSize: 36 },
   bannerText: { flex: 1 },
-  bannerSubtitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 15, marginBottom: 4 },
-  bannerTheme: { color: Colors.textSecondary, fontSize: 13 },
+  bannerTheme: { color: Colors.textPrimary, fontWeight: '700', fontSize: 14 },
+  bannerIlr: { color: Colors.textMuted, fontSize: 12, marginTop: 3 },
 
-  lessonsSection: { paddingHorizontal: 16 },
-  sectionTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 16, marginBottom: 12 },
+  sectionTitle: {
+    color: Colors.textPrimary, fontWeight: '800', fontSize: 16,
+    marginBottom: 10,
+  },
 
   lessonCard: {
     flexDirection: 'row',
     backgroundColor: Colors.backgroundCard,
-    borderRadius: 14, padding: 14, marginBottom: 10,
+    borderRadius: 14, padding: 14, marginBottom: 8,
     alignItems: 'center', gap: 12,
-    borderWidth: 1, borderColor: 'transparent',
+    borderWidth: 1.5, borderColor: Colors.border,
+    ...Shadows.card,
   },
   lessonCompleted: {
-    borderColor: Colors.success + '30',
-    backgroundColor: Colors.success + '08',
+    borderColor: Colors.success + '40',
+    backgroundColor: Colors.successBg,
   },
   lessonLocked: { opacity: 0.5 },
-  lessonNumber: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.backgroundLight,
+
+  statusCircle: {
+    width: 38, height: 38, borderRadius: 19,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: Colors.border,
+    borderWidth: 2, flexShrink: 0,
   },
-  lessonNumberCompleted: { borderColor: Colors.success + '60' },
-  lessonNumberLocked: { borderColor: Colors.textMuted + '40' },
-  lessonNumberText: { color: Colors.textPrimary, fontWeight: '700', fontSize: 14 },
+  statusNum: { fontWeight: '800', fontSize: 15 },
+
   lessonContent: { flex: 1 },
   lessonTitleRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 4,
+    alignItems: 'center', marginBottom: 4, gap: 8,
   },
-  lessonTitle: { color: Colors.textPrimary, fontWeight: '700', fontSize: 14, flex: 1, marginRight: 8 },
-  lessonObjective: { color: Colors.textSecondary, fontSize: 12, marginBottom: 8, lineHeight: 17 },
-  lessonMeta: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  lessonTitle: {
+    color: Colors.textPrimary, fontWeight: '700', fontSize: 14,
+    flex: 1,
+  },
+  lessonObjective: {
+    color: Colors.textSecondary, fontSize: 12, marginBottom: 8, lineHeight: 17,
+  },
+  metaRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   metaText: { color: Colors.textMuted, fontSize: 11 },
+
   xpBadge: {
-    backgroundColor: Colors.accent + '20',
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-    alignItems: 'center', borderWidth: 1, borderColor: Colors.accent + '60',
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1,
   },
-  xpText: { color: Colors.accent, fontWeight: '800', fontSize: 13 },
-  xpLabel: { color: Colors.accent, fontSize: 9, fontWeight: '600' },
+  xpText: { fontWeight: '800', fontSize: 11 },
+
   textMuted: { color: Colors.textMuted },
+  textSuccess: { color: Colors.successDark },
 });
