@@ -182,7 +182,7 @@ def redeem_all() -> int:
 
         # Pass both indexSets [1, 2] — CTF pays only for positions we actually hold.
         # indexSet 1 = outcome 0 (YES), indexSet 2 = outcome 1 (NO).
-        data = ctf.encodeABI(
+        data = ctf.encode_abi(
             fn_name="redeemPositions",
             args=[USDC_ADDRESS, BYTES32_ZERO, cid_bytes, [1, 2]],
         )

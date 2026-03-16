@@ -33,7 +33,7 @@ from executor import copy_trade
 from redeemer import redeem_all
 
 # ── Background redemption thread ───────────────────────────────────────────────
-_REDEEM_INTERVAL = 3600  # check for redeemable positions every hour
+_REDEEM_INTERVAL = 600  # check for redeemable positions every 10 minutes
 
 def _redemption_loop(logger: logging.Logger) -> None:
     """Periodically redeem resolved winning positions back to USDC."""
