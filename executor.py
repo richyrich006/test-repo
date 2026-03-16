@@ -192,7 +192,16 @@ def copy_trade(trade: dict) -> bool:
         return True
 
     except PolyApiException as exc:
-        logger.error("Polymarket API error placing order: %s", exc)
+        msg = str(exc).lower()
+        if "balance" in msg or "allowance" in msg:
+            logger.error(
+                "Order rejected — insufficient balance or allowance. "
+                "Deposit USDC to your Polymarket proxy wallet and ensure the "
+                "CLOB allowance is approved.  Error: %s",
+                exc,
+            )
+        else:
+            logger.error("Polymarket API error placing order: %s", exc)
         return False
     except Exception as exc:
         logger.error("Unexpected error placing order: %s", exc)
