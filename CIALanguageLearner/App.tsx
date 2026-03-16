@@ -16,19 +16,21 @@ import {
   calculateILRLevel,
 } from './src/store/progressStore';
 import { getLessonById } from './src/data/curriculum';
+import { QuizResult } from './src/utils/quizEngine';
 
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { UnitScreen } from './src/screens/UnitScreen';
 import { LessonScreen } from './src/screens/LessonScreen';
+import { QuizScreen } from './src/screens/QuizScreen';
 import { ReviewScreen } from './src/screens/ReviewScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 
-// ─── Navigation State ─────────────────────────────────────────
 type Screen =
   | { name: 'home' }
   | { name: 'unit'; unitId: string }
   | { name: 'lesson'; lessonId: string }
+  | { name: 'quiz'; lessonId: string; cardIds: string[] }
   | { name: 'review' }
   | { name: 'profile' };
 
@@ -36,52 +38,41 @@ export default function App() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
 
-  // Load saved progress on startup
-  useEffect(() => {
-    loadProgress().then(setProgress);
-  }, []);
-
-  // Persist progress whenever it changes
-  useEffect(() => {
-    if (progress) {
-      saveProgress(progress);
-    }
-  }, [progress]);
+  useEffect(() => { loadProgress().then(setProgress); }, []);
+  useEffect(() => { if (progress) saveProgress(progress); }, [progress]);
 
   const updateProgress = useCallback((updater: (p: UserProgress) => UserProgress) => {
     setProgress(prev => {
       if (!prev) return prev;
       const updated = updater(prev);
-      // Recalculate ILR level whenever progress changes
-      const newILR = calculateILRLevel(updated.completedLessons);
-      return { ...updated, currentILRLevel: newILR };
+      return { ...updated, currentILRLevel: calculateILRLevel(updated.completedLessons) };
     });
   }, []);
 
-  // Show loading state
   if (!progress) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color={Colors.accent} />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
-  // Show onboarding if not complete
   if (!progress.onboardingComplete) {
     return (
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaProvider>
-          <StatusBar style="light" />
-          <OnboardingScreen
-            onComplete={() => updateProgress(completeOnboarding)}
-          />
+          <StatusBar style="dark" />
+          <OnboardingScreen onComplete={() => updateProgress(completeOnboarding)} />
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
   }
 
-  // Main app navigation
+  const goBackFromLesson = (lessonId: string) => {
+    const l = getLessonById(lessonId);
+    setScreen(l ? { name: 'unit', unitId: l.unitId } : { name: 'home' });
+  };
+
   const renderScreen = () => {
     switch (screen.name) {
       case 'home':
@@ -110,25 +101,36 @@ export default function App() {
             lessonId={screen.lessonId}
             progress={progress}
             onComplete={(lessonId: string, xpEarned: number, minutesSpent: number) => {
-              const lesson = getLessonById(lessonId);
+              const completedLesson = getLessonById(lessonId);
               updateProgress(prev => {
                 let updated = completeLesson(prev, lessonId, xpEarned, minutesSpent);
-                if (lesson) {
-                  updated = addVocabCards(updated, lesson.vocabulary);
-                }
+                if (completedLesson) updated = addVocabCards(updated, completedLesson.vocabulary);
                 return updated;
               });
-              if (screen.name === 'lesson') {
-                const l = getLessonById(screen.lessonId);
-                setScreen(l ? { name: 'unit', unitId: l.unitId } : { name: 'home' });
+              // Go to quiz after lesson if there's vocabulary
+              if (completedLesson && completedLesson.vocabulary.length >= 2) {
+                setScreen({ name: 'quiz', lessonId, cardIds: completedLesson.vocabulary });
+              } else {
+                goBackFromLesson(lessonId);
               }
             }}
-            onBack={() => {
-              if (screen.name === 'lesson') {
-                const l = getLessonById(screen.lessonId);
-                setScreen(l ? { name: 'unit', unitId: l.unitId } : { name: 'home' });
-              }
+            onBack={() => goBackFromLesson(screen.lessonId)}
+          />
+        );
+
+      case 'quiz':
+        return (
+          <QuizScreen
+            cardIds={screen.cardIds}
+            lessonTitle={getLessonById(screen.lessonId)?.title ?? 'Quiz'}
+            onComplete={(results: QuizResult[], xp: number) => {
+              updateProgress(prev => ({
+                ...prev,
+                totalXP: prev.totalXP + xp,
+              }));
+              goBackFromLesson(screen.lessonId);
             }}
+            onBack={() => goBackFromLesson(screen.lessonId)}
           />
         );
 
@@ -136,9 +138,9 @@ export default function App() {
         return (
           <ReviewScreen
             progress={progress}
-            onRate={(cardId: string, rating: SRSRating) => {
-              updateProgress(prev => reviewVocabCard(prev, cardId, rating));
-            }}
+            onRate={(cardId: string, rating: SRSRating) =>
+              updateProgress(prev => reviewVocabCard(prev, cardId, rating))
+            }
             onFinish={() => setScreen({ name: 'home' })}
             onBack={() => setScreen({ name: 'home' })}
           />
@@ -150,10 +152,7 @@ export default function App() {
             progress={progress}
             onBack={() => setScreen({ name: 'home' })}
             onReset={() => {
-              loadProgress().then(p => {
-                setProgress(p);
-                setScreen({ name: 'home' });
-              });
+              loadProgress().then(p => { setProgress(p); setScreen({ name: 'home' }); });
             }}
           />
         );
@@ -166,7 +165,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         {renderScreen()}
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -176,9 +175,7 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   loading: {
-    flex: 1,
-    backgroundColor: Colors.primaryDark,
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1, backgroundColor: Colors.background,
+    justifyContent: 'center', alignItems: 'center',
   },
 });
