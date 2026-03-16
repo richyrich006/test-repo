@@ -5,7 +5,6 @@ import {
 import { Colors, Shadows } from '../theme/colors';
 import { ILRBadge } from '../components/ILRBadge';
 import { ProgressBar } from '../components/ProgressBar';
-import { AgentMayaInline, MayaMood } from '../components/AgentMaya';
 import { UserProgress } from '../types';
 import { getLevel, getDailyProgress } from '../store/progressStore';
 import { getDeckStats, getDueCards } from '../store/srsEngine';
@@ -18,6 +17,12 @@ interface Props {
   onPressProfile: () => void;
 }
 
+// Map unit index to a tile color
+const UNIT_TILE_COLORS = [
+  Colors.unit1, Colors.unit2, Colors.unit3, Colors.unit4,
+  Colors.unit5, Colors.unit6, Colors.unit7, Colors.unit8, Colors.unit9,
+];
+
 export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfile }: Props) {
   const levelInfo = getLevel(progress.totalXP);
   const dailyProgress = getDailyProgress(progress);
@@ -25,48 +30,36 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
   const dueCards = getDueCards(progress.srsCards);
   const nextLesson = spanishLessons.find(l => !progress.completedLessons.includes(l.id));
 
-  // Pick Maya's mood & greeting based on current progress
-  const mayaMood: MayaMood =
-    dailyProgress >= 1 ? 'celebrating' :
-    dueCards.length > 0 ? 'encouraging' :
-    progress.streak >= 3 ? 'happy' : 'neutral';
-  const mayaGreeting =
-    dailyProgress >= 1 ? `¡Misión cumplida! Daily goal done — ${progress.streak} day streak!` :
-    dueCards.length > 0 ? `You have ${dueCards.length} cards due for review. Keep it sharp, Agent!` :
-    nextLesson ? `Ready for your next mission? "${nextLesson.title}" is waiting!` :
-    '¡Hola, Agent! Let\'s train your Spanish today.';
-
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
+      {/* ── Yellow brand header ── */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.flagEmoji}>🇪🇸</Text>
-          <View>
-            <Text style={styles.headerTitle}>Spanish</Text>
-            <Text style={styles.headerSub}>CIA/FSI Method</Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.flagEmoji}>🇪🇸</Text>
+            <View>
+              <Text style={styles.headerTitle}>Spanish</Text>
+              <Text style={styles.headerSub}>Latin America • FSI Method</Text>
+            </View>
           </View>
-        </View>
-        <TouchableOpacity onPress={onPressProfile} style={styles.avatarBtn}>
-          <Text style={styles.avatarText}>{levelInfo.title.charAt(0)}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats row */}
-      <View style={styles.statsRow}>
-        <StatChip icon="🔥" value={`${progress.streak}`} label="Streak" color={Colors.streak} />
-        <StatChip icon="⭐" value={`${progress.totalXP}`} label="XP" color={Colors.gold} />
-        <StatChip icon="💎" value={levelInfo.title} label="Rank" color={Colors.primary} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
-        {/* Agent Maya greeting */}
-        <View style={styles.mayaCard}>
-          <AgentMayaInline mood={mayaMood} message={mayaGreeting} animate />
+          <TouchableOpacity onPress={onPressProfile} style={styles.avatarBtn}>
+            <Text style={styles.avatarText}>{levelInfo.title.charAt(0)}</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Daily goal */}
+        {/* Stat row inside yellow header */}
+        <View style={styles.statsRow}>
+          <StatChip icon="🔥" value={`${progress.streak}`} label="Streak" />
+          <StatChip icon="⭐" value={`${progress.totalXP}`} label="XP" />
+          <StatChip icon="💎" value={levelInfo.title} label="Rank" />
+        </View>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
+        {/* ── Daily Goal ── */}
         <View style={styles.card}>
           <View style={styles.cardRow}>
             <Text style={styles.cardTitle}>Daily Goal</Text>
@@ -74,21 +67,24 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
           </View>
           <ProgressBar
             progress={dailyProgress}
-            color={dailyProgress >= 1 ? Colors.success : Colors.primary}
-            height={12}
+            color={dailyProgress >= 1 ? Colors.success : Colors.brand}
+            height={10}
           />
-          {dailyProgress >= 1 && (
-            <Text style={styles.goalDone}>✅ Goal complete for today!</Text>
-          )}
+          {dailyProgress >= 1
+            ? <Text style={styles.goalDone}>✅ Goal complete for today!</Text>
+            : <Text style={styles.goalHint}>Keep going — you're doing great!</Text>
+          }
         </View>
 
-        {/* Review due */}
+        {/* ── Review due ── */}
         {dueCards.length > 0 && (
           <TouchableOpacity style={styles.reviewCard} onPress={onPressReview} activeOpacity={0.85}>
-            <Text style={styles.reviewEmoji}>🧠</Text>
+            <View style={styles.reviewIconBox}>
+              <Text style={styles.reviewEmoji}>🧠</Text>
+            </View>
             <View style={styles.reviewContent}>
-              <Text style={styles.reviewTitle}>Review Due</Text>
-              <Text style={styles.reviewSub}>{dueCards.length} vocab cards ready</Text>
+              <Text style={styles.reviewTitle}>Words to Review</Text>
+              <Text style={styles.reviewSub}>{dueCards.length} vocabulary cards ready</Text>
             </View>
             <View style={styles.reviewBadge}>
               <Text style={styles.reviewBadgeText}>{dueCards.length}</Text>
@@ -96,7 +92,7 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
           </TouchableOpacity>
         )}
 
-        {/* Continue button */}
+        {/* ── Continue button ── */}
         {nextLesson && (
           <TouchableOpacity
             style={styles.continueCard}
@@ -104,60 +100,65 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
             activeOpacity={0.85}
           >
             <View style={styles.continueLeft}>
-              <Text style={styles.continueLabel}>CONTINUE</Text>
+              <Text style={styles.continueLabel}>CONTINUE WHERE YOU LEFT OFF</Text>
               <Text style={styles.continueTitle}>{nextLesson.title}</Text>
               <Text style={styles.continueSub}>{nextLesson.subtitle}</Text>
             </View>
-            <Text style={styles.continueArrow}>→</Text>
+            <View style={styles.continueArrowBox}>
+              <Text style={styles.continueArrow}>›</Text>
+            </View>
           </TouchableOpacity>
         )}
 
-        {/* Units */}
-        <Text style={styles.sectionTitle}>Training Units</Text>
-        {spanishUnits.map(unit => {
-          const unitLessons = spanishLessons.filter(l => l.unitId === unit.id);
-          const completedCount = unitLessons.filter(l =>
-            progress.completedLessons.includes(l.id)
-          ).length;
-          const unitProgress = unitLessons.length > 0 ? completedCount / unitLessons.length : 0;
-          const isLocked = unit.ilrLevel > progress.currentILRLevel + 1;
+        {/* ── Units section title ── */}
+        <Text style={styles.sectionTitle}>All Courses</Text>
 
-          return (
-            <TouchableOpacity
-              key={unit.id}
-              style={[styles.unitCard, isLocked && styles.unitCardLocked]}
-              onPress={() => !isLocked && onPressUnit(unit.id)}
-              activeOpacity={isLocked ? 1 : 0.85}
-            >
-              <View style={[styles.unitIconBox, { backgroundColor: unit.color + '20' }]}>
-                <Text style={styles.unitIcon}>{unit.icon}</Text>
-              </View>
-              <View style={styles.unitContent}>
-                <View style={styles.unitTitleRow}>
-                  <Text style={[styles.unitTitle, isLocked && { color: Colors.textMuted }]}>
-                    {unit.title}
-                  </Text>
-                  <ILRBadge level={unit.ilrLevel} size="small" />
-                </View>
-                <Text style={[styles.unitSub, isLocked && { color: Colors.textMuted }]}>
-                  {unit.subtitle}
-                </Text>
-                <ProgressBar
-                  progress={unitProgress}
-                  color={isLocked ? Colors.border : unit.color}
-                  height={5}
-                />
-                <Text style={styles.unitMeta}>
-                  {isLocked ? '🔒 Complete previous unit' : `${completedCount}/${unitLessons.length} lessons`}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        {/* ── 2-column Unit Grid ── */}
+        <View style={styles.unitGrid}>
+          {spanishUnits.map((unit, idx) => {
+            const tileColor = UNIT_TILE_COLORS[idx % UNIT_TILE_COLORS.length];
+            const unitLessons = spanishLessons.filter(l => l.unitId === unit.id);
+            const completedCount = unitLessons.filter(l =>
+              progress.completedLessons.includes(l.id)
+            ).length;
+            const unitProgress = unitLessons.length > 0 ? completedCount / unitLessons.length : 0;
+            const isLocked = unit.ilrLevel > progress.currentILRLevel + 1;
 
-        {/* Vocab stats */}
+            return (
+              <TouchableOpacity
+                key={unit.id}
+                style={[styles.unitTile, { backgroundColor: isLocked ? '#C8CDD6' : tileColor }]}
+                onPress={() => !isLocked && onPressUnit(unit.id)}
+                activeOpacity={isLocked ? 1 : 0.82}
+              >
+                {isLocked && (
+                  <View style={styles.lockOverlay}>
+                    <Text style={styles.lockIcon}>🔒</Text>
+                  </View>
+                )}
+                <Text style={styles.tileUnitLabel}>
+                  {unit.title.split(':')[0].trim()}
+                </Text>
+                <Text style={styles.tileIcon}>{unit.icon}</Text>
+                <Text style={styles.tileTitle} numberOfLines={2}>
+                  {unit.title.includes(':') ? unit.title.split(':')[1].trim() : unit.title}
+                </Text>
+                <Text style={styles.tileMeta}>
+                  {isLocked ? 'Locked' : `${completedCount}/${unitLessons.length} lessons`}
+                </Text>
+                {!isLocked && unitProgress > 0 && (
+                  <View style={styles.tileProgressTrack}>
+                    <View style={[styles.tileProgressFill, { width: `${unitProgress * 100}%` as any }]} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* ── Vocabulary Stats ── */}
         {deckStats.total > 0 && (
-          <View style={styles.vocabStats}>
+          <View style={styles.vocabSection}>
             <Text style={styles.sectionTitle}>Vocabulary Progress</Text>
             <View style={styles.vocabGrid}>
               <VocabStat label="Total" value={deckStats.total} color={Colors.primary} />
@@ -168,19 +169,19 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
           </View>
         )}
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function StatChip({ icon, value, label, color }: {
-  icon: string; value: string; label: string; color: string;
-}) {
+// ── Sub-components ─────────────────────────────────────────────────
+
+function StatChip({ icon, value, label }: { icon: string; value: string; label: string }) {
   return (
-    <View style={[styles.statChip, { borderColor: color + '40' }]}>
+    <View style={styles.statChip}>
       <Text style={styles.statIcon}>{icon}</Text>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -188,74 +189,88 @@ function StatChip({ icon, value, label, color }: {
 
 function VocabStat({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
-    <View style={[styles.vocabStatBox, { borderColor: color + '30' }]}>
+    <View style={styles.vocabStatBox}>
       <Text style={[styles.vocabStatValue, { color }]}>{value}</Text>
       <Text style={styles.vocabStatLabel}>{label}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+// ── Styles ──────────────────────────────────────────────────────────
 
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.backgroundAlt },
+
+  // ── Yellow Header ──
   header: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', paddingHorizontal: 20,
-    paddingTop: 16, paddingBottom: 8,
+    backgroundColor: Colors.brand,
+    paddingTop: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  headerTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  flagEmoji: { fontSize: 36 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  headerSub: { fontSize: 12, color: Colors.textMuted, marginTop: 1 },
+  flagEmoji: { fontSize: 34 },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textBrand },
+  headerSub: { fontSize: 12, color: Colors.textBrand + 'BB', marginTop: 1 },
   avatarBtn: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: Colors.primary,
+    backgroundColor: 'rgba(0,0,0,0.15)',
     justifyContent: 'center', alignItems: 'center',
-    ...Shadows.button,
   },
-  avatarText: { color: Colors.textWhite, fontWeight: '800', fontSize: 18 },
+  avatarText: { color: Colors.textBrand, fontWeight: '800', fontSize: 18 },
 
-  statsRow: {
-    flexDirection: 'row', paddingHorizontal: 20,
-    paddingBottom: 12, gap: 8,
-  },
+  statsRow: { flexDirection: 'row', gap: 8 },
   statChip: {
-    flex: 1, borderRadius: 12, borderWidth: 1.5,
-    paddingVertical: 8, alignItems: 'center', gap: 2,
-    backgroundColor: Colors.backgroundCard, ...Shadows.card,
+    flex: 1, backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 12, paddingVertical: 8,
+    alignItems: 'center', gap: 2,
   },
-  statIcon: { fontSize: 16 },
-  statValue: { fontWeight: '800', fontSize: 14 },
-  statLabel: { color: Colors.textMuted, fontSize: 10 },
+  statIcon: { fontSize: 15 },
+  statValue: { fontWeight: '800', fontSize: 14, color: Colors.textBrand },
+  statLabel: { color: Colors.textBrand + 'CC', fontSize: 10 },
 
-  scroll: { paddingHorizontal: 20, gap: 12 },
+  // ── Scroll Content ──
+  scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
 
+  // ── Daily Goal Card ──
   card: {
-    backgroundColor: Colors.backgroundCard, borderRadius: 16,
-    padding: 16, gap: 10, ...Shadows.card,
-    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 16, padding: 16, gap: 10,
+    ...Shadows.card,
   },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontWeight: '700', fontSize: 15, color: Colors.textPrimary },
   cardMeta: { color: Colors.textMuted, fontSize: 13 },
   goalDone: { color: Colors.success, fontSize: 13, fontWeight: '600' },
+  goalHint: { color: Colors.textMuted, fontSize: 12 },
 
+  // ── Review Card ──
   reviewCard: {
-    backgroundColor: Colors.navyLight, borderRadius: 16,
-    padding: 16, flexDirection: 'row', alignItems: 'center',
-    gap: 12, borderWidth: 1.5, borderColor: Colors.navy + '30',
-    ...Shadows.card,
+    backgroundColor: Colors.backgroundCard, borderRadius: 16,
+    padding: 14, flexDirection: 'row', alignItems: 'center',
+    gap: 12, ...Shadows.card,
+    borderLeftWidth: 4, borderLeftColor: Colors.primary,
   },
-  reviewEmoji: { fontSize: 32 },
+  reviewIconBox: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  reviewEmoji: { fontSize: 22 },
   reviewContent: { flex: 1 },
-  reviewTitle: { fontWeight: '700', fontSize: 15, color: Colors.navy },
+  reviewTitle: { fontWeight: '700', fontSize: 15, color: Colors.textPrimary },
   reviewSub: { color: Colors.textSecondary, fontSize: 13, marginTop: 2 },
   reviewBadge: {
-    backgroundColor: Colors.navy, borderRadius: 14,
-    width: 28, height: 28, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: Colors.primary, borderRadius: 14,
+    width: 30, height: 30, justifyContent: 'center', alignItems: 'center',
   },
   reviewBadgeText: { color: Colors.textWhite, fontWeight: '800', fontSize: 13 },
 
+  // ── Continue Card ──
   continueCard: {
     backgroundColor: Colors.primary, borderRadius: 16,
     padding: 18, flexDirection: 'row', alignItems: 'center',
@@ -263,47 +278,67 @@ const styles = StyleSheet.create({
   },
   continueLeft: { flex: 1 },
   continueLabel: {
-    color: Colors.textWhite + 'AA', fontSize: 10,
-    fontWeight: '700', letterSpacing: 1.5, marginBottom: 2,
+    color: 'rgba(255,255,255,0.75)', fontSize: 10,
+    fontWeight: '700', letterSpacing: 1.2, marginBottom: 4,
   },
   continueTitle: { color: Colors.textWhite, fontSize: 17, fontWeight: '800' },
-  continueSub: { color: Colors.textWhite + 'CC', fontSize: 12, marginTop: 3 },
-  continueArrow: { color: Colors.textWhite, fontSize: 28, fontWeight: '300' },
-
-  sectionTitle: {
-    fontSize: 17, fontWeight: '800', color: Colors.textPrimary, marginTop: 4,
-  },
-
-  unitCard: {
-    backgroundColor: Colors.backgroundCard, borderRadius: 16,
-    padding: 14, flexDirection: 'row', alignItems: 'center',
-    gap: 12, ...Shadows.card, borderWidth: 1, borderColor: Colors.border,
-  },
-  unitCardLocked: { opacity: 0.5 },
-  unitIconBox: {
-    width: 52, height: 52, borderRadius: 14,
+  continueSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 3 },
+  continueArrowBox: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center',
   },
-  unitIcon: { fontSize: 26 },
-  unitContent: { flex: 1, gap: 4 },
-  unitTitleRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  unitTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, flex: 1, marginRight: 6 },
-  unitSub: { fontSize: 12, color: Colors.textSecondary },
-  unitMeta: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  continueArrow: { color: Colors.textWhite, fontSize: 26, fontWeight: '300', marginTop: -2 },
 
-  mayaCard: {
-    backgroundColor: Colors.backgroundAlt, borderRadius: 16,
-    padding: 14, borderWidth: 1.5, borderColor: Colors.primary + '25',
+  // ── Section Title ──
+  sectionTitle: {
+    fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginTop: 4,
   },
 
-  vocabStats: { gap: 10 },
+  // ── 2-column Unit Grid ──
+  unitGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 12,
+  },
+  unitTile: {
+    width: '47.5%', borderRadius: 16, padding: 16,
+    minHeight: 160, justifyContent: 'space-between',
+    ...Shadows.tile, overflow: 'hidden',
+  },
+  lockOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    justifyContent: 'flex-end', alignItems: 'flex-end',
+    padding: 12,
+  },
+  lockIcon: { fontSize: 20 },
+  tileUnitLabel: {
+    fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+  tileIcon: { fontSize: 36, marginVertical: 4 },
+  tileTitle: {
+    fontSize: 14, fontWeight: '800', color: Colors.textWhite, lineHeight: 19,
+  },
+  tileMeta: {
+    fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 4,
+  },
+  tileProgressTrack: {
+    height: 4, backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 2, marginTop: 6, overflow: 'hidden',
+  },
+  tileProgressFill: {
+    height: '100%', backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 2,
+  },
+
+  // ── Vocab Stats ──
+  vocabSection: { gap: 10 },
   vocabGrid: { flexDirection: 'row', gap: 8 },
   vocabStatBox: {
-    flex: 1, borderRadius: 12, borderWidth: 1.5,
-    paddingVertical: 12, alignItems: 'center',
-    backgroundColor: Colors.backgroundCard, gap: 3, ...Shadows.card,
+    flex: 1, borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center',
+    backgroundColor: Colors.backgroundCard, gap: 3,
+    ...Shadows.card,
   },
   vocabStatValue: { fontSize: 20, fontWeight: '800' },
   vocabStatLabel: { fontSize: 11, color: Colors.textMuted },

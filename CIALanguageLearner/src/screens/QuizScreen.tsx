@@ -508,7 +508,9 @@ const styles = StyleSheet.create({
 
   topBar: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12, gap: 12,
+    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+    backgroundColor: Colors.backgroundCard,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   closeBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -522,18 +524,18 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%', borderRadius: 5,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.brand,
   },
-  heartsRow: { flexDirection: 'row', gap: 2 },
+  heartsRow: { flexDirection: 'row', gap: 3 },
   heartIcon: { fontSize: 18 },
   xpPill: {
-    backgroundColor: Colors.goldLight, borderRadius: 12,
+    backgroundColor: Colors.brandLight, borderRadius: 12,
     paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1, borderColor: Colors.gold + '60',
+    borderWidth: 1.5, borderColor: Colors.brand + '60',
   },
-  xpText: { color: Colors.gold, fontWeight: '700', fontSize: 12 },
+  xpText: { color: Colors.brandDark, fontWeight: '700', fontSize: 12 },
 
-  content: { padding: 20, paddingBottom: 120, gap: 16 },
+  content: { padding: 20, paddingBottom: 130, gap: 16 },
 
   typeLabel: {
     color: Colors.textMuted, fontSize: 12, fontWeight: '700',
@@ -541,12 +543,13 @@ const styles = StyleSheet.create({
   },
 
   promptCard: {
-    backgroundColor: Colors.backgroundAlt,
-    borderRadius: 20, padding: 28,
-    alignItems: 'center', gap: 8,
-    borderWidth: 2, borderColor: Colors.primary + '30',
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 20, padding: 32,
+    alignItems: 'center', gap: 10,
+    borderWidth: 2, borderColor: Colors.border,
+    ...Shadows.card,
   },
-  promptWord: { color: Colors.textPrimary, fontSize: 36, fontWeight: '800', textAlign: 'center' },
+  promptWord: { color: Colors.textPrimary, fontSize: 38, fontWeight: '800', textAlign: 'center' },
   promptPhonetic: { color: Colors.textMuted, fontSize: 16, fontStyle: 'italic', textAlign: 'center' },
   audioBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -560,101 +563,101 @@ const styles = StyleSheet.create({
 
   options: { gap: 10 },
   option: {
-    borderRadius: 14, borderWidth: 2, padding: 16,
+    borderRadius: 14, borderWidth: 2, padding: 18,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    ...Shadows.card,
+    backgroundColor: Colors.backgroundCard, ...Shadows.card,
   },
   optionText: { color: Colors.textPrimary, fontSize: 16, fontWeight: '600', flex: 1 },
-  optionIconCorrect: { fontSize: 20, color: Colors.success, fontWeight: '700' },
-  optionIconWrong:   { fontSize: 20, color: Colors.error,   fontWeight: '700' },
+  optionIconCorrect: { fontSize: 22, color: Colors.success, fontWeight: '700' },
+  optionIconWrong:   { fontSize: 22, color: Colors.error,   fontWeight: '700' },
 
   textInput: {
     borderWidth: 2, borderColor: Colors.border,
-    borderRadius: 14, padding: 16,
+    borderRadius: 14, padding: 18,
     fontSize: 18, color: Colors.textPrimary,
     backgroundColor: Colors.backgroundCard,
     ...Shadows.card,
   },
   textInputCorrect: { borderColor: Colors.success, backgroundColor: Colors.successBg },
   textInputWrong:   { borderColor: Colors.error,   backgroundColor: Colors.errorBg },
-  answerReveal: { borderRadius: 12, padding: 12, borderWidth: 1.5 },
+  answerReveal: { borderRadius: 14, padding: 14, borderWidth: 2 },
   answerRevealCorrect: { backgroundColor: Colors.successBg, borderColor: Colors.success },
   answerRevealWrong:   { backgroundColor: Colors.errorBg,   borderColor: Colors.error },
-  answerRevealText: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
+  answerRevealText: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   submitBtn: {
     backgroundColor: Colors.primary, borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center', ...Shadows.button,
+    paddingVertical: 17, alignItems: 'center', ...Shadows.button,
   },
   submitBtnDisabled: { backgroundColor: Colors.border },
   submitBtnText: { color: Colors.textWhite, fontWeight: '800', fontSize: 16 },
 
   flashCard: {
     borderRadius: 20, borderWidth: 2, borderColor: Colors.border,
-    minHeight: 200, justifyContent: 'center', ...Shadows.card,
+    minHeight: 220, justifyContent: 'center', ...Shadows.card,
     backgroundColor: Colors.backgroundCard,
   },
-  flashCardFlipped: { borderColor: Colors.primary, backgroundColor: Colors.backgroundAlt },
-  flashCardInner: { padding: 28, alignItems: 'center', gap: 10 },
-  flashCardWord: { color: Colors.textPrimary, fontSize: 38, fontWeight: '800' },
+  flashCardFlipped: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  flashCardInner: { padding: 32, alignItems: 'center', gap: 10 },
+  flashCardWord: { color: Colors.textPrimary, fontSize: 40, fontWeight: '800' },
   flashCardPhonetic: { color: Colors.textMuted, fontSize: 16, fontStyle: 'italic' },
   flashCardAnswer: { color: Colors.primary, fontSize: 32, fontWeight: '800' },
   flashCardExample: {
     color: Colors.textSecondary, fontSize: 13, fontStyle: 'italic',
     textAlign: 'center', lineHeight: 19,
   },
-  tapHint: { color: Colors.textMuted, fontSize: 12, marginTop: 8 },
+  tapHint: { color: Colors.textMuted, fontSize: 13, marginTop: 4 },
   flashRatingRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   flashBtnWrong: {
     flex: 1, borderRadius: 14, borderWidth: 2,
-    borderColor: Colors.error, padding: 16, alignItems: 'center',
+    borderColor: Colors.error, padding: 18, alignItems: 'center',
     backgroundColor: Colors.errorLight,
   },
   flashBtnCorrect: {
     flex: 1, borderRadius: 14, borderWidth: 2,
-    borderColor: Colors.success, padding: 16, alignItems: 'center',
+    borderColor: Colors.success, padding: 18, alignItems: 'center',
     backgroundColor: Colors.successLight,
   },
-  flashBtnIcon: { fontSize: 26 },
+  flashBtnIcon: { fontSize: 28 },
   flashBtnText: { fontWeight: '700', fontSize: 14, marginTop: 4, color: Colors.textPrimary },
 
   listeningPrompt: { alignItems: 'center', marginBottom: 8 },
   bigPlayBtn: {
-    backgroundColor: Colors.primaryLight, borderRadius: 60,
-    width: 120, height: 120, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 3, borderColor: Colors.primary + '40', ...Shadows.card,
+    backgroundColor: Colors.brand, borderRadius: 60,
+    width: 130, height: 130, justifyContent: 'center', alignItems: 'center',
+    ...Shadows.tile,
   },
-  bigPlayIcon: { fontSize: 40 },
-  bigPlayText: { color: Colors.primary, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  bigPlayIcon: { fontSize: 44 },
+  bigPlayText: { color: Colors.textBrand, fontSize: 12, fontWeight: '800', marginTop: 4 },
 
-  // Feedback bar — now tappable, stays until user taps
+  // Feedback bar
   feedbackBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 20, paddingBottom: 28,
+    padding: 20, paddingBottom: 30,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    borderTopWidth: 1.5,
+    borderTopWidth: 2,
   },
   feedbackCorrect: {
     backgroundColor: Colors.successLight,
-    borderTopColor: Colors.success + '60',
+    borderTopColor: Colors.success,
   },
   feedbackWrong: {
     backgroundColor: Colors.errorLight,
-    borderTopColor: Colors.error + '60',
+    borderTopColor: Colors.error,
   },
-  feedbackIcon: { fontSize: 28 },
+  feedbackIcon: { fontSize: 30 },
   feedbackTextBlock: { flex: 1 },
-  feedbackTitle: { fontSize: 17, fontWeight: '800' },
-  feedbackHint: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  feedbackTitle: { fontSize: 18, fontWeight: '800' },
+  feedbackHint: { fontSize: 14, color: Colors.textSecondary, marginTop: 3 },
   nextBtn: {
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 12, paddingHorizontal: 18, paddingVertical: 12,
   },
   nextBtnText: { color: Colors.textWhite, fontWeight: '800', fontSize: 14 },
 
   // Pronunciation step footer
   continueFooterBtn: {
     margin: 16, backgroundColor: Colors.primary, borderRadius: 16,
-    paddingVertical: 16, alignItems: 'center', ...Shadows.button,
+    paddingVertical: 17, alignItems: 'center', ...Shadows.button,
   },
   continueFooterText: { color: Colors.textWhite, fontWeight: '800', fontSize: 17 },
 
@@ -663,11 +666,11 @@ const styles = StyleSheet.create({
     flex: 1, justifyContent: 'center', alignItems: 'center',
     padding: 28, gap: 20,
   },
-  resultsTitle: { color: Colors.textPrimary, fontSize: 26, fontWeight: '800' },
+  resultsTitle: { color: Colors.textPrimary, fontSize: 28, fontWeight: '800' },
   resultsCard: {
-    backgroundColor: Colors.backgroundMuted, borderRadius: 16,
-    padding: 20, width: '100%', gap: 14,
-    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.backgroundCard, borderRadius: 18,
+    padding: 22, width: '100%', gap: 14,
+    borderWidth: 1.5, borderColor: Colors.border, ...Shadows.card,
   },
   resultRow: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -677,7 +680,7 @@ const styles = StyleSheet.create({
   resultValue: { fontSize: 18, fontWeight: '800' },
   continueBtn: {
     backgroundColor: Colors.primary, borderRadius: 16,
-    paddingVertical: 16, paddingHorizontal: 48, ...Shadows.button,
+    paddingVertical: 17, paddingHorizontal: 52, ...Shadows.button,
   },
   continueBtnText: { color: Colors.textWhite, fontWeight: '800', fontSize: 17 },
 });
