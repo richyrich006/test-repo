@@ -13,7 +13,7 @@ from decimal import Decimal, ROUND_DOWN
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import (
     ApiCreds,
-    LimitOrderArgs,
+    OrderArgs,
     OrderType,
 )
 
@@ -166,7 +166,7 @@ def copy_trade(trade: dict) -> bool:
             limit_price, raw_price, config.MAX_SLIPPAGE_PCT * 100, token_size,
         )
 
-        order_args = LimitOrderArgs(
+        order_args = OrderArgs(
             token_id=parsed["token_id"],
             price=limit_price,
             size=token_size,
@@ -174,7 +174,7 @@ def copy_trade(trade: dict) -> bool:
         )
         # FOK: fill the whole order at this price or better, or cancel.
         # Never leaves a resting order, never overpays beyond our limit.
-        signed_order = client.create_limit_order(order_args)
+        signed_order = client.create_order(order_args)
         resp = client.post_order(signed_order, OrderType.FOK)
         logger.info("Order submitted: %s", resp)
         return True
