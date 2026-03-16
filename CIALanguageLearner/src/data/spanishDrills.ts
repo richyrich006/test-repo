@@ -277,6 +277,108 @@ export const spanishDrills: PatternDrill[] = [
       { id: 'd016e5', prompt: '"They like the movies."', answer: 'Les gustan las películas.', hint: 'Películas = plural → gustan', audioPrompt: 'Les gustan las películas' },
     ],
   },
+
+  // ─── UNIT 11: TENER ───────────────────────────────────────────
+  {
+    id: 'd017',
+    title: 'TENER: Expressing Possession & Conditions',
+    instruction: 'Use TENER for possession and idiomatic expressions of physical/emotional states.',
+    pattern: '[Subject] + TENGO/TIENES/TIENE/TENEMOS/TIENEN + [noun]',
+    patternExplanation: 'TENER (to have) is used for possession AND idiomatic expressions: "tengo hambre" (I\'m hungry), "tengo frío" (I\'m cold), "tengo miedo" (I\'m afraid). Unlike English, Spanish uses TENER (not ESTAR) for these conditions.',
+    ilrLevel: 0,
+    exercises: [
+      { id: 'd017e1', prompt: '"I have a question."', answer: 'Tengo una pregunta.', audioPrompt: 'Tengo una pregunta' },
+      { id: 'd017e2', prompt: '"She has two children."', answer: 'Ella tiene dos hijos.', audioPrompt: 'Ella tiene dos hijos' },
+      { id: 'd017e3', prompt: '"I am hungry." (use TENER)', answer: 'Tengo hambre.', hint: 'Spanish uses TENER for hunger, not ESTAR', audioPrompt: 'Tengo hambre' },
+      { id: 'd017e4', prompt: '"How old are you?"', answer: '¿Cuántos años tienes?', hint: 'Age also uses TENER in Spanish', audioPrompt: '¿Cuántos años tienes?' },
+      { id: 'd017e5', prompt: '"We have a meeting."', answer: 'Tenemos una reunión.', audioPrompt: 'Tenemos una reunión' },
+    ],
+  },
+
+  // ─── UNIT 12: DIRECT OBJECT PRONOUNS ─────────────────────────
+  {
+    id: 'd018',
+    title: 'Direct Object Pronouns',
+    instruction: 'Replace the direct object noun with the correct pronoun. Place it before the conjugated verb.',
+    pattern: '[Subject] + LO/LA/LOS/LAS + [verb]',
+    patternExplanation: 'Direct object pronouns replace the noun receiving the action. Lo/la (it, him, her) and los/las (them) go BEFORE the conjugated verb. Also: me (me), te (you), nos (us). These make speech more natural and fluent.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd018e1', prompt: '"I see him."', answer: 'Lo veo.', hint: 'Him = lo (masculine)', audioPrompt: 'Lo veo' },
+      { id: 'd018e2', prompt: '"She reads it (the book)."', answer: 'Ella lo lee.', hint: 'Book (libro) = masculine → lo', audioPrompt: 'Ella lo lee' },
+      { id: 'd018e3', prompt: '"We need them (the documents)."', answer: 'Los necesitamos.', hint: 'Documents (documentos) = masculine plural → los', audioPrompt: 'Los necesitamos' },
+      { id: 'd018e4', prompt: '"I understand you."', answer: 'Te entiendo.', hint: 'You (informal direct object) = te', audioPrompt: 'Te entiendo' },
+      { id: 'd018e5', prompt: '"Do you have it (the key)?"', answer: '¿La tienes?', hint: 'Key (llave) = feminine → la', audioPrompt: '¿La tienes?' },
+    ],
+  },
+
+  // ─── UNIT 13: REFLEXIVE VERBS DAILY ROUTINES ─────────────────
+  {
+    id: 'd019',
+    title: 'Reflexive Verbs: Daily Routines',
+    instruction: 'Use reflexive verbs with the correct pronoun to describe actions done to oneself.',
+    pattern: '[Reflexive pronoun] + [reflexive verb]',
+    patternExplanation: 'Reflexive verbs show the subject acts on itself. Pronouns: me (I), te (you), se (he/she/it/they), nos (we). Common ones: levantarse (to get up), llamarse (to be named), sentirse (to feel). The pronoun goes before the conjugated verb.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd019e1', prompt: '"My name is Carlos."', answer: 'Me llamo Carlos.', hint: 'LLAMARSE = to call oneself', audioPrompt: 'Me llamo Carlos' },
+      { id: 'd019e2', prompt: '"What time do you wake up?"', answer: '¿A qué hora te despiertas?', hint: 'DESPERTARSE = to wake up', audioPrompt: '¿A qué hora te despiertas?' },
+      { id: 'd019e3', prompt: '"He feels tired."', answer: 'Se siente cansado.', hint: 'SENTIRSE = to feel', audioPrompt: 'Se siente cansado' },
+      { id: 'd019e4', prompt: '"We sit down."', answer: 'Nos sentamos.', hint: 'SENTARSE = to sit down', audioPrompt: 'Nos sentamos' },
+      { id: 'd019e5', prompt: '"I get dressed at 7."', answer: 'Me visto a las siete.', hint: 'VESTIRSE = to get dressed (e→i stem change)', audioPrompt: 'Me visto a las siete' },
+    ],
+  },
+
+  // ─── UNIT 14: TELLING TIME ────────────────────────────────────
+  {
+    id: 'd020',
+    title: 'Asking & Telling Time',
+    instruction: 'Ask the time and give time expressions correctly.',
+    pattern: '¿Qué hora es? / Es la/Son las + [time]',
+    patternExplanation: 'To ask the time: ¿Qué hora es? To tell time: Es la una (1:00), Son las dos (2:00+). For minutes: Son las tres y veinte (3:20). For half: y media. For quarter: y cuarto / menos cuarto. Use "a las" for "at" a specific time.',
+    ilrLevel: 0,
+    exercises: [
+      { id: 'd020e1', prompt: '"What time is it?"', answer: '¿Qué hora es?', audioPrompt: '¿Qué hora es?' },
+      { id: 'd020e2', prompt: '"It is 1:00."', answer: 'Es la una.', hint: 'Only 1:00 uses "Es la" — all others use "Son las"', audioPrompt: 'Es la una' },
+      { id: 'd020e3', prompt: '"It is 3:30."', answer: 'Son las tres y media.', hint: 'y media = half past', audioPrompt: 'Son las tres y media' },
+      { id: 'd020e4', prompt: '"It is 8:15."', answer: 'Son las ocho y cuarto.', hint: 'y cuarto = quarter past', audioPrompt: 'Son las ocho y cuarto' },
+      { id: 'd020e5', prompt: '"The meeting is at 9:45."', answer: 'La reunión es a las diez menos cuarto.', hint: 'menos cuarto = quarter to (the next hour)', audioPrompt: 'La reunión es a las diez menos cuarto' },
+    ],
+  },
+
+  // ─── UNIT 15: COMPARISONS ─────────────────────────────────────
+  {
+    id: 'd021',
+    title: 'Comparisons: más/menos que + tan...como',
+    instruction: 'Form comparisons using más...que, menos...que, and tan...como.',
+    pattern: '[noun/adj] + MÁS/MENOS + [adj] + QUE / TAN + [adj] + COMO',
+    patternExplanation: 'To compare: más...que (more than), menos...que (less than), tan...como (as...as). "El café es más barato que el vino" (Coffee is cheaper than wine). "Ella es tan inteligente como él" (She is as intelligent as him). Special forms: bueno→mejor, malo→peor.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd021e1', prompt: '"Spanish is harder than English."', answer: 'El español es más difícil que el inglés.', audioPrompt: 'El español es más difícil que el inglés' },
+      { id: 'd021e2', prompt: '"This hotel is cheaper than that one."', answer: 'Este hotel es menos caro que ese.', audioPrompt: 'Este hotel es menos caro que ese' },
+      { id: 'd021e3', prompt: '"He is as tall as his brother."', answer: 'Él es tan alto como su hermano.', audioPrompt: 'Él es tan alto como su hermano' },
+      { id: 'd021e4', prompt: '"The first option is better."', answer: 'La primera opción es mejor.', hint: 'Mejor = better (irregular comparative of bueno)', audioPrompt: 'La primera opción es mejor' },
+      { id: 'd021e5', prompt: '"She speaks faster than me."', answer: 'Ella habla más rápido que yo.', audioPrompt: 'Ella habla más rápido que yo' },
+    ],
+  },
+
+  // ─── UNIT 16: EXPRESSING OBLIGATION ──────────────────────────
+  {
+    id: 'd022',
+    title: 'Expressing Obligation: TENER QUE / DEBER / HAY QUE',
+    instruction: 'Express necessity and obligation using three key structures.',
+    pattern: 'TENGO QUE / DEBO / HAY QUE + [infinitive]',
+    patternExplanation: 'Three ways to express must/should: TENER QUE + inf (personal obligation: I must), DEBER + inf (moral duty: you should), HAY QUE + inf (impersonal: one must/it\'s necessary to). HAY QUE is always third person singular and has no subject.',
+    ilrLevel: 1,
+    exercises: [
+      { id: 'd022e1', prompt: '"I have to call him."', answer: 'Tengo que llamarlo.', hint: 'TENER QUE = personal must; attach the pronoun to the infinitive', audioPrompt: 'Tengo que llamarlo' },
+      { id: 'd022e2', prompt: '"You should rest."', answer: 'Debes descansar.', hint: 'DEBER = moral obligation/should', audioPrompt: 'Debes descansar' },
+      { id: 'd022e3', prompt: '"One must have a passport."', answer: 'Hay que tener pasaporte.', hint: 'HAY QUE = impersonal obligation (no specific subject)', audioPrompt: 'Hay que tener pasaporte' },
+      { id: 'd022e4', prompt: '"She has to prepare the report."', answer: 'Ella tiene que preparar el informe.', audioPrompt: 'Ella tiene que preparar el informe' },
+      { id: 'd022e5', prompt: '"We must be careful."', answer: 'Hay que tener cuidado.', hint: 'HAY QUE for general "one must" statements', audioPrompt: 'Hay que tener cuidado' },
+    ],
+  },
 ];
 
 export const getDrillById = (id: string): PatternDrill | undefined =>

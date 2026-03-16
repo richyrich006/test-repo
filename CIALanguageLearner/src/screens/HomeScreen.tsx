@@ -15,6 +15,9 @@ interface Props {
   onPressUnit: (unitId: string) => void;
   onPressReview: () => void;
   onPressProfile: () => void;
+  onPressConversation: () => void;
+  onPressSettings: () => void;
+  onPressLesson?: (lessonId: string) => void;
 }
 
 // Map unit index to a tile color
@@ -23,7 +26,7 @@ const UNIT_TILE_COLORS = [
   Colors.unit5, Colors.unit6, Colors.unit7, Colors.unit8, Colors.unit9,
 ];
 
-export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfile }: Props) {
+export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfile, onPressConversation, onPressSettings, onPressLesson }: Props) {
   const levelInfo = getLevel(progress.totalXP);
   const dailyProgress = getDailyProgress(progress);
   const deckStats = getDeckStats(progress.srsCards);
@@ -42,9 +45,14 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
               <Text style={styles.headerSub}>Latin America • FSI Method</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={onPressProfile} style={styles.avatarBtn}>
-            <Text style={styles.avatarText}>{levelInfo.title.charAt(0)}</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={onPressSettings} style={styles.settingsBtn}>
+              <Text style={styles.settingsIcon}>⚙️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onPressProfile} style={styles.avatarBtn}>
+              <Text style={styles.avatarText}>{levelInfo.title.charAt(0)}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stat row inside yellow header */}
@@ -59,6 +67,29 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
+        {/* ── Today's Mission Card ── */}
+        <View style={styles.missionCard}>
+          <Text style={styles.missionLabel}>TODAY'S MISSION</Text>
+          {nextLesson ? (
+            <>
+              <Text style={styles.missionTitle}>{nextLesson.title}</Text>
+              <Text style={styles.missionSub}>{nextLesson.subtitle}</Text>
+              <View style={styles.missionMeta}>
+                <Text style={styles.missionMinutes}>⏱ {nextLesson.estimatedMinutes ?? 15} min</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.missionBtn}
+                onPress={() => onPressLesson ? onPressLesson(nextLesson.id) : onPressUnit(nextLesson.unitId)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.missionBtnText}>Start Lesson →</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.missionComplete}>🎖️ All lessons complete! Review vocabulary below.</Text>
+          )}
+        </View>
+
         {/* ── Daily Goal ── */}
         <View style={styles.card}>
           <View style={styles.cardRow}>
@@ -75,6 +106,13 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
             : <Text style={styles.goalHint}>Keep going — you're doing great!</Text>
           }
         </View>
+
+        {/* ── Practice Conversation Button ── */}
+        <TouchableOpacity style={styles.conversationBtn} onPress={onPressConversation} activeOpacity={0.85}>
+          <Text style={styles.conversationIcon}>🤖</Text>
+          <Text style={styles.conversationText}>Practice Conversation</Text>
+          <Text style={styles.conversationArrow}>›</Text>
+        </TouchableOpacity>
 
         {/* ── Review due ── */}
         {dueCards.length > 0 && (
@@ -216,6 +254,13 @@ const styles = StyleSheet.create({
   flagEmoji: { fontSize: 34 },
   headerTitle: { fontSize: 22, fontWeight: '800', color: Colors.textBrand },
   headerSub: { fontSize: 12, color: Colors.textBrand + 'BB', marginTop: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  settingsBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: 'rgba(0,0,0,0.10)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  settingsIcon: { fontSize: 20 },
   avatarBtn: {
     width: 42, height: 42, borderRadius: 21,
     backgroundColor: 'rgba(0,0,0,0.15)',
@@ -236,6 +281,64 @@ const styles = StyleSheet.create({
   // ── Scroll Content ──
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
 
+  // ── Today's Mission Card ──
+  missionCard: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+    gap: 6,
+    ...Shadows.card,
+  },
+  missionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  missionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginTop: 2,
+  },
+  missionSub: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  missionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  missionMinutes: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  missionBtn: {
+    backgroundColor: Colors.success,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  missionBtnText: {
+    color: Colors.textWhite,
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  missionComplete: {
+    fontSize: 14,
+    color: Colors.success,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+
   // ── Daily Goal Card ──
   card: {
     backgroundColor: Colors.backgroundCard,
@@ -247,6 +350,31 @@ const styles = StyleSheet.create({
   cardMeta: { color: Colors.textMuted, fontSize: 13 },
   goalDone: { color: Colors.success, fontSize: 13, fontWeight: '600' },
   goalHint: { color: Colors.textMuted, fontSize: 12 },
+
+  // ── Conversation Button ──
+  conversationBtn: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.card,
+  },
+  conversationIcon: { fontSize: 22 },
+  conversationText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  conversationArrow: {
+    fontSize: 26,
+    color: Colors.textMuted,
+    fontWeight: '300',
+  },
 
   // ── Review Card ──
   reviewCard: {

@@ -13,6 +13,24 @@ interface Props {
   onComplete: () => void;
 }
 
+const PLACEMENT_QUESTIONS = [
+  {
+    q: "¿Cómo se dice 'hello'?",
+    options: ['Hola', 'Adiós', 'Gracias', 'Por favor'],
+    correct: 'Hola',
+  },
+  {
+    q: "Complete: 'Yo ___ estudiante.' (I am a student)",
+    options: ['soy', 'estar', 'tengo', 'hacer'],
+    correct: 'soy',
+  },
+  {
+    q: "What does 'necesito ayuda' mean?",
+    options: ['I need help', 'I have help', 'No help', 'Help me now'],
+    correct: 'I need help',
+  },
+];
+
 const SLIDES = [
   {
     id: 'welcome',
@@ -46,20 +64,62 @@ const SLIDES = [
     goalOptions: [15, 30, 45, 60],
     icon: '⏱️',
   },
+  {
+    id: 'placement',
+    title: 'Quick\nPlacement Check',
+    subtitle: 'Three questions to calibrate your starting point.',
+    icon: '🎯',
+    isPlacement: true,
+  },
 ];
 
 export function OnboardingScreen({ onComplete }: Props) {
   const [page, setPage] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(30);
+  const [placementStep, setPlacementStep] = useState(0);
+  const [placementAnswers, setPlacementAnswers] = useState<string[]>([]);
+  const [lastAnswer, setLastAnswer] = useState<string | null>(null);
 
   const slide = SLIDES[page];
   const isLast = page === SLIDES.length - 1;
+  const isPlacementSlide = 'isPlacement' in slide && slide.isPlacement;
+  const placementDone = isPlacementSlide && placementAnswers.length === PLACEMENT_QUESTIONS.length;
+  const placementScore = placementAnswers.filter(
+    (a, i) => a === PLACEMENT_QUESTIONS[i].correct
+  ).length;
+
+  const handlePlacementAnswer = (option: string) => {
+    const qIdx = placementStep;
+    if (qIdx >= PLACEMENT_QUESTIONS.length) return;
+    setLastAnswer(option);
+    const newAnswers = [...placementAnswers, option];
+    setTimeout(() => {
+      setLastAnswer(null);
+      setPlacementAnswers(newAnswers);
+      if (qIdx < PLACEMENT_QUESTIONS.length - 1) {
+        setPlacementStep(s => s + 1);
+      }
+      // If all answered, stay on screen to show result — user presses Continue
+    }, 800);
+  };
+
+  const placementResultText = (): string => {
+    if (placementScore === 0) return 'Starting from the beginning — perfect for building a strong foundation!';
+    if (placementScore <= 2) return 'You know some basics. We\'ll build on that!';
+    return 'You have some Spanish background. Consider skipping to Unit 2!';
+  };
 
   const next = () => {
     if (isLast) {
       onComplete();
     } else {
       setPage(p => p + 1);
+      // Reset placement state when leaving placement slide
+      if (isPlacementSlide) {
+        setPlacementStep(0);
+        setPlacementAnswers([]);
+        setLastAnswer(null);
+      }
     }
   };
 
@@ -138,6 +198,75 @@ export function OnboardingScreen({ onComplete }: Props) {
               ))}
             </View>
           )}
+
+          {/* Placement Test */}
+          {isPlacementSlide && !placementDone && (
+            <View style={styles.placementContainer}>
+              {/* Question progress indicator */}
+              <View style={styles.placementProgress}>
+                {PLACEMENT_QUESTIONS.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.placementDot,
+                      i < placementAnswers.length && styles.placementDotDone,
+                      i === placementStep && styles.placementDotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+
+              {/* Current question */}
+              <View style={styles.placementQuestion}>
+                <Text style={styles.placementQNum}>
+                  Question {placementStep + 1} of {PLACEMENT_QUESTIONS.length}
+                </Text>
+                <Text style={styles.placementQText}>
+                  {PLACEMENT_QUESTIONS[placementStep].q}
+                </Text>
+              </View>
+
+              {/* Answer options */}
+              <View style={styles.placementOptions}>
+                {PLACEMENT_QUESTIONS[placementStep].options.map(option => {
+                  const isSelected = lastAnswer === option;
+                  const isCorrect = option === PLACEMENT_QUESTIONS[placementStep].correct;
+                  let optionStyle = styles.placementOption;
+                  let textStyle = styles.placementOptionText;
+                  if (isSelected) {
+                    optionStyle = isCorrect
+                      ? { ...styles.placementOption, ...styles.placementOptionCorrect }
+                      : { ...styles.placementOption, ...styles.placementOptionWrong };
+                    textStyle = { ...styles.placementOptionText, color: Colors.textPrimary };
+                  } else if (lastAnswer !== null && isCorrect) {
+                    // Reveal correct answer when wrong answer was selected
+                    optionStyle = { ...styles.placementOption, ...styles.placementOptionCorrect };
+                  }
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={optionStyle}
+                      onPress={() => lastAnswer === null && handlePlacementAnswer(option)}
+                      activeOpacity={0.8}
+                      disabled={lastAnswer !== null}
+                    >
+                      <Text style={textStyle}>{option}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* Placement result */}
+          {isPlacementSlide && placementDone && (
+            <View style={styles.placementResult}>
+              <Text style={styles.placementResultScore}>
+                {placementScore} / {PLACEMENT_QUESTIONS.length} correct
+              </Text>
+              <Text style={styles.placementResultText}>{placementResultText()}</Text>
+            </View>
+          )}
         </ScrollView>
 
         {/* Navigation */}
@@ -147,19 +276,22 @@ export function OnboardingScreen({ onComplete }: Props) {
               <Text style={styles.backText}>← Back</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            style={[styles.nextBtn, page === 0 && styles.nextBtnFull]}
-            onPress={next}
-          >
-            <LinearGradient
-              colors={[Colors.accent, Colors.accentDark]}
-              style={styles.nextGradient}
+          {/* Hide Continue on placement slide until all questions answered */}
+          {(!isPlacementSlide || placementDone) && (
+            <TouchableOpacity
+              style={[styles.nextBtn, page === 0 && styles.nextBtnFull]}
+              onPress={next}
             >
-              <Text style={styles.nextText}>
-                {isLast ? 'Begin Training' : 'Continue →'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={[Colors.accent, Colors.accentDark]}
+                style={styles.nextGradient}
+              >
+                <Text style={styles.nextText}>
+                  {isLast ? 'Get Started' : 'Continue →'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -286,6 +418,87 @@ const styles = StyleSheet.create({
   goalMinsSelected: { color: Colors.accent },
   goalLabel: { fontSize: 11, color: Colors.textMuted },
   goalLabelSelected: { color: Colors.accent },
+
+  // ── Placement Test ──
+  placementContainer: { gap: 16, marginTop: 4 },
+  placementProgress: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  placementDot: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: Colors.border,
+  },
+  placementDotActive: {
+    backgroundColor: Colors.accent,
+    width: 24,
+  },
+  placementDotDone: {
+    backgroundColor: Colors.success,
+  },
+  placementQuestion: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+  },
+  placementQNum: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  placementQText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    lineHeight: 23,
+  },
+  placementOptions: { gap: 10 },
+  placementOption: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  placementOptionCorrect: {
+    borderColor: Colors.success,
+    backgroundColor: Colors.successLight,
+  },
+  placementOptionWrong: {
+    borderColor: Colors.error,
+    backgroundColor: Colors.errorLight,
+  },
+  placementOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  placementResult: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.accent,
+  },
+  placementResultScore: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.accent,
+  },
+  placementResultText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
 
   navContainer: {
     flexDirection: 'row',

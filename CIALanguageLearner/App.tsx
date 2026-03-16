@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFonts, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
 
 import { Colors } from './src/theme/colors';
 import { UserProgress, SRSRating } from './src/types';
@@ -14,9 +15,12 @@ import {
   addVocabCards,
   completeOnboarding,
   calculateILRLevel,
+  setDailyGoal,
 } from './src/store/progressStore';
+import { AppSettings, loadSettings, saveSettings } from './src/store/settingsStore';
 import { getLessonById } from './src/data/curriculum';
 import { QuizResult } from './src/utils/quizEngine';
+import { scheduleDailyReminder, cancelDailyReminder } from './src/utils/notifications';
 
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -25,6 +29,10 @@ import { LessonScreen } from './src/screens/LessonScreen';
 import { QuizScreen } from './src/screens/QuizScreen';
 import { ReviewScreen } from './src/screens/ReviewScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { PaywallScreen } from './src/screens/PaywallScreen';
+import { PrivacyPolicyScreen } from './src/screens/PrivacyPolicyScreen';
+import { ConversationScreen } from './src/screens/ConversationScreen';
 
 type Screen =
   | { name: 'home' }
@@ -32,14 +40,36 @@ type Screen =
   | { name: 'lesson'; lessonId: string }
   | { name: 'quiz'; lessonId: string; cardIds: string[] }
   | { name: 'review' }
-  | { name: 'profile' };
+  | { name: 'profile' }
+  | { name: 'settings' }
+  | { name: 'paywall' }
+  | { name: 'privacy' }
+  | { name: 'conversation'; topic?: string };
 
 export default function App() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
 
-  useEffect(() => { loadProgress().then(setProgress); }, []);
-  useEffect(() => { if (progress) saveProgress(progress); }, [progress]);
+  const [fontsLoaded] = useFonts({
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
+
+  useEffect(() => {
+    loadProgress().then(setProgress);
+    loadSettings().then(setSettings);
+  }, []);
+
+  useEffect(() => {
+    if (progress) saveProgress(progress);
+  }, [progress]);
+
+  useEffect(() => {
+    if (settings) saveSettings(settings);
+  }, [settings]);
 
   const updateProgress = useCallback((updater: (p: UserProgress) => UserProgress) => {
     setProgress(prev => {
@@ -49,7 +79,11 @@ export default function App() {
     });
   }, []);
 
-  if (!progress) {
+  const updateSettings = useCallback((updater: (s: AppSettings) => AppSettings) => {
+    setSettings(prev => prev ? updater(prev) : prev);
+  }, []);
+
+  if (!progress || !settings || !fontsLoaded) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -73,6 +107,15 @@ export default function App() {
     setScreen(l ? { name: 'unit', unitId: l.unitId } : { name: 'home' });
   };
 
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (enabled) {
+      await scheduleDailyReminder(settings.notificationHour, settings.notificationMinute);
+    } else {
+      await cancelDailyReminder();
+    }
+    updateSettings(s => ({ ...s, notificationsEnabled: enabled }));
+  };
+
   const renderScreen = () => {
     switch (screen.name) {
       case 'home':
@@ -82,6 +125,9 @@ export default function App() {
             onPressUnit={(unitId: string) => setScreen({ name: 'unit', unitId })}
             onPressReview={() => setScreen({ name: 'review' })}
             onPressProfile={() => setScreen({ name: 'profile' })}
+            onPressSettings={() => setScreen({ name: 'settings' })}
+            onPressConversation={() => setScreen({ name: 'conversation' })}
+            onPressLesson={(lessonId: string) => setScreen({ name: 'lesson', lessonId })}
           />
         );
 
@@ -107,7 +153,6 @@ export default function App() {
                 if (completedLesson) updated = addVocabCards(updated, completedLesson.vocabulary);
                 return updated;
               });
-              // Go to quiz after lesson if there's vocabulary
               if (completedLesson && completedLesson.vocabulary.length >= 2) {
                 setScreen({ name: 'quiz', lessonId, cardIds: completedLesson.vocabulary });
               } else {
@@ -124,10 +169,7 @@ export default function App() {
             cardIds={screen.cardIds}
             lessonTitle={getLessonById(screen.lessonId)?.title ?? 'Quiz'}
             onComplete={(results: QuizResult[], xp: number) => {
-              updateProgress(prev => ({
-                ...prev,
-                totalXP: prev.totalXP + xp,
-              }));
+              updateProgress(prev => ({ ...prev, totalXP: prev.totalXP + xp }));
               goBackFromLesson(screen.lessonId);
             }}
             onBack={() => goBackFromLesson(screen.lessonId)}
@@ -151,9 +193,55 @@ export default function App() {
           <ProfileScreen
             progress={progress}
             onBack={() => setScreen({ name: 'home' })}
+            onSettings={() => setScreen({ name: 'settings' })}
             onReset={() => {
               loadProgress().then(p => { setProgress(p); setScreen({ name: 'home' }); });
             }}
+          />
+        );
+
+      case 'settings':
+        return (
+          <SettingsScreen
+            progress={progress}
+            notificationsEnabled={settings.notificationsEnabled}
+            speechRate={settings.speechRate}
+            onUpdateGoal={(minutes) => {
+              updateSettings(s => ({ ...s, dailyGoalMinutes: minutes }));
+              updateProgress(prev => setDailyGoal(prev, minutes));
+            }}
+            onToggleNotifications={handleToggleNotifications}
+            onSpeechRateChange={(rate) => updateSettings(s => ({ ...s, speechRate: rate }))}
+            onPrivacyPolicy={() => setScreen({ name: 'privacy' })}
+            onReset={() => {
+              loadProgress().then(p => { setProgress(p); setScreen({ name: 'home' }); });
+            }}
+            onBack={() => setScreen({ name: 'home' })}
+          />
+        );
+
+      case 'paywall':
+        return (
+          <PaywallScreen
+            onSubscribe={(plan) => {
+              updateSettings(s => ({ ...s, isPremium: true }));
+              setScreen({ name: 'home' });
+            }}
+            onRestore={() => setScreen({ name: 'home' })}
+            onClose={() => setScreen({ name: 'home' })}
+          />
+        );
+
+      case 'privacy':
+        return (
+          <PrivacyPolicyScreen onBack={() => setScreen({ name: 'settings' })} />
+        );
+
+      case 'conversation':
+        return (
+          <ConversationScreen
+            topic={screen.topic}
+            onBack={() => setScreen({ name: 'home' })}
           />
         );
 

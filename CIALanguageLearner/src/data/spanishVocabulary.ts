@@ -360,6 +360,30 @@ export const spanishVocabulary: VocabCard[] = [
   { id: 'v547', spanish: 'en línea / fuera de línea', english: 'online / offline', phonetic: 'ehn LEE-neh-ah / FWEH-rah deh LEE-neh-ah', category: 'work', ilrLevel: 1 },
   { id: 'v548', spanish: 'la videoconferencia', english: 'video conference', phonetic: 'lah bee-DEH-oh-kohn-feh-REHN-syah', category: 'work', ilrLevel: 2 },
   { id: 'v549', spanish: 'compartir / guardar', english: 'to share / to save', phonetic: 'kohm-pahr-TEER / gwahr-DAHR', category: 'work', ilrLevel: 1 },
+
+  // ── ADVANCED NEGOTIATION & DIPLOMATIC LANGUAGE (ILR 2-3) ─────────────────
+  { id: 'v550', spanish: 'el impacto / las consecuencias', english: 'impact / consequences', phonetic: 'el eem-PAHK-toh / lahs kohn-seh-KWEHN-syahs', category: 'negotiation', ilrLevel: 2 },
+  { id: 'v551', spanish: 'la propuesta / la contraoferta', english: 'proposal / counteroffer', phonetic: 'lah proh-PWES-tah / lah kohn-trah-oh-FEHR-tah', category: 'negotiation', ilrLevel: 2, notes: 'Key terms for any negotiation scenario' },
+  { id: 'v552', spanish: 'llegamos a un acuerdo', english: 'we reached an agreement', phonetic: 'yeh-GAH-mohs ah oon ah-KWEHR-doh', category: 'negotiation', ilrLevel: 2, exampleSentence: 'Después de tres horas, llegamos a un acuerdo.', exampleTranslation: 'After three hours, we reached an agreement.' },
+  { id: 'v553', spanish: 'en cuanto a / con respecto a', english: 'regarding / with respect to', phonetic: 'ehn KWAHN-toh ah / kohn rehs-PEHK-toh ah', category: 'negotiation', ilrLevel: 2, notes: 'Formal transition phrases for written and spoken reports' },
+  { id: 'v554', spanish: 'cabe mencionar que', english: 'it is worth mentioning that', phonetic: 'KAH-beh mehn-syoh-NAHR keh', category: 'negotiation', ilrLevel: 3, notes: 'Academic/formal register opener' },
+  { id: 'v555', spanish: 'no obstante / a pesar de', english: 'nevertheless / despite', phonetic: 'noh ohbs-TAHN-teh / ah peh-SAHR deh', category: 'negotiation', ilrLevel: 2 },
+  { id: 'v556', spanish: 'el plazo / la fecha límite', english: 'deadline / due date', phonetic: 'el PLAH-soh / lah FEH-chah LEE-mee-teh', category: 'work', ilrLevel: 2 },
+  { id: 'v557', spanish: 'el presupuesto / los fondos', english: 'budget / funds', phonetic: 'el preh-soo-PWES-toh / lohs FOHN-dohs', category: 'work', ilrLevel: 2 },
+  { id: 'v558', spanish: 'la prioridad / lo urgente', english: 'priority / what is urgent', phonetic: 'lah pryoh-ree-DAHD / loh oor-HEHN-teh', category: 'work', ilrLevel: 1 },
+  { id: 'v559', spanish: 'resolver / solucionar', english: 'to resolve / to solve', phonetic: 'reh-sohl-BEHR / soh-loo-syoh-NAHR', category: 'verbs_core', ilrLevel: 1, exampleSentence: 'Necesitamos resolver este problema hoy.', exampleTranslation: 'We need to resolve this problem today.' },
+
+  // ── COMPLEX GRAMMAR / ADVANCED EXPRESSIONS (ILR 2-3) ─────────────────────
+  { id: 'v560', spanish: 'habrá / habrán', english: 'there will be', phonetic: 'ah-BRAH / ah-BRAHN', category: 'verbs_core', ilrLevel: 2, notes: 'Future of HABER — "Habrá una reunión mañana."' },
+  { id: 'v561', spanish: 'hubiera / hubiese', english: 'there would have been / if there had been', phonetic: 'oo-BYEH-rah / oo-BYEH-seh', category: 'verbs_core', ilrLevel: 3, notes: 'Past subjunctive of HABER — signals advanced fluency' },
+  { id: 'v562', spanish: 'a menos que', english: 'unless', phonetic: 'ah MEH-nohs keh', category: 'negotiation', ilrLevel: 2, exampleSentence: 'Iré, a menos que llueva.', exampleTranslation: 'I\'ll go, unless it rains.' },
+  { id: 'v563', spanish: 'con tal de que', english: 'provided that / as long as', phonetic: 'kohn tahl deh keh', category: 'negotiation', ilrLevel: 2 },
+  { id: 'v564', spanish: 'lo que me preocupa es', english: 'what concerns me is', phonetic: 'loh keh meh preh-oh-KOO-pah ehs', category: 'negotiation', ilrLevel: 2, notes: 'Diplomatic opener to raise concerns without direct confrontation' },
+  { id: 'v565', spanish: 'quisiera aclarar que', english: 'I would like to clarify that', phonetic: 'kee-SYEH-rah ah-klah-RAHR keh', category: 'negotiation', ilrLevel: 2 },
+  { id: 'v566', spanish: 'si bien es cierto que', english: 'while it is true that', phonetic: 'see byehn ehs SYEHR-toh keh', category: 'negotiation', ilrLevel: 3, notes: 'Concession phrase — acknowledges other\'s point before your rebuttal' },
+  { id: 'v567', spanish: 'en este sentido', english: 'in this sense / in this regard', phonetic: 'ehn EHS-teh sehn-TEE-doh', category: 'negotiation', ilrLevel: 2 },
+  { id: 'v568', spanish: 'de hecho', english: 'in fact / actually', phonetic: 'deh EH-choh', category: 'culture', ilrLevel: 1, notes: 'Very common filler phrase. Avoid translating as "of fact."' },
+  { id: 'v569', spanish: 'lo antes posible', english: 'as soon as possible / ASAP', phonetic: 'loh AHN-tehs poh-SEE-bleh', category: 'work', ilrLevel: 1, notes: 'Common in professional emails: "Necesito la respuesta lo antes posible."' },
 ];
 
 export const getVocabByLevel = (maxLevel: number): VocabCard[] =>

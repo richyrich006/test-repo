@@ -314,6 +314,110 @@ export const spanishDialogues: Dialogue[] = [
     ],
     keyVocab: ['v420', 'v421', 'v422', 'v423', 'v424'],
   },
+
+  // ─── NEW DIALOGUES: OPERATIONAL SCENARIOS ────────────────────
+
+  {
+    id: 'dia011',
+    title: 'At the Airport / En el aeropuerto',
+    scenario: 'Checking in for a flight and going through security',
+    situation: 'You are checking in for a domestic flight. Practice interacting with airline staff, locating your gate, and navigating security — essential mobility skills for any field assignment.',
+    ilrLevel: 0,
+    characters: [
+      { id: 'c1', name: 'Ana', role: 'Airline Agent', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Traveler', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: 'Buenos días. ¿Su pasaporte, por favor?', english: 'Good morning. Your passport, please?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Aquí está. ¿Dónde está la puerta de embarque?', english: 'Here it is. Where is the boarding gate?', isLearnerLine: true, phonetic: 'ah-KEE ehs-TAH. DOHN-deh ehs-TAH lah PWEHR-tah' },
+      { characterId: 'c1', spanish: 'Puerta doce. El vuelo sale a las dos de la tarde.', english: 'Gate twelve. The flight leaves at 2 in the afternoon.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Hay que pasar por seguridad?', english: 'Do we need to go through security?', isLearnerLine: true, phonetic: 'eye keh pah-SAHR pohr seh-goo-ree-DAHD' },
+      { characterId: 'c1', spanish: 'Sí, por favor. Y llegue con tiempo.', english: 'Yes, please. And arrive with time to spare.', isLearnerLine: false },
+    ],
+    culturalNotes: [
+      'At Latin American airports, passport control agents often ask your reason for visit (motivo del viaje) — have "turismo" or "negocios" ready.',
+      'Gate numbers are often announced as "puerta" (door) not "gate" — same concept.',
+    ],
+    keyVocab: ['v350', 'v351'],
+  },
+
+  {
+    id: 'dia012',
+    title: 'At the Doctor / En el médico',
+    scenario: 'Visiting a clinic with a stomach problem',
+    situation: 'You have been feeling unwell for two days and visit a local clinic. Describing symptoms precisely in Spanish is a critical health and safety skill for any assignment abroad.',
+    ilrLevel: 1,
+    characters: [
+      { id: 'c1', name: 'Doctor Martínez', role: 'Physician', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Patient', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: '¿Qué le pasa? ¿Cómo se siente?', english: 'What\'s wrong? How do you feel?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Me duele el estómago desde ayer. También tengo fiebre.', english: 'My stomach has been hurting since yesterday. I also have a fever.', isLearnerLine: true, phonetic: 'meh DWEH-leh el ehs-TOH-mah-goh' },
+      { characterId: 'c1', spanish: '¿Tiene náuseas o vómitos?', english: 'Do you have nausea or vomiting?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Sí, náuseas. No como bien desde hace dos días.', english: 'Yes, nausea. I haven\'t eaten well for two days.', isLearnerLine: true, phonetic: 'see, NOW-seh-ahs' },
+      { characterId: 'c1', spanish: 'Le voy a recetar un medicamento. Tome mucho líquido.', english: 'I\'m going to prescribe you a medication. Drink plenty of fluids.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Es serio? ¿Necesito hospitalizarme?', english: 'Is it serious? Do I need to be hospitalized?', isLearnerLine: true, phonetic: 'ehs SEH-ryoh' },
+      { characterId: 'c1', spanish: 'No, no es necesario. Descanse y vuelva si empeora.', english: 'No, it\'s not necessary. Rest and come back if it gets worse.', isLearnerLine: false },
+    ],
+    culturalNotes: [
+      'In Latin America, pharmacists (farmacéuticos) can advise on and sell many medications without a prescription.',
+      'Always carry travel health insurance and know the nearest clinic (clínica) or hospital.',
+    ],
+    keyVocab: ['v400', 'v401', 'v402'],
+  },
+
+  {
+    id: 'dia013',
+    title: 'Buying a SIM Card / Comprando una SIM',
+    scenario: 'Getting a local phone SIM at a telecom store',
+    situation: 'You need a local SIM card for your phone to avoid roaming charges and stay connected. This is a standard operational task in any new assignment location.',
+    ilrLevel: 1,
+    characters: [
+      { id: 'c1', name: 'Carlos', role: 'Store Clerk', isLearner: false },
+      { id: 'c2', name: 'You', role: 'Customer', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: '¡Bienvenido! ¿En qué le puedo ayudar?', english: 'Welcome! How can I help you?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Necesito una tarjeta SIM local. ¿Cuál es la mejor opción?', english: 'I need a local SIM card. What is the best option?', isLearnerLine: true, phonetic: 'neh-seh-SEE-toh oo-nah tahr-HEH-tah seem' },
+      { characterId: 'c1', spanish: 'Esta incluye datos, llamadas y mensajes. Cuesta cien pesos.', english: 'This one includes data, calls, and messages. It costs one hundred pesos.', isLearnerLine: false },
+      { characterId: 'c2', spanish: '¿Tiene buena cobertura en la ciudad?', english: 'Does it have good coverage in the city?', isLearnerLine: true, phonetic: 'TYEH-neh BWEH-nah koh-behr-TOO-rah' },
+      { characterId: 'c1', spanish: 'Sí, excelente cobertura. ¿Me permite su pasaporte para el registro?', english: 'Yes, excellent coverage. May I have your passport for registration?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Aquí tiene. ¿Cómo recargo crédito?', english: 'Here you go. How do I recharge credit?', isLearnerLine: true, phonetic: 'ah-KEE TYEH-neh. KOH-moh reh-KAR-goh' },
+      { characterId: 'c1', spanish: 'En cualquier tienda de conveniencia. Pida una recarga.', english: 'At any convenience store. Ask for a recharge.', isLearnerLine: false },
+    ],
+    culturalNotes: [
+      'A local SIM card is essential for fieldwork — avoid roaming charges and stay connected.',
+      'Most Latin American countries require passport registration to buy a SIM — this is normal procedure.',
+    ],
+    keyVocab: ['v540', 'v546'],
+  },
+
+  {
+    id: 'dia014',
+    title: 'Meeting a New Colleague / Conociendo a un colega',
+    scenario: 'First day at a new office, meeting a local colleague',
+    situation: 'It is your first day at a new office. You are meeting a local colleague who will help you settle in. Building genuine rapport from day one is an operational priority.',
+    ilrLevel: 1,
+    characters: [
+      { id: 'c1', name: 'Lucía', role: 'Colleague', isLearner: false },
+      { id: 'c2', name: 'You', role: 'New Employee', isLearner: true },
+    ],
+    lines: [
+      { characterId: 'c1', spanish: '¡Hola! Soy Lucía. ¿Tú eres el nuevo de la oficina de Washington?', english: 'Hi! I\'m Lucía. Are you the new person from the Washington office?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Sí, encantado. Me llamo Alex. Acabo de llegar.', english: 'Yes, pleased to meet you. My name is Alex. I just arrived.', isLearnerLine: true, phonetic: 'see, ehn-kahn-TAH-doh. meh YAH-moh' },
+      { characterId: 'c1', spanish: '¡Bienvenido! ¿Es tu primera vez en México?', english: 'Welcome! Is this your first time in Mexico?', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Es mi segunda vez. Me encanta la ciudad. ¿Llevas mucho tiempo aquí?', english: 'It\'s my second time. I love the city. Have you been here long?', isLearnerLine: true, phonetic: 'ehs mee seh-GOON-dah BEHS' },
+      { characterId: 'c1', spanish: 'Cinco años. Si necesitas algo, no dudes en preguntarme.', english: 'Five years. If you need anything, don\'t hesitate to ask me.', isLearnerLine: false },
+      { characterId: 'c2', spanish: 'Muchas gracias, Lucía. ¿Hay un buen lugar para almorzar cerca?', english: 'Thank you very much, Lucía. Is there a good place for lunch nearby?', isLearnerLine: true, phonetic: 'MOO-chahs GRAH-syahs' },
+      { characterId: 'c1', spanish: '¡Claro! Te llevo. La comida aquí es excelente.', english: 'Of course! I\'ll take you. The food here is excellent.', isLearnerLine: false },
+    ],
+    culturalNotes: [
+      'Building personal rapport before discussing work is essential in Latin American office culture.',
+      'Asking about family, the city, and local recommendations shows genuine interest and builds trust quickly.',
+    ],
+    keyVocab: ['v001', 'v002', 'v160'],
+  },
 ];
 
 export const getDialogueById = (id: string): Dialogue | undefined =>

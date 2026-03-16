@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '../theme/colors';
 import { ILRBadge } from '../components/ILRBadge';
@@ -9,6 +10,7 @@ import { AudioButton } from '../components/AudioButton';
 import { ProgressBar } from '../components/ProgressBar';
 import { AgentMaya, AgentMayaInline } from '../components/AgentMaya';
 import { AskMaya } from '../components/AskMaya';
+import { PronunciationChecker } from '../components/PronunciationChecker';
 import { getLessonById } from '../data/curriculum';
 import { getVocabById } from '../data/spanishVocabulary';
 import { getDrillById } from '../data/spanishDrills';
@@ -68,6 +70,7 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
   };
 
   const advancePhase = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (phase === 'intro') {
       if (lesson.culturalBriefing) setPhase('cultural');
       else if (vocabCards.length > 0) setPhase('vocabulary');
@@ -250,6 +253,14 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
             </View>
 
             <VocabCardView key={vocabIndex} card={vocabCards[vocabIndex]} />
+
+            {/* Speaking practice after every 3rd card */}
+            {vocabIndex % 3 === 2 && (
+              <PronunciationChecker
+                expectedText={vocabCards[vocabIndex].spanish}
+                expectedLanguage="es-MX"
+              />
+            )}
 
             {/* Prev / Next navigation */}
             <View style={styles.vocabNavRow}>

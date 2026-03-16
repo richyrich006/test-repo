@@ -4,6 +4,7 @@ import {
   TextInput, ScrollView, Animated, Platform,
 } from 'react-native';
 import * as Speech from 'expo-speech';
+import * as Haptics from 'expo-haptics';
 import { Colors, Shadows } from '../theme/colors';
 import { QuizQuestion, QuizResult, generateQuiz, scoreTextAnswer, QuizType } from '../utils/quizEngine';
 import { PronunciationChecker } from '../components/PronunciationChecker';
@@ -89,12 +90,14 @@ export function QuizScreen({ cardIds, lessonTitle, onComplete, onBack }: Props) 
 
     if (correct) {
       setMayaMood('correct');
-      setMayaMessage(undefined); // use random correct message
+      setMayaMessage(undefined);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       shake();
       setHearts(h => Math.max(0, h - 1));
       setMayaMood('wrong');
       setMayaMessage(undefined);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
 
     setPhase('feedback');
