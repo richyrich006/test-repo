@@ -30,14 +30,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-speech",
-        {
-          "microphonePermission": "Allow CIA Language Trainer to use the microphone for pronunciation practice."
-        }
-      ]
-    ]
+    }
   }
 }
