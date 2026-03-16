@@ -4,13 +4,18 @@ executor.py - Places a mirrored trade on Polymarket.
 Given a raw trade dict from the monitor, this module:
   1. Parses the trade into the fields we need (market, outcome, side, size, price)
   2. Scales the size by COPY_FRACTION and clamps it to configured limits
-  3. Uses py-clob-client to submit a market or limit order on your behalf
+  3. Checks we hold the token before placing a SELL (avoids pointless failed orders)
+  4. Uses py-clob-client to submit a FOK limit order on your behalf
+  5. Retries up to 2 times on transient network errors before giving up
 """
 
 import logging
+import threading
+import time
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 from math import gcd as _gcd
 
+import requests
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import (
     ApiCreds,
@@ -25,6 +30,10 @@ from py_clob_client.exceptions import PolyApiException
 import config
 
 logger = logging.getLogger(__name__)
+
+# Each thread gets its own ClobClient so concurrent copy_trade calls don't
+# share mutable client state.
+_local = threading.local()
 
 
 def _build_client() -> ClobClient:
@@ -41,22 +50,14 @@ def _build_client() -> ClobClient:
     return client
 
 
-# Build the client once at module load
-_client: ClobClient | None = None
-
-
 def get_client() -> ClobClient:
-    global _client
-    if _client is None:
-        _client = _build_client()
-    return _client
+    """Return this thread's ClobClient, creating one on first use."""
+    if not hasattr(_local, "client"):
+        _local.client = _build_client()
+    return _local.client
 
 
 def _parse_side(trade: dict) -> str:
-    """
-    Return BUY or SELL based on the trade record.
-    Polymarket activity records use 'BUY' / 'SELL' or 'buy' / 'sell'.
-    """
     side = str(trade.get("side", "BUY")).upper()
     return BUY if side == "BUY" else SELL
 
@@ -67,7 +68,6 @@ def _parse_trade(trade: dict) -> dict | None:
     Returns a dict with keys: token_id, side, price, size_usdc
     or None if the trade can't be parsed.
     """
-    # token_id identifies the specific outcome token (e.g. "Yes" for a market)
     token_id = (
         trade.get("asset")
         or trade.get("tokenId")
@@ -99,7 +99,7 @@ def _parse_trade(trade: dict) -> dict | None:
 def _scale_size(size_usdc: float) -> float | None:
     """
     Apply COPY_FRACTION, then clamp between MIN and MAX.
-    Returns None if the result is below the minimum (trade not worth copying).
+    Returns None if the result is below the minimum.
     """
     scaled = size_usdc * config.COPY_FRACTION
     if scaled < config.MIN_TRADE_SIZE_USDC:
@@ -119,10 +119,56 @@ def _scale_size(size_usdc: float) -> float | None:
     return clamped
 
 
+def _has_position(token_id: str) -> bool:
+    """
+    Return True if our proxy wallet holds any of this outcome token.
+    Used to skip SELL orders when we have nothing to sell.
+    Falls back to True (proceed) if the check fails.
+    """
+    if not config.POLY_PROXY_ADDRESS:
+        return True  # can't check without a proxy address
+    try:
+        resp = requests.get(
+            f"{config.DATA_API_URL}/positions",
+            params={"user": config.POLY_PROXY_ADDRESS, "sizeThreshold": "0"},
+            timeout=5,
+        )
+        resp.raise_for_status()
+        for pos in resp.json():
+            if str(pos.get("asset", "")) == str(token_id):
+                return float(pos.get("size", 0)) > 0
+        return False
+    except Exception as exc:
+        logger.warning("Position check failed: %s — proceeding with SELL.", exc)
+        return True  # fail-safe: let the order attempt
+
+
+def _submit_with_retry(order_args: OrderArgs, client: ClobClient, max_attempts: int = 3) -> dict:
+    """
+    Create and post a FOK order, retrying up to *max_attempts* times on
+    transient errors. Re-raises on the final failure or on API errors
+    (which indicate a bad request that retrying won't fix).
+    """
+    for attempt in range(max_attempts):
+        try:
+            signed_order = client.create_order(order_args)
+            return client.post_order(signed_order, OrderType.FOK)
+        except PolyApiException:
+            raise  # API rejections (bad price, insufficient balance) are not retryable
+        except Exception as exc:
+            if attempt == max_attempts - 1:
+                raise
+            wait = 2 ** attempt  # 1s, 2s
+            logger.warning(
+                "Order attempt %d/%d failed: %s — retrying in %ds.",
+                attempt + 1, max_attempts, exc, wait,
+            )
+            time.sleep(wait)
+
+
 def copy_trade(trade: dict) -> bool:
     """
     Mirror a single trade from the target trader.
-
     Returns True if the order was submitted successfully, False otherwise.
     """
     parsed = _parse_trade(trade)
@@ -131,6 +177,13 @@ def copy_trade(trade: dict) -> bool:
 
     final_size = _scale_size(parsed["size_usdc"])
     if final_size is None:
+        return False
+
+    # Skip SELL orders when we don't hold the token — avoids a doomed API call
+    if parsed["side"] == SELL and not _has_position(parsed["token_id"]):
+        logger.info(
+            "No position in token %s — skipping SELL.", parsed["token_id"][:16] + "..."
+        )
         return False
 
     # Round to 2 decimal places (USDC cents)
@@ -148,10 +201,6 @@ def copy_trade(trade: dict) -> bool:
     try:
         client = get_client()
 
-        # Build an aggressive limit price, rounded to 2dp (Polymarket's tick size).
-        # Polymarket only accepts prices at 0.01 increments — using 4dp prices
-        # causes the maker USDC amount (token_size * price) to have >2dp, which
-        # the API rejects.  BUY rounds up to stay aggressive; SELL rounds down.
         raw_price = parsed["price"]
         _raw = Decimal(str(raw_price))
         _slip = Decimal(str(config.MAX_SLIPPAGE_PCT))
@@ -165,9 +214,6 @@ def copy_trade(trade: dict) -> bool:
             )
         limit_price = float(_lp_dec)
 
-        # For price P/100, token_size must be a multiple of 10000/gcd(P,10000)/10000
-        # so that token_size * price is exactly 2dp.  Example: price=0.61 → P=61,
-        # gcd(61,10000)=1 → step=1 (integer tokens only).  price=0.50 → step=0.02.
         _P = int((_lp_dec * 100).to_integral_value())
         _step = Decimal(10000 // _gcd(_P, 10000)) / Decimal(10000)
         _usdc = Decimal(str(final_size)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
@@ -184,10 +230,7 @@ def copy_trade(trade: dict) -> bool:
             size=token_size,
             side=parsed["side"],
         )
-        # FOK: fill the whole order at this price or better, or cancel.
-        # Never leaves a resting order, never overpays beyond our limit.
-        signed_order = client.create_order(order_args)
-        resp = client.post_order(signed_order, OrderType.FOK)
+        resp = _submit_with_retry(order_args, client)
         logger.info("Order submitted: %s", resp)
         return True
 

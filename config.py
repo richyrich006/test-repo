@@ -53,3 +53,11 @@ DATA_API_URL: str = os.getenv("DATA_API_URL", "https://data-api.polymarket.com")
 
 # Chain
 CHAIN_ID: int = int(os.getenv("CHAIN_ID", "137"))
+
+# Notifications — set to a Discord or Slack incoming webhook URL to get alerts
+# Discord: Server Settings → Integrations → Webhooks → Copy Webhook URL
+# Slack:   https://api.slack.com/messaging/webhooks
+WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "")
+
+# Local SQLite database for P&L tracking (created automatically if missing)
+DB_PATH: str = os.getenv("DB_PATH", "trades.db")
