@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -135,10 +134,10 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => {
-            Alert.alert('Leave Lesson?', 'Your progress in this lesson will be lost.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Leave', onPress: onBack, style: 'destructive' },
-            ]);
+            const confirmed = typeof window !== 'undefined'
+              ? window.confirm('Leave this lesson? Your progress will be lost.')
+              : true;
+            if (confirmed) onBack();
           }} style={styles.backBtn}>
             <Ionicons name="close" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
