@@ -211,7 +211,7 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
                 <ImmersionItem text='Greet formally with "buenos días / buenas tardes" — NOT "hola"' />
                 <ImmersionItem text='Use "usted" unless they switch to "tú" first' />
                 <ImmersionItem text='Comment on something personal before business: their city, family, or a recent event' />
-                <ImmersionItem text='Allow pauses — don\'t rush to fill silence' />
+                <ImmersionItem text="Allow pauses — don't rush to fill silence" />
               </View>
             </View>
 
