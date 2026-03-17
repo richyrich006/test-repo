@@ -8,7 +8,7 @@ if (!window.__readAloud) {
     utterance: null,
     chunks: [],       // array of paragraph strings
     chunkIndex: 0,    // which paragraph we're on
-    rate: 1.0,
+    rate: 1.5,
     playing: false,
     paused: false,
     active: false,
@@ -89,32 +89,21 @@ if (!window.__readAloud) {
       .map((s) => `<button class="rta-speed${s === RA.rate ? ' rta-speed-active' : ''}" data-speed="${s}">${s}x</button>`)
       .join('');
 
-    const paragraphHTML = paragraphs
-      .map((para, i) => `<p class="rta-para" id="rta-para-${i}">${renderParagraph(para, i)}</p>`)
-      .join('');
-
     const panel = document.createElement('div');
     panel.id = 'rta-panel';
     panel.innerHTML = `
-      <div id="rta-backdrop"></div>
-      <div id="rta-sheet">
-        <div id="rta-reader-header">
-          <span id="rta-title">${escHtml(article.title || document.title || 'Article')}</span>
-          <button id="rta-close" title="Close">✕</button>
+      <div id="rta-player">
+        <div class="rta-player-group">
+          <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
+          <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
+          <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
         </div>
-        <div id="rta-content">${paragraphHTML}</div>
-        <div id="rta-player">
-          <div class="rta-player-group">
-            <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
-            <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
-            <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
-          </div>
-          <div id="rta-status">Ready — click ▶ or any paragraph</div>
-          <div class="rta-player-group">
-            <span class="rta-label">Speed</span>
-            ${speedBtns}
-          </div>
+        <div id="rta-status">Ready</div>
+        <div class="rta-player-group">
+          <span class="rta-label">Speed</span>
+          ${speedBtns}
         </div>
+        <button id="rta-close" title="Close">✕</button>
       </div>
     `;
 
@@ -125,7 +114,6 @@ if (!window.__readAloud) {
   function attachEvents(paragraphs) {
     // Close
     document.getElementById('rta-close').addEventListener('click', teardown);
-    document.getElementById('rta-backdrop').addEventListener('click', teardown);
 
     // Play / Pause
     document.getElementById('rta-playpause').addEventListener('click', () => {
@@ -152,12 +140,6 @@ if (!window.__readAloud) {
     });
     document.getElementById('rta-next').addEventListener('click', () => {
       jump(Math.min(paragraphs.length - 1, RA.chunkIndex + 1));
-    });
-
-    // Click any paragraph to jump to it
-    paragraphs.forEach((_, i) => {
-      const el = document.getElementById(`rta-para-${i}`);
-      if (el) el.addEventListener('click', () => jump(i));
     });
 
     // Speed buttons
