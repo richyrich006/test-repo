@@ -14,6 +14,7 @@ if (!window.__readAloud) {
     active: false,
     keepAliveTimer: null,
     markedEls: [],    // page DOM elements we've modified
+    wordTimers: [],   // setTimeout IDs for timer-based word highlighting
   };
 
   window.__readAloud = RA;
@@ -297,6 +298,7 @@ if (!window.__readAloud) {
         RA.playing = false;
         setPlayBtn(false);
         stopKeepAlive();
+        clearWordTimers();
       } else {
         RA.synth.resume();
         RA.paused = false;
@@ -382,6 +384,7 @@ if (!window.__readAloud) {
       return;
     }
 
+    clearWordTimers();
     RA.chunkIndex = idx;
     RA.playing = true;
     RA.paused = false;
@@ -401,21 +404,27 @@ if (!window.__readAloud) {
 
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
+      // onboundary is working — cancel the timer fallback and use events instead
+      clearWordTimers();
       // event.charIndex is relative to the utterance text (which may be sliced),
       // so add charOffset to map back to the original span data-s positions.
       highlightWord(idx, event.charIndex + charOffset);
     };
 
     utterance.onend = () => {
+      clearWordTimers();
       if (!RA.paused) startReading(idx + 1);
     };
 
     utterance.onerror = (e) => {
+      clearWordTimers();
       if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
     };
 
     RA.utterance = utterance;
     RA.synth.speak(utterance);
+    // Start timer-based highlights as fallback; onboundary cancels them if it fires
+    scheduleWordHighlights(idx, charOffset);
   }
 
   function highlightWord(chunkIdx, charIndex) {
@@ -432,6 +441,45 @@ if (!window.__readAloud) {
         span.classList.add('rta-hl');
         break;
       }
+    }
+  }
+
+  function clearWordTimers() {
+    RA.wordTimers.forEach((t) => clearTimeout(t));
+    RA.wordTimers = [];
+  }
+
+  // Schedule per-word highlight timeouts as a fallback for when onboundary
+  // doesn't fire (common with Google/Chrome voices in Chromium-based browsers).
+  // If onboundary does fire, it calls clearWordTimers() and takes over.
+  function scheduleWordHighlights(chunkIdx, charOffset) {
+    clearWordTimers();
+    const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
+    if (!para) return;
+
+    const words = Array.from(para.querySelectorAll('.rta-word'));
+    const startIdx = charOffset > 0
+      ? words.findIndex((w) => parseInt(w.dataset.e, 10) > charOffset)
+      : 0;
+    if (startIdx < 0) return;
+
+    // ~60ms per character at 1× rate ≈ 150 WPM average; scales with RA.rate
+    const msPerChar = 60 / RA.rate;
+    let elapsed = 0;
+
+    for (let i = startIdx; i < words.length; i++) {
+      const word = words[i];
+      const wordLen = word.textContent.trim().length;
+      const delay = elapsed;
+      elapsed += Math.max(wordLen * msPerChar, 100); // min 100ms per word
+
+      RA.wordTimers.push(
+        setTimeout(() => {
+          const prev = document.querySelector('.rta-word.rta-hl');
+          if (prev) prev.classList.remove('rta-hl');
+          word.classList.add('rta-hl');
+        }, delay)
+      );
     }
   }
 
@@ -470,13 +518,15 @@ if (!window.__readAloud) {
     RA.chunks = paragraphs;
     RA.chunkIndex = 0;
     RA.active = true;
-    markPageElements(paragraphs);
     buildUI(article, paragraphs);
+    // Defer the heavy DOM rewrite so the panel paints first
+    setTimeout(() => markPageElements(paragraphs), 0);
   }
 
   function teardown() {
     RA.synth.cancel();
     stopKeepAlive();
+    clearWordTimers();
     const panel = document.getElementById('rta-panel');
     if (panel) panel.remove();
     restorePageElements();
