@@ -7,6 +7,14 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["Readability.js", "content.js"],
+      "css": ["player.css"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_title": "ReadAloud — Click to start reading"
   }

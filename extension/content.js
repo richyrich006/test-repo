@@ -444,7 +444,7 @@ if (!window.__readAloud) {
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
-  function activate() {
+  function activate(silent = false) {
     if (RA.active) {
       teardown();
       return;
@@ -452,13 +452,13 @@ if (!window.__readAloud) {
 
     const article = extractArticle();
     if (!article) {
-      alert('ReadAloud: Could not extract article content from this page.');
+      if (!silent) alert('ReadAloud: Could not extract article content from this page.');
       return;
     }
 
     const paragraphs = getParagraphs(article);
     if (paragraphs.length === 0) {
-      alert('ReadAloud: No readable content found on this page.');
+      if (!silent) alert('ReadAloud: No readable content found on this page.');
       return;
     }
 
@@ -487,5 +487,5 @@ if (!window.__readAloud) {
     if (msg.action === 'activate') activate();
   });
 
-  activate();
+  activate(true);
 }
