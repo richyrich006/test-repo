@@ -17,5 +17,11 @@
   ],
   "action": {
     "default_title": "ReadAloud — Click to start reading"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["pdf.worker.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

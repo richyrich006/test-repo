@@ -73,22 +73,41 @@ setActionIcon();
 chrome.runtime.onInstalled.addListener(setActionIcon);
 chrome.runtime.onStartup.addListener(setActionIcon);
 
+// Returns true if the tab is displaying a PDF file.
+function isPdfTab(tab) {
+  return /\.pdf(\?|#|$)/i.test(tab.url || '');
+}
+
 // On icon click: inject scripts on first use, toggle on subsequent clicks.
 chrome.action.onClicked.addListener(async (tab) => {
   try {
     // If already injected, send toggle message
     await chrome.tabs.sendMessage(tab.id, { action: 'activate' });
   } catch {
-    // Not injected yet — inject Readability, then our content script + styles.
+    // Not injected yet — inject libraries, then our content script + styles.
     // content.js auto-activates after injection.
     await chrome.scripting.insertCSS({
       target: { tabId: tab.id },
       files: ['player.css'],
     });
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['Readability.js'],
-    });
+
+    if (isPdfTab(tab)) {
+      // PDF mode: set flag so content.js uses PDF.js extraction instead of Readability
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => { window.__rtaPdfMode = true; },
+      });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['pdf.min.js'],
+      });
+    } else {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['Readability.js'],
+      });
+    }
+
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['content.js'],

@@ -623,17 +623,88 @@ if (!window.__readAloud) {
     }
   }
 
+  // ─── PDF extraction ───────────────────────────────────────────────────────
+
+  // Extract readable text chunks from a PDF using PDF.js.
+  // Reconstructs paragraphs from text-item Y positions so each chunk is a
+  // natural paragraph rather than an entire page dump.
+  async function extractPdfChunks() {
+    // Point PDF.js at the worker file bundled with the extension
+    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('pdf.worker.min.js');
+
+    const response = await fetch(document.URL);
+    const arrayBuffer = await response.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    const allChunks = [];
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+
+      const items = textContent.items.filter((item) => item.str && item.str.trim());
+      if (items.length === 0) continue;
+
+      // PDF Y-axis is bottom-up; sort top-to-bottom then left-to-right
+      items.sort((a, b) => {
+        const dy = b.transform[5] - a.transform[5];
+        return Math.abs(dy) > 2 ? dy : a.transform[4] - b.transform[4];
+      });
+
+      // Estimate typical line height from consecutive Y gaps
+      const yGaps = [];
+      for (let i = 1; i < items.length; i++) {
+        const d = Math.abs(items[i - 1].transform[5] - items[i].transform[5]);
+        if (d > 0 && d < 30) yGaps.push(d);
+      }
+      yGaps.sort((a, b) => a - b);
+      const lineH = yGaps.length ? yGaps[Math.floor(yGaps.length / 2)] : 12;
+      const paraGap = lineH * 1.6; // gap larger than 1.6× line height = new paragraph
+
+      // Group items into paragraphs
+      let cur = '';
+      let lastY = items[0].transform[5];
+
+      for (const item of items) {
+        const y = item.transform[5];
+        if (Math.abs(lastY - y) > paraGap && cur.trim().length > 0) {
+          const text = cur.replace(/\s+/g, ' ').trim();
+          if (text.length > 20) allChunks.push(text);
+          cur = item.str;
+        } else {
+          cur += (cur && !cur.endsWith(' ') && !item.str.startsWith(' ') ? ' ' : '') + item.str;
+        }
+        lastY = y;
+      }
+      if (cur.trim().length > 20) allChunks.push(cur.replace(/\s+/g, ' ').trim());
+    }
+
+    return allChunks;
+  }
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
-  function activate(silent = false) {
+  async function activate(silent = false) {
     if (RA.active) { teardown(); return; }
 
-    const article = extractArticle();
-    let paragraphs = article ? getParagraphs(article) : [];
+    let paragraphs = [];
 
-    // Readability couldn't extract enough content — try the live DOM directly
-    if (paragraphs.length < 3) {
-      paragraphs = extractFallback() || [];
+    if (window.__rtaPdfMode) {
+      try {
+        paragraphs = await extractPdfChunks();
+      } catch (e) {
+        console.warn('ReadAloud PDF extraction error:', e);
+        if (!silent) alert('ReadAloud: Could not extract text from this PDF.');
+        return;
+      }
+    } else {
+      const article = extractArticle();
+      paragraphs = article ? getParagraphs(article) : [];
+
+      // Readability couldn't extract enough content — try the live DOM directly
+      if (paragraphs.length < 3) {
+        paragraphs = extractFallback() || [];
+      }
     }
 
     if (paragraphs.length === 0) {
@@ -644,9 +715,11 @@ if (!window.__readAloud) {
     RA.chunks = paragraphs;
     RA.chunkIndex = loadPosition();
     RA.active = true;
-    buildUI(article, paragraphs);
-    // Defer heavy DOM rewrite so the panel paints first
-    setTimeout(() => markPageElements(paragraphs), 0);
+    buildUI(null, paragraphs);
+    // PDF pages have no HTML paragraphs to mark; skip for PDF mode
+    if (!window.__rtaPdfMode) {
+      setTimeout(() => markPageElements(paragraphs), 0);
+    }
   }
 
   function teardown() {
