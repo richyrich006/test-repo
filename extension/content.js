@@ -20,23 +20,44 @@ if (!window.__readAloud) {
 
   // ─── Article extraction via Readability.js ────────────────────────────────
 
+  // Selectors for content that should never be read aloud
+  const JUNK_SELECTORS = [
+    'form', '[class*="newsletter"]', '[class*="signup"]', '[class*="sign-up"]',
+    '[class*="subscribe"]', '[id*="newsletter"]', '[id*="signup"]', '[id*="subscribe"]',
+    '[class*="cookie"]', '[class*="consent"]', '[class*="gdpr"]',
+    '[class*="promo"]', '[class*="banner"]', '[class*="advert"]',
+    '[class*="related"]', '[class*="recommended"]', '[class*="more-stories"]',
+    '[class*="social-share"]', '[class*="share-bar"]',
+  ].join(',');
+
   function extractArticle() {
     const docClone = document.cloneNode(true);
+    // Strip junk nodes before Readability sees them
+    docClone.querySelectorAll(JUNK_SELECTORS).forEach((el) => el.remove());
     const article = new Readability(docClone).parse();
     if (!article || !article.content) return null;
     return article;
   }
+
+  // Patterns that mark a paragraph as boilerplate (newsletter CTAs, cookie notices, etc.)
+  const BOILERPLATE_RE = /sign[\s-]?up|newsletter|subscribe|email address|your info will be|privacy policy|cookie|follow us|advertisement|sponsored|terms of (use|service)/i;
 
   // Parse Readability's cleaned HTML into an array of paragraph strings.
   function getParagraphs(article) {
     const div = document.createElement('div');
     div.innerHTML = article.content;
 
+    // Remove any leftover form/input elements Readability kept
+    div.querySelectorAll('form, input, button[type="submit"], [class*="newsletter"], [class*="signup"]').forEach((el) => el.remove());
+
     const blocks = div.querySelectorAll('p, h1, h2, h3, h4, h5, li');
     const paras = [];
     blocks.forEach((el) => {
       const text = el.textContent.replace(/\s+/g, ' ').trim();
-      if (text.length > 15) paras.push(text);
+      // Skip very short lines and obvious boilerplate
+      if (text.length < 20) return;
+      if (text.length < 120 && BOILERPLATE_RE.test(text)) return;
+      paras.push(text);
     });
 
     // Fallback: plain text split by newlines
@@ -44,7 +65,7 @@ if (!window.__readAloud) {
       return article.textContent
         .split(/\n+/)
         .map((s) => s.replace(/\s+/g, ' ').trim())
-        .filter((s) => s.length > 15);
+        .filter((s) => s.length > 20 && !(s.length < 120 && BOILERPLATE_RE.test(s)));
     }
 
     return paras;
@@ -165,6 +186,21 @@ if (!window.__readAloud) {
 
   // ─── UI ───────────────────────────────────────────────────────────────────
 
+  const LOGO_SVG = `<svg id="rta-logo-svg" width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="22" height="22" rx="6" fill="url(#rta-grad)"/>
+    <defs>
+      <linearGradient id="rta-grad" x1="0" y1="0" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#6366f1"/>
+        <stop offset="1" stop-color="#8b5cf6"/>
+      </linearGradient>
+    </defs>
+    <rect x="3"   y="9"  width="2.2" height="4"   rx="1.1" fill="white" opacity="0.85"/>
+    <rect x="6.5" y="6"  width="2.2" height="10"  rx="1.1" fill="white"/>
+    <rect x="10"  y="8"  width="2.2" height="6"   rx="1.1" fill="white" opacity="0.9"/>
+    <rect x="13.5" y="4" width="2.2" height="14"  rx="1.1" fill="white"/>
+    <rect x="17"  y="7"  width="2.2" height="8"   rx="1.1" fill="white" opacity="0.85"/>
+  </svg>`;
+
   function buildUI(article, paragraphs) {
     const existing = document.getElementById('rta-panel');
     if (existing) existing.remove();
@@ -178,26 +214,74 @@ if (!window.__readAloud) {
     panel.id = 'rta-panel';
     panel.innerHTML = `
       <div id="rta-player">
-        <div class="rta-player-group">
-          <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
-          <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
-          <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
+        <div id="rta-logo" title="Drag to move">${LOGO_SVG}</div>
+        <div id="rta-controls">
+          <div class="rta-player-group">
+            <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
+            <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
+            <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
+          </div>
+          <div id="rta-status">Ready</div>
+          <div class="rta-player-group">
+            <span class="rta-label">Speed</span>
+            ${speedBtns}
+          </div>
         </div>
-        <div id="rta-status">Ready</div>
-        <div class="rta-player-group">
-          <span class="rta-label">Speed</span>
-          ${speedBtns}
+        <div id="rta-actions">
+          <button id="rta-collapse" title="Minimize">−</button>
+          <button id="rta-close" title="Close">✕</button>
         </div>
-        <button id="rta-close" title="Close">✕</button>
       </div>
     `;
 
     document.body.appendChild(panel);
+    makeDraggable(panel);
     attachEvents(paragraphs);
+  }
+
+  function makeDraggable(panel) {
+    let dragging = false, startX, startY, origLeft, origTop;
+    const handle = panel.querySelector('#rta-logo');
+
+    handle.addEventListener('mousedown', (e) => {
+      dragging = true;
+      const rect = panel.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      // Switch from centered CSS to explicit position so we can move it freely
+      panel.style.transform = 'none';
+      panel.style.bottom = 'auto';
+      panel.style.left = rect.left + 'px';
+      panel.style.top = rect.top + 'px';
+      handle.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const x = Math.max(0, Math.min(e.clientX - startX, window.innerWidth - panel.offsetWidth));
+      const y = Math.max(0, Math.min(e.clientY - startY, window.innerHeight - panel.offsetHeight));
+      panel.style.left = x + 'px';
+      panel.style.top = y + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        handle.style.cursor = 'grab';
+      }
+    });
   }
 
   function attachEvents(paragraphs) {
     document.getElementById('rta-close').addEventListener('click', teardown);
+
+    document.getElementById('rta-collapse').addEventListener('click', () => {
+      const panel = document.getElementById('rta-panel');
+      const collapsed = panel.classList.toggle('rta-collapsed');
+      document.getElementById('rta-collapse').title = collapsed ? 'Expand' : 'Minimize';
+      document.getElementById('rta-collapse').textContent = collapsed ? '+' : '−';
+    });
 
     document.getElementById('rta-playpause').addEventListener('click', () => {
       if (!RA.playing && !RA.paused) {

@@ -16,11 +16,63 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
+  padding: 10px 14px 10px 10px;
   background: #fff;
   border-radius: 50px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08);
   white-space: nowrap;
+  user-select: none;
+}
+
+#rta-logo {
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 8px;
+  transition: opacity 0.12s;
+}
+#rta-logo:hover { opacity: 0.85; }
+
+#rta-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#rta-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+#rta-collapse {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#rta-collapse:hover { background: #e0e0e0; }
+
+/* Collapsed (mini) state — show only logo + action buttons */
+#rta-panel.rta-collapsed #rta-controls {
+  display: none;
+}
+#rta-panel.rta-collapsed #rta-player {
+  border-radius: 50px;
+  padding: 8px 10px;
 }
 
 .rta-player-group {
@@ -93,7 +145,6 @@
   justify-content: center;
   flex-shrink: 0;
   transition: background 0.15s;
-  margin-left: 4px;
 }
 #rta-close:hover { background: #e0e0e0; }
 
@@ -101,15 +152,9 @@
 
 .rta-para {
   cursor: pointer;
-  transition: background 0.15s;
 }
 
-.rta-para-active {
-  background: rgba(59, 130, 246, 0.08) !important;
-  outline: 2px solid rgba(59, 130, 246, 0.25);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
+/* No full-paragraph highlight — only the active word is highlighted */
 
 .rta-word {
   border-radius: 3px;
@@ -136,6 +181,6 @@
   .rta-speed { background: #2c2c2e; color: #ccc; }
   .rta-speed:hover { background: #3a3a3c; }
   .rta-speed-active { background: #f0f0f0; color: #000; }
-  #rta-close { background: #2c2c2e; color: #aaa; }
-  #rta-close:hover { background: #3a3a3c; }
+  #rta-close, #rta-collapse { background: #2c2c2e; color: #aaa; }
+  #rta-close:hover, #rta-collapse:hover { background: #3a3a3c; }
 }
