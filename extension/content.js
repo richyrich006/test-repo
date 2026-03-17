@@ -45,6 +45,37 @@ if (!window.__readAloud) {
     }
   }
 
+  // Ordered list of article-body selectors used across major news sites.
+  // Daily Mail uses [itemprop="articleBody"] + <p class="mol-para-with-font">;
+  // many other sites use <article> or role="main".
+  const ARTICLE_BODY_SELECTORS = [
+    '[itemprop="articleBody"]',
+    'article',
+    '[role="article"]',
+    '[class*="article-body"]',
+    '[class*="article-text"]',
+    '[class*="story-body"]',
+    '[class*="post-content"]',
+    '[class*="entry-content"]',
+    '[class*="article__body"]',
+    'main',
+    '[role="main"]',
+  ];
+
+  // Fallback when Readability returns nothing: pull <p> tags directly from the
+  // first recognisable article container we can find in the live DOM.
+  function extractFallback() {
+    for (const sel of ARTICLE_BODY_SELECTORS) {
+      const container = document.querySelector(sel);
+      if (!container) continue;
+      const paras = Array.from(container.querySelectorAll('p'))
+        .map((p) => p.textContent.replace(/\s+/g, ' ').trim())
+        .filter((t) => t.length > 40 && !(t.length < 120 && BOILERPLATE_RE.test(t)));
+      if (paras.length >= 3) return paras;
+    }
+    return null;
+  }
+
   const BOILERPLATE_RE = /sign[\s-]?up|newsletter|subscribe|email address|your info will be|privacy policy|cookie|follow us|advertisement|sponsored|terms of (use|service)/i;
 
   function getParagraphs(article) {
@@ -598,12 +629,13 @@ if (!window.__readAloud) {
     if (RA.active) { teardown(); return; }
 
     const article = extractArticle();
-    if (!article) {
-      if (!silent) alert('ReadAloud: Could not extract article content from this page.');
-      return;
+    let paragraphs = article ? getParagraphs(article) : [];
+
+    // Readability couldn't extract enough content — try the live DOM directly
+    if (paragraphs.length < 3) {
+      paragraphs = extractFallback() || [];
     }
 
-    const paragraphs = getParagraphs(article);
     if (paragraphs.length === 0) {
       if (!silent) alert('ReadAloud: No readable content found on this page.');
       return;
