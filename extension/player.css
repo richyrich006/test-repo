@@ -13,6 +13,7 @@
 /* ── Player bar ──────────────────────────────────────────────────────────── */
 
 #rta-player {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -22,6 +23,27 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08);
   white-space: nowrap;
   user-select: none;
+  overflow: hidden; /* clips the progress bar to the pill shape */
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+
+#rta-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 50px 50px 0 0;
+}
+
+#rta-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: inherit;
+  transition: width 0.4s ease;
 }
 
 #rta-logo {
@@ -39,6 +61,17 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* ── Mini-mode controls (play button shown when collapsed) ───────────────── */
+
+#rta-mini-controls {
+  display: none;
+  align-items: center;
+}
+
+#rta-panel.rta-collapsed #rta-mini-controls {
+  display: flex;
 }
 
 #rta-actions {
@@ -66,7 +99,7 @@
 }
 #rta-collapse:hover { background: #e0e0e0; }
 
-/* Collapsed (mini) state — show only logo + action buttons */
+/* Collapsed (mini) state — show only logo + mini play + action buttons */
 #rta-panel.rta-collapsed #rta-controls {
   display: none;
 }
@@ -93,6 +126,20 @@
 }
 .rta-btn:hover { background: #e5e5e5; }
 
+/* Skip ±10s buttons — slightly narrower than nav buttons */
+.rta-icon-btn {
+  padding: 7px 9px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.rta-skip-label {
+  font-size: 10px;
+  line-height: 1;
+}
+
 .rta-play-btn {
   background: #111 !important;
   color: #fff !important;
@@ -105,7 +152,7 @@
 #rta-status {
   font-size: 11px;
   color: #888;
-  min-width: 80px;
+  min-width: 60px;
   text-align: center;
 }
 
@@ -154,8 +201,6 @@
   cursor: pointer;
 }
 
-/* No full-paragraph highlight — only the active word is highlighted */
-
 .rta-word {
   border-radius: 3px;
   cursor: pointer;
@@ -175,6 +220,7 @@
 
 @media (prefers-color-scheme: dark) {
   #rta-player { background: #1c1c1e; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5); }
+  #rta-progress { background: rgba(99, 102, 241, 0.2); }
   .rta-btn { background: #2c2c2e; color: #e0e0e0; }
   .rta-btn:hover { background: #3a3a3c; }
   .rta-play-btn { background: #f0f0f0 !important; color: #000 !important; }

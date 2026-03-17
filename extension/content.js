@@ -6,22 +6,23 @@ if (!window.__readAloud) {
   const RA = {
     synth: window.speechSynthesis,
     utterance: null,
-    chunks: [],       // array of paragraph strings
-    chunkIndex: 0,    // which paragraph we're on
+    chunks: [],         // array of paragraph strings
+    chunkIndex: 0,      // which paragraph we're on
     rate: 1.5,
     playing: false,
     paused: false,
     active: false,
     keepAliveTimer: null,
-    markedEls: [],    // page DOM elements we've modified
-    wordTimers: [],   // setTimeout IDs for timer-based word highlighting
+    markedEls: [],      // page DOM elements we've modified
+    wordTimers: [],     // setTimeout IDs for timer-based word highlighting
+    uttStartTime: 0,    // Date.now() when current utterance began
+    uttCharOffset: 0,   // charOffset passed to startReading for current utterance
   };
 
   window.__readAloud = RA;
 
   // ─── Article extraction via Readability.js ────────────────────────────────
 
-  // Selectors for content that should never be read aloud
   const JUNK_SELECTORS = [
     'form', '[class*="newsletter"]', '[class*="signup"]', '[class*="sign-up"]',
     '[class*="subscribe"]', '[id*="newsletter"]', '[id*="signup"]', '[id*="subscribe"]',
@@ -34,7 +35,6 @@ if (!window.__readAloud) {
   function extractArticle() {
     const docClone = document.cloneNode(true);
     if (!docClone || !docClone.documentElement) return null;
-    // Strip junk nodes before Readability sees them
     docClone.querySelectorAll(JUNK_SELECTORS).forEach((el) => el.remove());
     try {
       const article = new Readability(docClone).parse();
@@ -45,28 +45,22 @@ if (!window.__readAloud) {
     }
   }
 
-  // Patterns that mark a paragraph as boilerplate (newsletter CTAs, cookie notices, etc.)
   const BOILERPLATE_RE = /sign[\s-]?up|newsletter|subscribe|email address|your info will be|privacy policy|cookie|follow us|advertisement|sponsored|terms of (use|service)/i;
 
-  // Parse Readability's cleaned HTML into an array of paragraph strings.
   function getParagraphs(article) {
     const div = document.createElement('div');
     div.innerHTML = article.content;
-
-    // Remove any leftover form/input elements Readability kept
     div.querySelectorAll('form, input, button[type="submit"], [class*="newsletter"], [class*="signup"]').forEach((el) => el.remove());
 
     const blocks = div.querySelectorAll('p, h1, h2, h3, h4, h5, li');
     const paras = [];
     blocks.forEach((el) => {
       const text = el.textContent.replace(/\s+/g, ' ').trim();
-      // Skip very short lines and obvious boilerplate
       if (text.length < 20) return;
       if (text.length < 120 && BOILERPLATE_RE.test(text)) return;
       paras.push(text);
     });
 
-    // Fallback: plain text split by newlines
     if (paras.length === 0) {
       return article.textContent
         .split(/\n+/)
@@ -79,17 +73,12 @@ if (!window.__readAloud) {
 
   // ─── Word-span rendering ──────────────────────────────────────────────────
 
-  function renderParagraph(text, chunkIdx) {
+  function renderParagraph(text) {
     let html = '';
     let pos = 0;
-    let wordIdx = 0;
-
-    const parts = text.split(/(\s+)/);
-    for (const part of parts) {
+    for (const part of text.split(/(\s+)/)) {
       if (part.trim().length > 0) {
-        const safe = escHtml(part);
-        html += `<span class="rta-word" data-s="${pos}" data-e="${pos + part.length}">${safe}</span>`;
-        wordIdx++;
+        html += `<span class="rta-word" data-s="${pos}" data-e="${pos + part.length}">${escHtml(part)}</span>`;
       } else {
         html += part;
       }
@@ -103,8 +92,6 @@ if (!window.__readAloud) {
   }
 
   // ─── Page element matching ────────────────────────────────────────────────
-  // Find the real DOM elements on the page that correspond to each extracted
-  // paragraph, wrap their text in word spans, and attach click handlers.
 
   function markPageElements(paragraphs) {
     const candidates = Array.from(
@@ -115,27 +102,15 @@ if (!window.__readAloud) {
 
     paragraphs.forEach((text, idx) => {
       const normText = text.replace(/\s+/g, ' ').trim();
-
-      let bestEl = null;
-      let bestScore = 0;
+      let bestEl = null, bestScore = 0;
 
       for (const el of candidates) {
         if (used.has(el)) continue;
         const elText = el.textContent.replace(/\s+/g, ' ').trim();
-
-        if (elText === normText) {
-          bestEl = el;
-          bestScore = 1;
-          break;
-        }
-
-        // Accept if the element's text is mostly contained in the paragraph
+        if (elText === normText) { bestEl = el; bestScore = 1; break; }
         if (normText.includes(elText) && elText.length > 15) {
           const score = elText.length / normText.length;
-          if (score > 0.7 && score > bestScore) {
-            bestScore = score;
-            bestEl = el;
-          }
+          if (score > 0.7 && score > bestScore) { bestScore = score; bestEl = el; }
         }
       }
 
@@ -143,12 +118,9 @@ if (!window.__readAloud) {
         used.add(bestEl);
         bestEl._rtaOrigHTML = bestEl.innerHTML;
         bestEl.setAttribute('data-rta-chunk', idx);
-        bestEl.innerHTML = renderParagraph(normText, idx);
+        bestEl.innerHTML = renderParagraph(normText);
         bestEl.classList.add('rta-para');
-        // Word clicks jump to that exact word; paragraph clicks (whitespace) start from beginning
-        bestEl.querySelectorAll('.rta-word').forEach((span) => {
-          span.addEventListener('click', handleWordClick);
-        });
+        bestEl.querySelectorAll('.rta-word').forEach((span) => span.addEventListener('click', handleWordClick));
         bestEl.addEventListener('click', handleParaClick);
         RA.markedEls.push(bestEl);
       }
@@ -190,6 +162,34 @@ if (!window.__readAloud) {
     RA.markedEls = [];
   }
 
+  // ─── Session position ─────────────────────────────────────────────────────
+
+  function savePosition(idx) {
+    try { sessionStorage.setItem('rta-pos:' + location.href, idx); } catch (_) {}
+  }
+
+  function loadPosition() {
+    try { return parseInt(sessionStorage.getItem('rta-pos:' + location.href)) || 0; } catch (_) { return 0; }
+  }
+
+  // ─── Progress & time remaining ────────────────────────────────────────────
+
+  function updateProgress(idx) {
+    const fill = document.getElementById('rta-progress-fill');
+    if (!fill || RA.chunks.length === 0) return;
+    fill.style.width = `${((idx + 1) / RA.chunks.length) * 100}%`;
+  }
+
+  function timeRemainingStr(fromIdx) {
+    let words = 0;
+    for (let i = fromIdx; i < RA.chunks.length; i++) {
+      words += RA.chunks[i].split(/\s+/).filter(Boolean).length;
+    }
+    const minutes = words / (150 * RA.rate);
+    if (minutes < 1) return `~${Math.max(1, Math.round(minutes * 60))}s left`;
+    return `~${Math.round(minutes)}m left`;
+  }
+
   // ─── UI ───────────────────────────────────────────────────────────────────
 
   const LOGO_SVG = `<svg id="rta-logo-svg" width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -220,11 +220,14 @@ if (!window.__readAloud) {
     panel.id = 'rta-panel';
     panel.innerHTML = `
       <div id="rta-player">
+        <div id="rta-progress"><div id="rta-progress-fill"></div></div>
         <div id="rta-logo" title="Drag to move">${LOGO_SVG}</div>
         <div id="rta-controls">
           <div class="rta-player-group">
             <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
+            <button class="rta-btn rta-icon-btn" id="rta-skip-back" title="Back 10s">↺<span class="rta-skip-label">10</span></button>
             <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
+            <button class="rta-btn rta-icon-btn" id="rta-skip-fwd" title="Forward 10s"><span class="rta-skip-label">10</span>↻</button>
             <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
           </div>
           <div id="rta-status">Ready</div>
@@ -232,6 +235,9 @@ if (!window.__readAloud) {
             <span class="rta-label">Speed</span>
             ${speedBtns}
           </div>
+        </div>
+        <div id="rta-mini-controls">
+          <button class="rta-btn rta-play-btn" id="rta-mini-playpause" title="Play">▶</button>
         </div>
         <div id="rta-actions">
           <button id="rta-collapse" title="Minimize">−</button>
@@ -246,7 +252,7 @@ if (!window.__readAloud) {
   }
 
   function makeDraggable(panel) {
-    let dragging = false, startX, startY, origLeft, origTop;
+    let dragging = false, startX, startY;
     const handle = panel.querySelector('#rta-logo');
 
     handle.addEventListener('mousedown', (e) => {
@@ -254,7 +260,6 @@ if (!window.__readAloud) {
       const rect = panel.getBoundingClientRect();
       startX = e.clientX - rect.left;
       startY = e.clientY - rect.top;
-      // Switch from centered CSS to explicit position so we can move it freely
       panel.style.transform = 'none';
       panel.style.bottom = 'auto';
       panel.style.left = rect.left + 'px';
@@ -272,10 +277,7 @@ if (!window.__readAloud) {
     });
 
     document.addEventListener('mouseup', () => {
-      if (dragging) {
-        dragging = false;
-        handle.style.cursor = 'grab';
-      }
+      if (dragging) { dragging = false; handle.style.cursor = 'grab'; }
     });
   }
 
@@ -289,7 +291,7 @@ if (!window.__readAloud) {
       document.getElementById('rta-collapse').textContent = collapsed ? '+' : '−';
     });
 
-    document.getElementById('rta-playpause').addEventListener('click', () => {
+    const togglePlay = () => {
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
       } else if (RA.playing) {
@@ -306,14 +308,14 @@ if (!window.__readAloud) {
         setPlayBtn(true);
         startKeepAlive();
       }
-    });
+    };
+    document.getElementById('rta-playpause').addEventListener('click', togglePlay);
+    document.getElementById('rta-mini-playpause').addEventListener('click', togglePlay);
 
-    document.getElementById('rta-prev').addEventListener('click', () => {
-      jump(Math.max(0, RA.chunkIndex - 1));
-    });
-    document.getElementById('rta-next').addEventListener('click', () => {
-      jump(Math.min(paragraphs.length - 1, RA.chunkIndex + 1));
-    });
+    document.getElementById('rta-prev').addEventListener('click', () => jump(Math.max(0, RA.chunkIndex - 1)));
+    document.getElementById('rta-next').addEventListener('click', () => jump(Math.min(paragraphs.length - 1, RA.chunkIndex + 1)));
+    document.getElementById('rta-skip-back').addEventListener('click', () => skip(-10));
+    document.getElementById('rta-skip-fwd').addEventListener('click', () => skip(10));
 
     document.querySelectorAll('.rta-speed').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -330,8 +332,11 @@ if (!window.__readAloud) {
   }
 
   function setPlayBtn(playing) {
+    const icon = playing ? '⏸' : '▶';
     const btn = document.getElementById('rta-playpause');
-    if (btn) btn.textContent = playing ? '⏸' : '▶';
+    const mini = document.getElementById('rta-mini-playpause');
+    if (btn) btn.textContent = icon;
+    if (mini) mini.textContent = icon;
   }
 
   function setStatus(text) {
@@ -346,6 +351,8 @@ if (!window.__readAloud) {
       el.classList.add('rta-para-active');
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    updateProgress(idx);
+    savePosition(idx);
   }
 
   // ─── TTS ──────────────────────────────────────────────────────────────────
@@ -364,10 +371,7 @@ if (!window.__readAloud) {
   function startKeepAlive() {
     clearInterval(RA.keepAliveTimer);
     RA.keepAliveTimer = setInterval(() => {
-      if (RA.synth.speaking && !RA.synth.paused) {
-        RA.synth.pause();
-        RA.synth.resume();
-      }
+      if (RA.synth.speaking && !RA.synth.paused) { RA.synth.pause(); RA.synth.resume(); }
     }, 10000);
   }
 
@@ -375,56 +379,40 @@ if (!window.__readAloud) {
     clearInterval(RA.keepAliveTimer);
   }
 
-  function startReading(idx, charOffset = 0) {
-    if (idx >= RA.chunks.length) {
-      setStatus('Done');
-      setPlayBtn(false);
-      RA.playing = false;
-      stopKeepAlive();
-      return;
-    }
+  function clearWordTimers() {
+    RA.wordTimers.forEach((t) => clearTimeout(t));
+    RA.wordTimers = [];
+  }
 
+  // Schedule per-word highlight timeouts as fallback when onboundary doesn't fire.
+  // onboundary cancels these and takes over if it does fire.
+  function scheduleWordHighlights(chunkIdx, charOffset) {
     clearWordTimers();
-    RA.chunkIndex = idx;
-    RA.playing = true;
-    RA.paused = false;
-    setPlayBtn(true);
-    setActivePara(idx);
-    setStatus(`Paragraph ${idx + 1} of ${RA.chunks.length}`);
-    startKeepAlive();
+    const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
+    if (!para) return;
 
-    // Pre-highlight the starting word so there's instant visual feedback
-    if (charOffset > 0) highlightWord(idx, charOffset);
+    const words = Array.from(para.querySelectorAll('.rta-word'));
+    const startIdx = charOffset > 0
+      ? words.findIndex((w) => parseInt(w.dataset.e, 10) > charOffset)
+      : 0;
+    if (startIdx < 0) return;
 
-    const fullText = RA.chunks[idx];
-    const text = charOffset > 0 ? fullText.substring(charOffset) : fullText;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = RA.rate;
-    utterance.voice = getBestVoice();
+    const msPerChar = 60 / RA.rate;
+    let elapsed = 0;
 
-    utterance.onboundary = (event) => {
-      if (event.name !== 'word') return;
-      // onboundary is working — cancel the timer fallback and use events instead
-      clearWordTimers();
-      // event.charIndex is relative to the utterance text (which may be sliced),
-      // so add charOffset to map back to the original span data-s positions.
-      highlightWord(idx, event.charIndex + charOffset);
-    };
+    for (let i = startIdx; i < words.length; i++) {
+      const word = words[i];
+      const delay = elapsed;
+      elapsed += Math.max(word.textContent.trim().length * msPerChar, 100);
 
-    utterance.onend = () => {
-      clearWordTimers();
-      if (!RA.paused) startReading(idx + 1);
-    };
-
-    utterance.onerror = (e) => {
-      clearWordTimers();
-      if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
-    };
-
-    RA.utterance = utterance;
-    RA.synth.speak(utterance);
-    // Start timer-based highlights as fallback; onboundary cancels them if it fires
-    scheduleWordHighlights(idx, charOffset);
+      RA.wordTimers.push(
+        setTimeout(() => {
+          const prev = document.querySelector('.rta-word.rta-hl');
+          if (prev) prev.classList.remove('rta-hl');
+          word.classList.add('rta-hl');
+        }, delay)
+      );
+    }
   }
 
   function highlightWord(chunkIdx, charIndex) {
@@ -439,48 +427,157 @@ if (!window.__readAloud) {
       const e = parseInt(span.dataset.e, 10);
       if (charIndex >= s && charIndex < e) {
         span.classList.add('rta-hl');
+        // Auto-scroll word into view if it's scrolled off-screen.
+        // Use 80px margins to keep it clear of the fixed player bar at the bottom.
+        const rect = span.getBoundingClientRect();
+        if (rect.top < 80 || rect.bottom > window.innerHeight - 80) {
+          span.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
         break;
       }
     }
   }
 
-  function clearWordTimers() {
-    RA.wordTimers.forEach((t) => clearTimeout(t));
-    RA.wordTimers = [];
+  // Build and immediately queue an utterance for paragraph idx.
+  // Used to pre-queue the next paragraph so there's no gap between them.
+  // Each queued utterance pre-queues the one after it from its onstart handler,
+  // creating a seamless chain without any noticeable pause.
+  function _buildAndQueueUtterance(idx) {
+    if (idx >= RA.chunks.length) return;
+
+    const utt = new SpeechSynthesisUtterance(RA.chunks[idx]);
+    utt.rate = RA.rate;
+    utt.voice = getBestVoice();
+
+    utt.onstart = () => {
+      RA.chunkIndex = idx;
+      RA.uttStartTime = Date.now();
+      RA.uttCharOffset = 0;
+      setActivePara(idx);
+      setStatus(timeRemainingStr(idx));
+      scheduleWordHighlights(idx, 0);
+      // Pre-queue the next one immediately for another seamless transition
+      _buildAndQueueUtterance(idx + 1);
+    };
+
+    utt.onboundary = (event) => {
+      if (event.name !== 'word') return;
+      clearWordTimers();
+      highlightWord(idx, event.charIndex);
+    };
+
+    utt.onend = () => {
+      clearWordTimers();
+      if (!RA.paused && idx + 1 >= RA.chunks.length) {
+        setStatus('Done');
+        setPlayBtn(false);
+        RA.playing = false;
+        stopKeepAlive();
+      }
+      // else: next utterance already queued from onstart, nothing to do
+    };
+
+    utt.onerror = (e) => {
+      clearWordTimers();
+      if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+    };
+
+    RA.synth.speak(utt);
   }
 
-  // Schedule per-word highlight timeouts as a fallback for when onboundary
-  // doesn't fire (common with Google/Chrome voices in Chromium-based browsers).
-  // If onboundary does fire, it calls clearWordTimers() and takes over.
-  function scheduleWordHighlights(chunkIdx, charOffset) {
-    clearWordTimers();
-    const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
-    if (!para) return;
-
-    const words = Array.from(para.querySelectorAll('.rta-word'));
-    const startIdx = charOffset > 0
-      ? words.findIndex((w) => parseInt(w.dataset.e, 10) > charOffset)
-      : 0;
-    if (startIdx < 0) return;
-
-    // ~60ms per character at 1× rate ≈ 150 WPM average; scales with RA.rate
-    const msPerChar = 60 / RA.rate;
-    let elapsed = 0;
-
-    for (let i = startIdx; i < words.length; i++) {
-      const word = words[i];
-      const wordLen = word.textContent.trim().length;
-      const delay = elapsed;
-      elapsed += Math.max(wordLen * msPerChar, 100); // min 100ms per word
-
-      RA.wordTimers.push(
-        setTimeout(() => {
-          const prev = document.querySelector('.rta-word.rta-hl');
-          if (prev) prev.classList.remove('rta-hl');
-          word.classList.add('rta-hl');
-        }, delay)
-      );
+  function startReading(idx, charOffset = 0) {
+    if (idx >= RA.chunks.length) {
+      setStatus('Done');
+      setPlayBtn(false);
+      RA.playing = false;
+      stopKeepAlive();
+      return;
     }
+
+    clearWordTimers();
+    RA.chunkIndex = idx;
+    RA.uttStartTime = Date.now();
+    RA.uttCharOffset = charOffset;
+    RA.playing = true;
+    RA.paused = false;
+    setPlayBtn(true);
+    setActivePara(idx);
+    setStatus(timeRemainingStr(idx));
+    startKeepAlive();
+
+    if (charOffset > 0) highlightWord(idx, charOffset);
+
+    const fullText = RA.chunks[idx];
+    const text = charOffset > 0 ? fullText.substring(charOffset) : fullText;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = RA.rate;
+    utterance.voice = getBestVoice();
+
+    utterance.onboundary = (event) => {
+      if (event.name !== 'word') return;
+      clearWordTimers();
+      highlightWord(idx, event.charIndex + charOffset);
+    };
+
+    utterance.onend = () => {
+      clearWordTimers();
+      if (!RA.paused) {
+        if (charOffset > 0) {
+          // Started mid-paragraph so no next utterance was pre-queued
+          _buildAndQueueUtterance(idx + 1);
+          if (idx + 1 >= RA.chunks.length) {
+            setStatus('Done');
+            setPlayBtn(false);
+            RA.playing = false;
+            stopKeepAlive();
+          }
+        } else if (idx + 1 >= RA.chunks.length) {
+          setStatus('Done');
+          setPlayBtn(false);
+          RA.playing = false;
+          stopKeepAlive();
+        }
+        // else: next was pre-queued below and its onstart handles state
+      }
+    };
+
+    utterance.onerror = (e) => {
+      clearWordTimers();
+      if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+    };
+
+    RA.utterance = utterance;
+    RA.synth.speak(utterance);
+    scheduleWordHighlights(idx, charOffset);
+
+    // Pre-queue next paragraph for seamless playback (only when starting from
+    // the beginning of a paragraph; mid-paragraph starts queue on onend instead)
+    if (charOffset === 0) _buildAndQueueUtterance(idx + 1);
+  }
+
+  // Skip forward or backward by `seconds` seconds using estimated char position.
+  function skip(seconds) {
+    if (!RA.playing && !RA.paused) return;
+    const charsPerMs = (12.5 * RA.rate) / 1000; // ~12.5 chars/sec at 1×
+    const elapsed = Date.now() - RA.uttStartTime;
+    let targetChar = RA.uttCharOffset + elapsed * charsPerMs + seconds * 1000 * charsPerMs;
+    let targetIdx = RA.chunkIndex;
+
+    // Advance or retreat through paragraph boundaries
+    while (targetChar >= RA.chunks[targetIdx].length && targetIdx + 1 < RA.chunks.length) {
+      targetChar -= RA.chunks[targetIdx].length;
+      targetIdx++;
+    }
+    while (targetChar < 0 && targetIdx > 0) {
+      targetIdx--;
+      targetChar += RA.chunks[targetIdx].length;
+    }
+    targetChar = Math.max(0, Math.min(Math.round(targetChar), RA.chunks[targetIdx].length - 1));
+
+    RA.synth.cancel();
+    RA.paused = false;
+    RA.playing = true;
+    startReading(targetIdx, targetChar);
   }
 
   function jump(idx) {
@@ -491,17 +588,14 @@ if (!window.__readAloud) {
     } else {
       RA.chunkIndex = idx;
       setActivePara(idx);
-      setStatus(`Paragraph ${idx + 1} of ${RA.chunks.length}`);
+      setStatus(timeRemainingStr(idx));
     }
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   function activate(silent = false) {
-    if (RA.active) {
-      teardown();
-      return;
-    }
+    if (RA.active) { teardown(); return; }
 
     const article = extractArticle();
     if (!article) {
@@ -516,10 +610,10 @@ if (!window.__readAloud) {
     }
 
     RA.chunks = paragraphs;
-    RA.chunkIndex = 0;
+    RA.chunkIndex = loadPosition();
     RA.active = true;
     buildUI(article, paragraphs);
-    // Defer the heavy DOM rewrite so the panel paints first
+    // Defer heavy DOM rewrite so the panel paints first
     setTimeout(() => markPageElements(paragraphs), 0);
   }
 
