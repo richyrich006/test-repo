@@ -68,9 +68,7 @@ export function UnitScreen({ unitId, progress, onPressLesson, onBack }: Props) {
         <Text style={styles.sectionTitle}>Lessons</Text>
         {lessons.map((lesson, index) => {
           const isCompleted = progress.completedLessons.includes(lesson.id);
-          const isPreviousCompleted = index === 0 ||
-            progress.completedLessons.includes(lessons[index - 1]?.id);
-          const isAvailable = isPreviousCompleted;
+          const isAvailable = true;
 
           return (
             <TouchableOpacity
