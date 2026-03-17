@@ -35,9 +35,13 @@ if (!window.__readAloud) {
     if (!docClone || !docClone.documentElement) return null;
     // Strip junk nodes before Readability sees them
     docClone.querySelectorAll(JUNK_SELECTORS).forEach((el) => el.remove());
-    const article = new Readability(docClone).parse();
-    if (!article || !article.content) return null;
-    return article;
+    try {
+      const article = new Readability(docClone).parse();
+      if (!article || !article.content) return null;
+      return article;
+    } catch (e) {
+      return null;
+    }
   }
 
   // Patterns that mark a paragraph as boilerplate (newsletter CTAs, cookie notices, etc.)
