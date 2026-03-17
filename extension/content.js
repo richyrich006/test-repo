@@ -469,51 +469,91 @@ if (!window.__readAloud) {
     }
   }
 
-  // Build and immediately queue an utterance for paragraph idx.
-  // Used to pre-queue the next paragraph so there's no gap between them.
-  // Each queued utterance pre-queues the one after it from its onstart handler,
-  // creating a seamless chain without any noticeable pause.
+  // ─── Sentence splitting ───────────────────────────────────────────────────
+
+  // Split text into sentence-sized strings for TTS.
+  // Shorter utterances let the engine plan intonation over a manageable span,
+  // which eliminates the slurred/clipped sound at 1.5× and 2× speeds.
+  function sentenceSplit(text) {
+    // Split after . ! ? that are followed by whitespace + capital letter.
+    // Negative lookbehind skips common abbreviations so "Dr. Smith" stays whole.
+    const parts = text
+      .split(/(?<!\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e))(?<=[.!?])\s+(?=[A-Z"'\u201C])/u)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    return parts.length > 0 ? parts : [text];
+  }
+
+  // Returns the char offset of each sentence within fullText.
+  function sentenceOffsets(fullText, sentences) {
+    const offsets = [];
+    let pos = 0;
+    for (const s of sentences) {
+      const i = fullText.indexOf(s, pos);
+      offsets.push(i >= 0 ? i : pos);
+      pos = (i >= 0 ? i : pos) + s.length;
+    }
+    return offsets;
+  }
+
+  // ─── TTS utterance queue ──────────────────────────────────────────────────
+
+  // Queue all sentences of chunk[idx] as individual utterances.
+  // Sentence-level utterances give the TTS engine a natural phrase boundary
+  // on every sentence, producing clean audio even at 1.5× / 2× speed.
+  // The last sentence's onstart pre-queues the next chunk for seamless flow.
   function _buildAndQueueUtterance(idx) {
     if (idx >= RA.chunks.length) return;
 
-    const utt = new SpeechSynthesisUtterance(RA.chunks[idx]);
-    utt.rate = RA.rate;
-    utt.voice = getBestVoice();
+    const fullText = RA.chunks[idx];
+    const sentences = sentenceSplit(fullText);
+    const offsets = sentenceOffsets(fullText, sentences);
 
-    utt.onstart = () => {
-      RA.chunkIndex = idx;
-      RA.uttStartTime = Date.now();
-      RA.uttCharOffset = 0;
-      setActivePara(idx);
-      setStatus(timeRemainingStr(idx));
-      scheduleWordHighlights(idx, 0);
-      // Pre-queue the next one immediately for another seamless transition
-      _buildAndQueueUtterance(idx + 1);
-    };
+    sentences.forEach((sentence, sIdx) => {
+      const isFirst = sIdx === 0;
+      const isLast = sIdx === sentences.length - 1;
+      const sOffset = offsets[sIdx];
 
-    utt.onboundary = (event) => {
-      if (event.name !== 'word') return;
-      clearWordTimers();
-      highlightWord(idx, event.charIndex);
-    };
+      const utt = new SpeechSynthesisUtterance(sentence);
+      utt.rate = RA.rate;
+      utt.voice = getBestVoice();
 
-    utt.onend = () => {
-      clearWordTimers();
-      if (!RA.paused && idx + 1 >= RA.chunks.length) {
-        setStatus('Done');
-        setPlayBtn(false);
-        RA.playing = false;
-        stopKeepAlive();
-      }
-      // else: next utterance already queued from onstart, nothing to do
-    };
+      utt.onstart = () => {
+        RA.chunkIndex = idx;
+        RA.uttStartTime = Date.now();
+        RA.uttCharOffset = sOffset;
+        if (isFirst) {
+          setActivePara(idx);
+          setStatus(timeRemainingStr(idx));
+          scheduleWordHighlights(idx, 0);
+        }
+        // Chain: pre-queue the next chunk while the last sentence of this one plays
+        if (isLast) _buildAndQueueUtterance(idx + 1);
+      };
 
-    utt.onerror = (e) => {
-      clearWordTimers();
-      if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
-    };
+      utt.onboundary = (event) => {
+        if (event.name !== 'word') return;
+        clearWordTimers();
+        highlightWord(idx, sOffset + event.charIndex);
+      };
 
-    RA.synth.speak(utt);
+      utt.onend = () => {
+        clearWordTimers();
+        if (!RA.paused && isLast && idx + 1 >= RA.chunks.length) {
+          setStatus('Done');
+          setPlayBtn(false);
+          RA.playing = false;
+          stopKeepAlive();
+        }
+      };
+
+      utt.onerror = (e) => {
+        clearWordTimers();
+        if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+      };
+
+      RA.synth.speak(utt);
+    });
   }
 
   function startReading(idx, charOffset = 0) {
@@ -539,36 +579,42 @@ if (!window.__readAloud) {
     if (charOffset > 0) highlightWord(idx, charOffset);
 
     const fullText = RA.chunks[idx];
-    const text = charOffset > 0 ? fullText.substring(charOffset) : fullText;
-    const utterance = new SpeechSynthesisUtterance(text);
+    const sentences = sentenceSplit(fullText);
+    const offsets = sentenceOffsets(fullText, sentences);
+
+    // Find which sentence contains charOffset
+    let startSentIdx = sentences.length - 1;
+    for (let i = 0; i < sentences.length - 1; i++) {
+      if (charOffset < offsets[i + 1]) { startSentIdx = i; break; }
+    }
+
+    // First utterance: the sentence that contains charOffset, possibly trimmed
+    const withinSent = charOffset - offsets[startSentIdx];
+    const firstText = sentences[startSentIdx].substring(Math.max(0, withinSent));
+    const firstGlobalOffset = offsets[startSentIdx] + withinSent;
+
+    const utterance = new SpeechSynthesisUtterance(firstText);
     utterance.rate = RA.rate;
     utterance.voice = getBestVoice();
 
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
       clearWordTimers();
-      highlightWord(idx, event.charIndex + charOffset);
+      highlightWord(idx, firstGlobalOffset + event.charIndex);
     };
 
     utterance.onend = () => {
       clearWordTimers();
-      if (!RA.paused) {
-        if (charOffset > 0) {
-          // Started mid-paragraph so no next utterance was pre-queued
-          _buildAndQueueUtterance(idx + 1);
-          if (idx + 1 >= RA.chunks.length) {
-            setStatus('Done');
-            setPlayBtn(false);
-            RA.playing = false;
-            stopKeepAlive();
-          }
-        } else if (idx + 1 >= RA.chunks.length) {
+      // If no more sentences were queued below (started at the last sentence),
+      // we are responsible for chaining the next chunk.
+      if (!RA.paused && startSentIdx === sentences.length - 1) {
+        _buildAndQueueUtterance(idx + 1);
+        if (idx + 1 >= RA.chunks.length) {
           setStatus('Done');
           setPlayBtn(false);
           RA.playing = false;
           stopKeepAlive();
         }
-        // else: next was pre-queued below and its onstart handles state
       }
     };
 
@@ -581,9 +627,45 @@ if (!window.__readAloud) {
     RA.synth.speak(utterance);
     scheduleWordHighlights(idx, charOffset);
 
-    // Pre-queue next paragraph for seamless playback (only when starting from
-    // the beginning of a paragraph; mid-paragraph starts queue on onend instead)
-    if (charOffset === 0) _buildAndQueueUtterance(idx + 1);
+    // Queue the remaining sentences of this chunk immediately so there is no
+    // gap within the paragraph.  The last one's onstart pre-queues the next chunk.
+    for (let i = startSentIdx + 1; i < sentences.length; i++) {
+      const sOffset = offsets[i];
+      const isLast = i === sentences.length - 1;
+
+      const utt = new SpeechSynthesisUtterance(sentences[i]);
+      utt.rate = RA.rate;
+      utt.voice = getBestVoice();
+
+      utt.onstart = () => {
+        RA.uttStartTime = Date.now();
+        RA.uttCharOffset = sOffset;
+        if (isLast) _buildAndQueueUtterance(idx + 1);
+      };
+
+      utt.onboundary = (event) => {
+        if (event.name !== 'word') return;
+        clearWordTimers();
+        highlightWord(idx, sOffset + event.charIndex);
+      };
+
+      utt.onend = () => {
+        clearWordTimers();
+        if (!RA.paused && isLast && idx + 1 >= RA.chunks.length) {
+          setStatus('Done');
+          setPlayBtn(false);
+          RA.playing = false;
+          stopKeepAlive();
+        }
+      };
+
+      utt.onerror = (e) => {
+        clearWordTimers();
+        if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+      };
+
+      RA.synth.speak(utt);
+    }
   }
 
   // Skip forward or backward by `seconds` seconds using estimated char position.
