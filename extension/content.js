@@ -32,6 +32,7 @@ if (!window.__readAloud) {
 
   function extractArticle() {
     const docClone = document.cloneNode(true);
+    if (!docClone || !docClone.documentElement) return null;
     // Strip junk nodes before Readability sees them
     docClone.querySelectorAll(JUNK_SELECTORS).forEach((el) => el.remove());
     const article = new Readability(docClone).parse();
