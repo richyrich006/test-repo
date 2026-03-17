@@ -13,6 +13,7 @@ if (!window.__readAloud) {
     paused: false,
     active: false,
     keepAliveTimer: null,
+    markedEls: [],    // page DOM elements we've modified
   };
 
   window.__readAloud = RA;
@@ -27,7 +28,6 @@ if (!window.__readAloud) {
   }
 
   // Parse Readability's cleaned HTML into an array of paragraph strings.
-  // This is what we feed to TTS — no ads, no nav, no headers/footers.
   function getParagraphs(article) {
     const div = document.createElement('div');
     div.innerHTML = article.content;
@@ -51,23 +51,20 @@ if (!window.__readAloud) {
   }
 
   // ─── Word-span rendering ──────────────────────────────────────────────────
-  // Each word gets a <span> with its character start/end positions stored
-  // as data attributes so we can map Web Speech API charIndex → DOM element.
 
   function renderParagraph(text, chunkIdx) {
     let html = '';
     let pos = 0;
     let wordIdx = 0;
 
-    // Split on whitespace, preserving the whitespace tokens
     const parts = text.split(/(\s+)/);
     for (const part of parts) {
       if (part.trim().length > 0) {
         const safe = escHtml(part);
-        html += `<span class="rta-word" id="rta-${chunkIdx}-${wordIdx}" data-s="${pos}" data-e="${pos + part.length}">${safe}</span>`;
+        html += `<span class="rta-word" data-s="${pos}" data-e="${pos + part.length}">${safe}</span>`;
         wordIdx++;
       } else {
-        html += part; // preserve spacing as-is
+        html += part;
       }
       pos += part.length;
     }
@@ -76,6 +73,76 @@ if (!window.__readAloud) {
 
   function escHtml(t) {
     return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ─── Page element matching ────────────────────────────────────────────────
+  // Find the real DOM elements on the page that correspond to each extracted
+  // paragraph, wrap their text in word spans, and attach click handlers.
+
+  function markPageElements(paragraphs) {
+    const candidates = Array.from(
+      document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li')
+    ).filter((el) => !el.closest('#rta-panel'));
+
+    const used = new Set();
+
+    paragraphs.forEach((text, idx) => {
+      const normText = text.replace(/\s+/g, ' ').trim();
+
+      let bestEl = null;
+      let bestScore = 0;
+
+      for (const el of candidates) {
+        if (used.has(el)) continue;
+        const elText = el.textContent.replace(/\s+/g, ' ').trim();
+
+        if (elText === normText) {
+          bestEl = el;
+          bestScore = 1;
+          break;
+        }
+
+        // Accept if the element's text is mostly contained in the paragraph
+        if (normText.includes(elText) && elText.length > 15) {
+          const score = elText.length / normText.length;
+          if (score > 0.7 && score > bestScore) {
+            bestScore = score;
+            bestEl = el;
+          }
+        }
+      }
+
+      if (bestEl) {
+        used.add(bestEl);
+        bestEl._rtaOrigHTML = bestEl.innerHTML;
+        bestEl.setAttribute('data-rta-chunk', idx);
+        bestEl.innerHTML = renderParagraph(normText, idx);
+        bestEl.classList.add('rta-para');
+        bestEl.addEventListener('click', handleParaClick);
+        RA.markedEls.push(bestEl);
+      }
+    });
+  }
+
+  function handleParaClick(e) {
+    const el = e.currentTarget;
+    const idx = parseInt(el.getAttribute('data-rta-chunk'), 10);
+    if (isNaN(idx)) return;
+    RA.synth.cancel();
+    RA.paused = false;
+    RA.playing = true;
+    startReading(idx);
+  }
+
+  function restorePageElements() {
+    RA.markedEls.forEach((el) => {
+      el.innerHTML = el._rtaOrigHTML;
+      el.removeAttribute('data-rta-chunk');
+      el.classList.remove('rta-para', 'rta-para-active');
+      el.removeEventListener('click', handleParaClick);
+      delete el._rtaOrigHTML;
+    });
+    RA.markedEls = [];
   }
 
   // ─── UI ───────────────────────────────────────────────────────────────────
@@ -112,10 +179,8 @@ if (!window.__readAloud) {
   }
 
   function attachEvents(paragraphs) {
-    // Close
     document.getElementById('rta-close').addEventListener('click', teardown);
 
-    // Play / Pause
     document.getElementById('rta-playpause').addEventListener('click', () => {
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
@@ -134,7 +199,6 @@ if (!window.__readAloud) {
       }
     });
 
-    // Prev / Next paragraph
     document.getElementById('rta-prev').addEventListener('click', () => {
       jump(Math.max(0, RA.chunkIndex - 1));
     });
@@ -142,13 +206,11 @@ if (!window.__readAloud) {
       jump(Math.min(paragraphs.length - 1, RA.chunkIndex + 1));
     });
 
-    // Speed buttons
     document.querySelectorAll('.rta-speed').forEach((btn) => {
       btn.addEventListener('click', () => {
         RA.rate = parseFloat(btn.dataset.speed);
         document.querySelectorAll('.rta-speed').forEach((b) => b.classList.remove('rta-speed-active'));
         btn.classList.add('rta-speed-active');
-        // Restart current chunk at new speed if playing
         if (RA.playing) {
           RA.synth.cancel();
           RA.paused = false;
@@ -170,7 +232,7 @@ if (!window.__readAloud) {
 
   function setActivePara(idx) {
     document.querySelectorAll('.rta-para-active').forEach((el) => el.classList.remove('rta-para-active'));
-    const el = document.getElementById(`rta-para-${idx}`);
+    const el = document.querySelector(`[data-rta-chunk="${idx}"]`);
     if (el) {
       el.classList.add('rta-para-active');
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -190,8 +252,6 @@ if (!window.__readAloud) {
     );
   }
 
-  // Chrome has a silent-pause bug where speech stops after ~15 seconds.
-  // Calling pause()+resume() every 10s keeps it alive.
   function startKeepAlive() {
     clearInterval(RA.keepAliveTimer);
     RA.keepAliveTimer = setInterval(() => {
@@ -246,11 +306,10 @@ if (!window.__readAloud) {
   }
 
   function highlightWord(chunkIdx, charIndex) {
-    // Clear previous highlight
     const prev = document.querySelector('.rta-word.rta-hl');
     if (prev) prev.classList.remove('rta-hl');
 
-    const para = document.getElementById(`rta-para-${chunkIdx}`);
+    const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
     if (!para) return;
 
     for (const span of para.querySelectorAll('.rta-word')) {
@@ -258,7 +317,6 @@ if (!window.__readAloud) {
       const e = parseInt(span.dataset.e, 10);
       if (charIndex >= s && charIndex < e) {
         span.classList.add('rta-hl');
-        span.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         break;
       }
     }
@@ -299,6 +357,7 @@ if (!window.__readAloud) {
     RA.chunks = paragraphs;
     RA.chunkIndex = 0;
     RA.active = true;
+    markPageElements(paragraphs);
     buildUI(article, paragraphs);
   }
 
@@ -307,6 +366,7 @@ if (!window.__readAloud) {
     stopKeepAlive();
     const panel = document.getElementById('rta-panel');
     if (panel) panel.remove();
+    restorePageElements();
     RA.active = false;
     RA.playing = false;
     RA.paused = false;
@@ -315,11 +375,9 @@ if (!window.__readAloud) {
 
   // ─── Entry points ─────────────────────────────────────────────────────────
 
-  // Listen for subsequent icon clicks (background.js sends this message)
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === 'activate') activate();
   });
 
-  // Auto-activate on first injection (triggered by first icon click)
   activate();
 }
