@@ -1,0 +1,186 @@
+/* ReadAloud — floating player bar */
+
+#rta-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+
+/* ── Player bar ──────────────────────────────────────────────────────────── */
+
+#rta-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 10px;
+  background: #fff;
+  border-radius: 50px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  user-select: none;
+}
+
+#rta-logo {
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 8px;
+  transition: opacity 0.12s;
+}
+#rta-logo:hover { opacity: 0.85; }
+
+#rta-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#rta-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+#rta-collapse {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#rta-collapse:hover { background: #e0e0e0; }
+
+/* Collapsed (mini) state — show only logo + action buttons */
+#rta-panel.rta-collapsed #rta-controls {
+  display: none;
+}
+#rta-panel.rta-collapsed #rta-player {
+  border-radius: 50px;
+  padding: 8px 10px;
+}
+
+.rta-player-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rta-btn {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 15px;
+  cursor: pointer;
+  color: #222;
+  transition: background 0.12s;
+}
+.rta-btn:hover { background: #e5e5e5; }
+
+.rta-play-btn {
+  background: #111 !important;
+  color: #fff !important;
+  padding: 8px 20px;
+  font-size: 16px;
+  border-radius: 50px;
+}
+.rta-play-btn:hover { background: #333 !important; }
+
+#rta-status {
+  font-size: 11px;
+  color: #888;
+  min-width: 80px;
+  text-align: center;
+}
+
+.rta-label {
+  font-size: 11px;
+  color: #999;
+  margin-right: 2px;
+}
+
+.rta-speed {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.12s;
+}
+.rta-speed:hover { background: #e5e5e5; }
+.rta-speed-active {
+  background: #111;
+  color: #fff;
+}
+
+#rta-close {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+#rta-close:hover { background: #e0e0e0; }
+
+/* ── Page paragraph & word highlighting ─────────────────────────────────── */
+
+.rta-para {
+  cursor: pointer;
+}
+
+/* No full-paragraph highlight — only the active word is highlighted */
+
+.rta-word {
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.rta-word:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.rta-word.rta-hl {
+  background: #fde68a;
+  color: #000;
+}
+
+/* ── Dark mode ───────────────────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  #rta-player { background: #1c1c1e; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5); }
+  .rta-btn { background: #2c2c2e; color: #e0e0e0; }
+  .rta-btn:hover { background: #3a3a3c; }
+  .rta-play-btn { background: #f0f0f0 !important; color: #000 !important; }
+  .rta-speed { background: #2c2c2e; color: #ccc; }
+  .rta-speed:hover { background: #3a3a3c; }
+  .rta-speed-active { background: #f0f0f0; color: #000; }
+  #rta-close, #rta-collapse { background: #2c2c2e; color: #aaa; }
+  #rta-close:hover, #rta-collapse:hover { background: #3a3a3c; }
+}

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "ReadAloud",
+  "version": "1.0.0",
+  "description": "Read any article aloud — automatically skips ads, headers, footers, and clutter.",
+  "permissions": ["activeTab", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["Readability.js", "content.js"],
+      "css": ["player.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "ReadAloud — Click to start reading"
+  }
+}
