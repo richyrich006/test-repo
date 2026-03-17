@@ -19,6 +19,108 @@ import { VocabCard, PatternDrill, Dialogue, UserProgress } from '../types';
 
 type LessonPhase = 'intro' | 'cultural' | 'vocabulary' | 'drills' | 'dialogue' | 'complete';
 
+const IMMERSION_SIMULATIONS: Record<string, { body: string; items: string[] }> = {
+  l001: {
+    body: 'You just landed at El Dorado International Airport in Bogotá. A local contact is waiting at arrivals. Your first 60 seconds set the tone for the entire relationship.',
+    items: [
+      'Greet formally: "buenos días / buenas tardes" — never "hola" at a first meeting',
+      'Offer a firm handshake and maintain eye contact',
+      'Use "usted" until they invite you to use "tú"',
+      'Comment on the flight or their city before any business talk',
+    ],
+  },
+  l002: {
+    body: 'You are at a police checkpoint in Mexico City. An officer is asking you questions. Your ability to ask clarifying questions is your most important tool right now.',
+    items: [
+      'Stay calm — ask "¿Puede repetir, por favor?" if you miss something',
+      'Use "¿Qué significa…?" to ask for definitions',
+      'Never volunteer information beyond what\'s asked',
+      'Have your documents ready and identify yourself clearly',
+    ],
+  },
+  l003: {
+    body: 'You\'re networking at a business dinner in Buenos Aires. Introducing yourself with SER and ESTAR correctly signals education and attention to detail.',
+    items: [
+      'Use SER for identity: profession, nationality, character',
+      'Use ESTAR for current state: how you feel, where you are right now',
+      'Avoid mixing them — locals notice immediately',
+      'Practice: "Soy analista. Estoy aquí para la conferencia."',
+    ],
+  },
+  l004: {
+    body: 'You\'re conducting a routine interview with a local informant in a café in Lima. These 15 core verbs will carry 80% of the conversation.',
+    items: [
+      'Keep sentences short — fluency beats complexity',
+      'Use querer/necesitar to make requests politely',
+      'If you lose the thread, say "Un momento" and reset',
+      'Match the informant\'s pace — don\'t rush',
+    ],
+  },
+  l005: {
+    body: 'Your wallet and phone were stolen near the Zócalo in Mexico City. You need to report the theft at a police station and contact the embassy.',
+    items: [
+      '"Soy ciudadano americano" — state this immediately',
+      '"Quiero hablar con el cónsul" — know this phrase cold',
+      'Stay firm but calm — escalate through proper channels',
+      'Ask for a written report ("denuncia") for insurance',
+    ],
+  },
+  l006: {
+    body: 'You need to take a taxi, pay for a meal, and find an address in Santiago de Chile — all in the next hour. Numbers are your lifeline.',
+    items: [
+      'Confirm prices before getting in any taxi',
+      'Say phone numbers in pairs: "cincuenta y cinco, treinta y dos…"',
+      'For addresses, listen for street name + number sequence',
+      'When in doubt, ask them to write it down: "¿Me lo escribe?"',
+    ],
+  },
+  l007: {
+    body: 'You\'re debriefing a source about events from last week in Caracas. You need to establish a clear timeline using past tense.',
+    items: [
+      'Pin events to specific times: "¿A qué hora exactamente?"',
+      'Use preterite for completed actions with clear endpoints',
+      'Ask "¿Y después qué pasó?" to move the timeline forward',
+      'Repeat back key facts to confirm accuracy',
+    ],
+  },
+  l008: {
+    body: 'You\'re at a social gathering in Medellín. Locals are swapping stories about their weekends and ongoing routines — you need to follow along and contribute.',
+    items: [
+      'Use imperfect for background/habitual past: "cuando era niño…"',
+      'Use preterite for specific events: "ayer fui al mercado"',
+      'Mixing them correctly marks you as an advanced speaker',
+      'Listen for "siempre / antes / a veces" as imperfect signals',
+    ],
+  },
+  l009: {
+    body: 'You\'re negotiating access to a restricted area with a local official in Quito. Subjunctive mood will help you make requests diplomatically.',
+    items: [
+      'Frame requests with "Espero que…" or "Quiero que…" + subjunctive',
+      'Softer requests reduce resistance in formal settings',
+      'Avoid direct commands — use "¿Sería posible que…?"',
+      'Let them feel in control while guiding the outcome',
+    ],
+  },
+  l010: {
+    body: 'You\'re being interviewed on a local radio program in Bogotá about US-Colombia relations. You need to speak with nuance about hypothetical scenarios.',
+    items: [
+      'Use conditional for hypotheticals: "Si tuviera más tiempo…"',
+      'Hedge statements diplomatically: "En mi opinión…", "Depende de…"',
+      'Pause and say "Es una buena pregunta" to buy thinking time',
+      'Keep answers to 2-3 sentences — clarity over length',
+    ],
+  },
+  default: {
+    body: 'Before starting this lesson, place yourself in a real operational scenario. You are in a Spanish-speaking country and must communicate effectively under pressure.',
+    items: [
+      'Use formal register ("usted") until the situation changes',
+      'Speak slowly and clearly — it\'s a strength, not a weakness',
+      'Confirm understanding: "¿Me expliqué bien?"',
+      'When stuck, describe around the word you don\'t know',
+    ],
+  },
+};
+
 interface Props {
   lessonId: string;
   progress: UserProgress;
@@ -206,21 +308,18 @@ export function LessonScreen({ lessonId, progress, onComplete, onBack }: Props) 
             </View>
 
             {/* Immersion simulation */}
-            <View style={styles.immersionCard}>
-              <Text style={styles.immersionTitle}>🎭 IMMERSION SIMULATION</Text>
-              <Text style={styles.immersionBody}>
-                Before starting this lesson, imagine you are in a professional setting in
-                Mexico City, Bogotá, or Buenos Aires. You are meeting a local contact for
-                the first time. You must establish rapport ("confianza") before any
-                substantive conversation.
-              </Text>
-              <View style={styles.immersionChecklist}>
-                <ImmersionItem text='Greet formally with "buenos días / buenas tardes" — NOT "hola"' />
-                <ImmersionItem text='Use "usted" unless they switch to "tú" first' />
-                <ImmersionItem text='Comment on something personal before business: their city, family, or a recent event' />
-                <ImmersionItem text="Allow pauses — don't rush to fill silence" />
-              </View>
-            </View>
+            {(() => {
+              const sim = IMMERSION_SIMULATIONS[lesson.id] ?? IMMERSION_SIMULATIONS['default'];
+              return (
+                <View style={styles.immersionCard}>
+                  <Text style={styles.immersionTitle}>🎭 IMMERSION SIMULATION</Text>
+                  <Text style={styles.immersionBody}>{sim.body}</Text>
+                  <View style={styles.immersionChecklist}>
+                    {sim.items.map((item, i) => <ImmersionItem key={i} text={item} />)}
+                  </View>
+                </View>
+              );
+            })()}
 
             {/* Regional note */}
             <View style={[styles.regionalNote, { borderColor: Colors.primary + '30' }]}>

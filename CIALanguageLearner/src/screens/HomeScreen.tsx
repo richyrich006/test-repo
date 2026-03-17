@@ -160,7 +160,7 @@ export function HomeScreen({ progress, onPressUnit, onPressReview, onPressProfil
               progress.completedLessons.includes(l.id)
             ).length;
             const unitProgress = unitLessons.length > 0 ? completedCount / unitLessons.length : 0;
-            const isLocked = unit.ilrLevel > progress.currentILRLevel + 1;
+            const isLocked = false;
 
             return (
               <TouchableOpacity
