@@ -118,10 +118,28 @@ if (!window.__readAloud) {
         bestEl.setAttribute('data-rta-chunk', idx);
         bestEl.innerHTML = renderParagraph(normText, idx);
         bestEl.classList.add('rta-para');
+        // Word clicks jump to that exact word; paragraph clicks (whitespace) start from beginning
+        bestEl.querySelectorAll('.rta-word').forEach((span) => {
+          span.addEventListener('click', handleWordClick);
+        });
         bestEl.addEventListener('click', handleParaClick);
         RA.markedEls.push(bestEl);
       }
     });
+  }
+
+  function handleWordClick(e) {
+    e.stopPropagation();
+    const span = e.currentTarget;
+    const para = span.closest('[data-rta-chunk]');
+    if (!para) return;
+    const idx = parseInt(para.getAttribute('data-rta-chunk'), 10);
+    const charOffset = parseInt(span.dataset.s, 10);
+    if (isNaN(idx) || isNaN(charOffset)) return;
+    RA.synth.cancel();
+    RA.paused = false;
+    RA.playing = true;
+    startReading(idx, charOffset);
   }
 
   function handleParaClick(e) {
@@ -131,7 +149,7 @@ if (!window.__readAloud) {
     RA.synth.cancel();
     RA.paused = false;
     RA.playing = true;
-    startReading(idx);
+    startReading(idx, 0);
   }
 
   function restorePageElements() {
@@ -266,7 +284,7 @@ if (!window.__readAloud) {
     clearInterval(RA.keepAliveTimer);
   }
 
-  function startReading(idx) {
+  function startReading(idx, charOffset = 0) {
     if (idx >= RA.chunks.length) {
       setStatus('Done');
       setPlayBtn(false);
@@ -283,14 +301,20 @@ if (!window.__readAloud) {
     setStatus(`Paragraph ${idx + 1} of ${RA.chunks.length}`);
     startKeepAlive();
 
-    const text = RA.chunks[idx];
+    // Pre-highlight the starting word so there's instant visual feedback
+    if (charOffset > 0) highlightWord(idx, charOffset);
+
+    const fullText = RA.chunks[idx];
+    const text = charOffset > 0 ? fullText.substring(charOffset) : fullText;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = RA.rate;
     utterance.voice = getBestVoice();
 
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
-      highlightWord(idx, event.charIndex);
+      // event.charIndex is relative to the utterance text (which may be sliced),
+      // so add charOffset to map back to the original span data-s positions.
+      highlightWord(idx, event.charIndex + charOffset);
     };
 
     utterance.onend = () => {
@@ -326,7 +350,7 @@ if (!window.__readAloud) {
     RA.synth.cancel();
     RA.paused = false;
     if (RA.playing) {
-      startReading(idx);
+      startReading(idx, 0);
     } else {
       RA.chunkIndex = idx;
       setActivePara(idx);
