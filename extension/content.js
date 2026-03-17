@@ -13,11 +13,17 @@ if (!window.__readAloud) {
     paused: false,
     active: false,
     keepAliveTimer: null,
+    noStartTimer: null, // watchdog for silent Chrome TTS failures
     markedEls: [],      // page DOM elements we've modified
     wordTimers: [],     // setTimeout IDs for timer-based word highlighting
     uttStartTime: 0,    // Date.now() when current utterance began
     uttCharOffset: 0,   // charOffset passed to startReading for current utterance
   };
+
+  // Kick off async voice loading immediately so voices are ready before the
+  // first play button click.  Chrome loads voices lazily on the first getVoices()
+  // call; doing it here gives the browser time to populate them.
+  RA.synth.getVoices();
 
   window.__readAloud = RA;
 
@@ -556,7 +562,7 @@ if (!window.__readAloud) {
     });
   }
 
-  function startReading(idx, charOffset = 0) {
+  function startReading(idx, charOffset = 0, _isRetry = false) {
     if (idx >= RA.chunks.length) {
       setStatus('Done');
       setPlayBtn(false);
@@ -566,6 +572,13 @@ if (!window.__readAloud) {
     }
 
     clearWordTimers();
+    clearTimeout(RA.noStartTimer);
+
+    // Cancel any previous or stuck utterance before queuing new ones.
+    // Chrome silently drops the very first speak() call after page load if the
+    // TTS daemon hasn't started yet; canceling first forces it to initialise.
+    RA.synth.cancel();
+
     RA.chunkIndex = idx;
     RA.uttStartTime = Date.now();
     RA.uttCharOffset = charOffset;
@@ -597,6 +610,11 @@ if (!window.__readAloud) {
     utterance.rate = RA.rate;
     utterance.voice = getBestVoice();
 
+    utterance.onstart = () => {
+      // Speech actually started — cancel the silent-failure watchdog.
+      clearTimeout(RA.noStartTimer);
+    };
+
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
       clearWordTimers();
@@ -626,6 +644,16 @@ if (!window.__readAloud) {
     RA.utterance = utterance;
     RA.synth.speak(utterance);
     scheduleWordHighlights(idx, charOffset);
+
+    // Watchdog: if onstart hasn't fired after 700ms the utterance was silently
+    // dropped (Chrome bug).  Retry once with a fresh cancel/speak cycle.
+    if (!_isRetry) {
+      RA.noStartTimer = setTimeout(() => {
+        if (RA.playing && !RA.paused) {
+          startReading(idx, charOffset, true);
+        }
+      }, 700);
+    }
 
     // Queue the remaining sentences of this chunk immediately so there is no
     // gap within the paragraph.  The last one's onstart pre-queues the next chunk.
@@ -808,6 +836,7 @@ if (!window.__readAloud) {
     RA.synth.cancel();
     stopKeepAlive();
     clearWordTimers();
+    clearTimeout(RA.noStartTimer);
     const panel = document.getElementById('rta-panel');
     if (panel) panel.remove();
     restorePageElements();
