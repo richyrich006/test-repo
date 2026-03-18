@@ -19,6 +19,8 @@ if (!window.__readAloud) {
     wordTimers: [],     // setTimeout IDs for timer-based word highlighting
     uttStartTime: 0,    // Date.now() when current utterance began
     uttCharOffset: 0,   // charOffset passed to startReading for current utterance
+    pauseChunk: 0,      // chunk index saved on pause
+    pauseOffset: 0,     // char offset saved on pause
   };
 
   // Kick off async voice loading immediately so voices are ready before the
@@ -417,18 +419,28 @@ if (!window.__readAloud) {
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
       } else if (RA.playing) {
-        RA.synth.pause();
+        // Estimate current char position before canceling so we can resume later.
+        // RA.synth.pause() is unreliable in Chrome — queued sentences keep playing.
+        // cancel() reliably clears the queue.
+        const elapsed = Date.now() - RA.uttStartTime;
+        const charsPerMs = (12.5 * RA.rate) / 1000;
+        RA.pauseChunk = RA.chunkIndex;
+        RA.pauseOffset = Math.min(
+          Math.round(RA.uttCharOffset + elapsed * charsPerMs),
+          RA.chunks[RA.chunkIndex].length - 1
+        );
+        RA.synth.cancel();
         RA.paused = true;
         RA.playing = false;
         setPlayBtn(false);
         stopKeepAlive();
         clearWordTimers();
       } else {
-        RA.synth.resume();
+        // Resume from the position saved at pause time
         RA.paused = false;
         RA.playing = true;
         setPlayBtn(true);
-        startKeepAlive();
+        startReading(RA.pauseChunk, RA.pauseOffset);
       }
     };
     document.getElementById('rta-playpause').addEventListener('click', togglePlay);
@@ -973,6 +985,8 @@ if (!window.__readAloud) {
     RA.playing = false;
     RA.paused = false;
     RA.chunkIndex = 0;
+    RA.pauseChunk = 0;
+    RA.pauseOffset = 0;
   }
 
   // ─── Entry points ─────────────────────────────────────────────────────────
