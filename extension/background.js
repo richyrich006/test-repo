@@ -78,6 +78,11 @@ function isPdfTab(tab) {
   return /\.pdf(\?|#|$)/i.test(tab.url || '');
 }
 
+// Handle messages from content scripts that need privileged APIs.
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.action === 'openOptions') chrome.runtime.openOptionsPage();
+});
+
 // On icon click: inject scripts on first use, toggle on subsequent clicks.
 chrome.action.onClicked.addListener(async (tab) => {
   try {

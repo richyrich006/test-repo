@@ -385,7 +385,8 @@ if (!window.__readAloud) {
     document.getElementById('rta-close').addEventListener('click', teardown);
 
     document.getElementById('rta-options').addEventListener('click', () => {
-      chrome.runtime.openOptionsPage();
+      // openOptionsPage() is unavailable in content scripts — delegate to background
+      chrome.runtime.sendMessage({ action: 'openOptions' });
     });
 
     document.getElementById('rta-save').addEventListener('click', () => {
