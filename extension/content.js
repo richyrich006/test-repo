@@ -9,6 +9,7 @@ if (!window.__readAloud) {
     chunks: [],         // array of paragraph strings
     chunkIndex: 0,      // which paragraph we're on
     rate: 1.5,
+    voiceName: '',      // preferred voice name ('' = auto-select)
     playing: false,
     paused: false,
     active: false,
@@ -199,14 +200,74 @@ if (!window.__readAloud) {
     RA.markedEls = [];
   }
 
-  // ─── Session position ─────────────────────────────────────────────────────
+  // ─── Persistent storage helpers ───────────────────────────────────────────
 
-  function savePosition(idx) {
-    try { sessionStorage.setItem('rta-pos:' + location.href, idx); } catch (_) {}
+  // Show a temporary toast notification anchored to the bottom of the screen.
+  // Used for errors that occur before the player panel is built.
+  function showToast(msg) {
+    let toast = document.getElementById('rta-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'rta-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('rta-toast-show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('rta-toast-show'), 3500);
   }
 
-  function loadPosition() {
-    try { return parseInt(sessionStorage.getItem('rta-pos:' + location.href)) || 0; } catch (_) { return 0; }
+  // Persist the current paragraph index keyed by page URL.
+  // Entries older than 7 days are pruned on next write (max 200 stored).
+  function savePosition(idx) {
+    chrome.storage.local.get({ positions: {} }).then(({ positions }) => {
+      const WEEK = 7 * 24 * 60 * 60 * 1000;
+      const pruned = Object.fromEntries(
+        Object.entries(positions)
+          .filter(([, v]) => Date.now() - v.ts < WEEK)
+          .sort(([, a], [, b]) => b.ts - a.ts)
+          .slice(0, 199)
+      );
+      pruned[location.href] = { idx, ts: Date.now() };
+      chrome.storage.local.set({ positions: pruned });
+    }).catch(() => {});
+  }
+
+  async function loadPosition() {
+    try {
+      const { positions = {} } = await chrome.storage.local.get('positions');
+      const entry = positions[location.href];
+      if (!entry || Date.now() - entry.ts > 7 * 24 * 60 * 60 * 1000) return 0;
+      return entry.idx || 0;
+    } catch (_) { return 0; }
+  }
+
+  // Load rate + voiceName from sync storage and apply to RA state.
+  async function loadSettings() {
+    try {
+      const { rate = 1.5, voiceName = '' } =
+        await chrome.storage.sync.get(['rate', 'voiceName']);
+      RA.rate = rate;
+      RA.voiceName = voiceName;
+    } catch (_) {}
+  }
+
+  function saveSetting(key, value) {
+    chrome.storage.sync.set({ [key]: value }).catch(() => {});
+  }
+
+  // Increment the running word count in local storage (used by the options page).
+  function trackWords(text) {
+    const n = text.trim().split(/\s+/).filter(Boolean).length;
+    chrome.storage.local.get({ stats: { wordsRead: 0, weekStart: 0 } }).then(({ stats }) => {
+      const WEEK = 7 * 24 * 60 * 60 * 1000;
+      if (Date.now() - (stats.weekStart || 0) > WEEK) {
+        stats.wordsRead = 0;
+        stats.weekStart = Date.now();
+      }
+      stats.wordsRead = (stats.wordsRead || 0) + n;
+      chrome.storage.local.set({ stats });
+    }).catch(() => {});
   }
 
   // ─── Progress & time remaining ────────────────────────────────────────────
@@ -277,6 +338,8 @@ if (!window.__readAloud) {
           <button class="rta-btn rta-play-btn" id="rta-mini-playpause" title="Play">▶</button>
         </div>
         <div id="rta-actions">
+          <button id="rta-save" title="Save to reading list">🔖</button>
+          <button id="rta-options" title="Settings">⚙</button>
           <button id="rta-collapse" title="Minimize">−</button>
           <button id="rta-close" title="Close">✕</button>
         </div>
@@ -321,6 +384,27 @@ if (!window.__readAloud) {
   function attachEvents(paragraphs) {
     document.getElementById('rta-close').addEventListener('click', teardown);
 
+    document.getElementById('rta-options').addEventListener('click', () => {
+      chrome.runtime.openOptionsPage();
+    });
+
+    document.getElementById('rta-save').addEventListener('click', () => {
+      const url = location.href;
+      const title = document.title || url;
+      const wordCount = RA.chunks.reduce((n, c) => n + c.trim().split(/\s+/).length, 0);
+      chrome.storage.local.get({ readingList: [] }).then(({ readingList }) => {
+        if (readingList.find((item) => item.url === url)) {
+          setStatus('Already saved ✓');
+        } else {
+          readingList.unshift({ url, title, wordCount, ts: Date.now() });
+          if (readingList.length > 100) readingList.pop();
+          chrome.storage.local.set({ readingList });
+          setStatus('Saved to reading list ✓');
+        }
+        setTimeout(() => { if (!RA.playing) setStatus('Ready'); }, 2000);
+      }).catch(() => {});
+    });
+
     document.getElementById('rta-collapse').addEventListener('click', () => {
       const panel = document.getElementById('rta-panel');
       const collapsed = panel.classList.toggle('rta-collapsed');
@@ -357,6 +441,7 @@ if (!window.__readAloud) {
     document.querySelectorAll('.rta-speed').forEach((btn) => {
       btn.addEventListener('click', () => {
         RA.rate = parseFloat(btn.dataset.speed);
+        saveSetting('rate', RA.rate);
         document.querySelectorAll('.rta-speed').forEach((b) => b.classList.remove('rta-speed-active'));
         btn.classList.add('rta-speed-active');
         if (RA.playing) {
@@ -396,6 +481,10 @@ if (!window.__readAloud) {
 
   function getBestVoice() {
     const voices = RA.synth.getVoices();
+    if (RA.voiceName) {
+      const preferred = voices.find((v) => v.name === RA.voiceName);
+      if (preferred) return preferred;
+    }
     return (
       voices.find((v) => v.name.includes('Google') && v.lang.startsWith('en')) ||
       voices.find((v) => v.name.includes('Microsoft') && v.lang.startsWith('en')) ||
@@ -545,11 +634,14 @@ if (!window.__readAloud) {
 
       utt.onend = () => {
         clearWordTimers();
-        if (!RA.paused && isLast && idx + 1 >= RA.chunks.length) {
-          setStatus('Done');
-          setPlayBtn(false);
-          RA.playing = false;
-          stopKeepAlive();
+        if (isLast) {
+          trackWords(fullText);
+          if (!RA.paused && idx + 1 >= RA.chunks.length) {
+            setStatus('Done');
+            setPlayBtn(false);
+            RA.playing = false;
+            stopKeepAlive();
+          }
         }
       };
 
@@ -797,6 +889,9 @@ if (!window.__readAloud) {
   async function activate(silent = false) {
     if (RA.active) { teardown(); return; }
 
+    // Load persisted speed + voice before doing anything else
+    await loadSettings();
+
     let paragraphs = [];
 
     if (window.__rtaPdfMode) {
@@ -804,7 +899,7 @@ if (!window.__readAloud) {
         paragraphs = await extractPdfChunks();
       } catch (e) {
         console.warn('ReadAloud PDF extraction error:', e);
-        if (!silent) alert('ReadAloud: Could not extract text from this PDF.');
+        if (!silent) showToast('ReadAloud: Could not extract text from this PDF.');
         return;
       }
     } else {
@@ -818,12 +913,13 @@ if (!window.__readAloud) {
     }
 
     if (paragraphs.length === 0) {
-      if (!silent) alert('ReadAloud: No readable content found on this page.');
+      if (!silent) showToast('ReadAloud: No readable content found on this page.');
       return;
     }
 
     RA.chunks = paragraphs;
-    RA.chunkIndex = loadPosition();
+    // Load persisted position for this URL; clamp in case article shrank
+    RA.chunkIndex = Math.min(await loadPosition(), Math.max(0, paragraphs.length - 1));
     RA.active = true;
     buildUI(null, paragraphs);
     // PDF pages have no HTML paragraphs to mark; skip for PDF mode

@@ -3,9 +3,13 @@
   "name": "ReadAloud",
   "version": "1.0.0",
   "description": "Read any article aloud — automatically skips ads, headers, footers, and clutter.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "background": {
     "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "content_scripts": [
     {

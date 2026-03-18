@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReadAloud — Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#8b5cf6"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#g)"/>
+          <rect x="6"  y="13" width="3" height="6"  rx="1.5" fill="#fff"/>
+          <rect x="11" y="9"  width="3" height="14" rx="1.5" fill="#fff"/>
+          <rect x="16" y="11" width="3" height="10" rx="1.5" fill="#fff"/>
+          <rect x="21" y="7"  width="3" height="18" rx="1.5" fill="#fff"/>
+          <rect x="26" y="12" width="3" height="8"  rx="1.5" fill="#fff"/>
+        </svg>
+      </div>
+      <h1>ReadAloud</h1>
+    </header>
+
+    <!-- Stats ─────────────────────────────────────────────────────────────── -->
+    <section class="card" id="stats-card">
+      <h2>This week</h2>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value" id="stat-words">—</div>
+          <div class="stat-label">words read</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-minutes">—</div>
+          <div class="stat-label">minutes of content</div>
+        </div>
+      </div>
+      <p class="stat-note" id="stat-note"></p>
+    </section>
+
+    <!-- Settings ───────────────────────────────────────────────────────────── -->
+    <section class="card">
+      <h2>Settings</h2>
+
+      <div class="setting-row">
+        <label class="setting-label">Default speed</label>
+        <div class="speed-group" id="speed-group">
+          <button class="speed-btn" data-speed="0.75">0.75×</button>
+          <button class="speed-btn" data-speed="1">1×</button>
+          <button class="speed-btn" data-speed="1.25">1.25×</button>
+          <button class="speed-btn" data-speed="1.5">1.5×</button>
+          <button class="speed-btn" data-speed="2">2×</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label class="setting-label" for="voice-select">Voice</label>
+        <select id="voice-select">
+          <option value="">Auto (best available)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Reading list ─────────────────────────────────────────────────────── -->
+    <section class="card">
+      <div class="section-header">
+        <h2>Reading list</h2>
+        <span class="badge" id="list-count"></span>
+      </div>
+      <div id="reading-list">
+        <p class="empty-state">No saved articles yet.<br>
+          Click the 🔖 button in the player to save a page for later.</p>
+      </div>
+    </section>
+
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
