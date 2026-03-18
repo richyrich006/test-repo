@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReadAloud</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <div class="header">
+    <svg class="logo" width="22" height="22" viewBox="0 0 32 32" fill="none">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#6366f1"/>
+          <stop offset="100%" stop-color="#8b5cf6"/>
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8" fill="url(#g)"/>
+      <rect x="6"  y="13" width="3" height="6"  rx="1.5" fill="#fff"/>
+      <rect x="11" y="9"  width="3" height="14" rx="1.5" fill="#fff"/>
+      <rect x="16" y="11" width="3" height="10" rx="1.5" fill="#fff"/>
+      <rect x="21" y="7"  width="3" height="18" rx="1.5" fill="#fff"/>
+      <rect x="26" y="12" width="3" height="8"  rx="1.5" fill="#fff"/>
+    </svg>
+    <span class="title">ReadAloud</span>
+    <button id="btn-settings" class="icon-btn" title="Settings">⚙</button>
+  </div>
+
+  <button id="btn-read" class="read-btn">
+    <span class="play-icon">▶</span>
+    <span id="read-label">Read this page</span>
+  </button>
+
+  <div id="list-section" hidden>
+    <div class="section-header">
+      <span class="section-title">Reading list</span>
+      <span class="badge" id="list-badge"></span>
+    </div>
+    <div id="list-items"></div>
+    <button id="btn-view-all" class="view-all" hidden>View all in settings →</button>
+  </div>
+
+  <div id="list-empty" class="empty" hidden>
+    <p>No saved articles yet.</p>
+    <p class="hint">Open any article, activate the reader,<br>then click 🔖 to save it here.</p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
