@@ -8,7 +8,7 @@ if (!window.__readAloud) {
     utterance: null,
     chunks: [],         // array of paragraph strings
     chunkIndex: 0,      // which paragraph we're on
-    rate: 1.5,
+    rate: 1.25,
     voiceName: '',      // preferred voice name ('' = auto-select)
     playing: false,
     paused: false,
@@ -245,7 +245,7 @@ if (!window.__readAloud) {
   // Load rate + voiceName from sync storage and apply to RA state.
   async function loadSettings() {
     try {
-      const { rate = 1.5, voiceName = '' } =
+      const { rate = 1.25, voiceName = '' } =
         await chrome.storage.sync.get(['rate', 'voiceName']);
       RA.rate = rate;
       RA.voiceName = voiceName;
@@ -511,9 +511,12 @@ if (!window.__readAloud) {
     RA.wordTimers = [];
   }
 
-  // Schedule per-word highlight timeouts as fallback when onboundary doesn't fire.
-  // onboundary cancels these and takes over if it does fire.
-  function scheduleWordHighlights(chunkIdx, charOffset) {
+  // Schedule per-word highlight timeouts, anchored to the moment a sentence
+  // utterance actually starts (called from onstart, not before speak()).
+  // maxOffset limits scheduling to the current sentence's words only — this
+  // prevents stale timers from carrying over into subsequent sentences.
+  // onboundary events cancel these and take over with exact positions when fired.
+  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity) {
     clearWordTimers();
     const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
     if (!para) return;
@@ -524,13 +527,15 @@ if (!window.__readAloud) {
       : 0;
     if (startIdx < 0) return;
 
-    const msPerChar = 60 / RA.rate;
+    // ~13 chars/sec at 1× (≈ 156 wpm); scales linearly with rate
+    const msPerChar = 1000 / (13 * RA.rate);
     let elapsed = 0;
 
     for (let i = startIdx; i < words.length; i++) {
       const word = words[i];
+      if (parseInt(word.dataset.s, 10) >= maxOffset) break;
       const delay = elapsed;
-      elapsed += Math.max(word.textContent.trim().length * msPerChar, 100);
+      elapsed += Math.max(word.textContent.trim().length * msPerChar, 60 / RA.rate);
 
       RA.wordTimers.push(
         setTimeout(() => {
@@ -567,17 +572,42 @@ if (!window.__readAloud) {
 
   // ─── Sentence splitting ───────────────────────────────────────────────────
 
-  // Split text into sentence-sized strings for TTS.
-  // Shorter utterances let the engine plan intonation over a manageable span,
-  // which eliminates the slurred/clipped sound at 1.5× and 2× speeds.
+  // Split text into short utterance strings for TTS.
+  // Two-pass: first split at sentence boundaries, then further split any
+  // segment longer than MAX_CHARS at comma/semicolon/colon clause boundaries.
+  // Shorter utterances give the TTS engine a smaller prosody window, which
+  // eliminates slurring at 1.5× and 2× even on slower local voices.
   function sentenceSplit(text) {
-    // Split after . ! ? that are followed by whitespace + capital letter.
-    // Negative lookbehind skips common abbreviations so "Dr. Smith" stays whole.
-    const parts = text
+    const MAX_CHARS = 120;
+
+    // Pass 1 — sentence boundaries
+    const sentences = text
       .split(/(?<!\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e))(?<=[.!?])\s+(?=[A-Z"'\u201C])/u)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
-    return parts.length > 0 ? parts : [text];
+
+    // Pass 2 — clause boundaries for long sentences
+    const result = [];
+    for (const sent of (sentences.length ? sentences : [text])) {
+      if (sent.length <= MAX_CHARS) { result.push(sent); continue; }
+
+      // Split on comma/semicolon/colon + space, keeping the punctuation attached
+      const clauses = sent.split(/(?<=[,;:])\s+/);
+      let cur = '';
+      for (const clause of clauses) {
+        if (!cur) { cur = clause; continue; }
+        // Keep joining until adding the next clause would exceed the limit
+        if ((cur + ' ' + clause).length <= MAX_CHARS) {
+          cur += ' ' + clause;
+        } else {
+          result.push(cur);
+          cur = clause;
+        }
+      }
+      if (cur.trim()) result.push(cur.trim());
+    }
+
+    return result.length > 0 ? result : [text];
   }
 
   // Returns the char offset of each sentence within fullText.
@@ -618,10 +648,11 @@ if (!window.__readAloud) {
         RA.chunkIndex = idx;
         RA.uttStartTime = Date.now();
         RA.uttCharOffset = sOffset;
+        // Anchor highlights to actual speech start, bounded to this sentence only
+        scheduleWordHighlights(idx, sOffset, sOffset + sentence.length);
         if (isFirst) {
           setActivePara(idx);
           setStatus(timeRemainingStr(idx));
-          scheduleWordHighlights(idx, 0);
         }
         // Chain: pre-queue the next chunk while the last sentence of this one plays
         if (isLast) _buildAndQueueUtterance(idx + 1);
@@ -706,6 +737,7 @@ if (!window.__readAloud) {
     utterance.onstart = () => {
       // Speech actually started — cancel the silent-failure watchdog.
       clearTimeout(RA.noStartTimer);
+      scheduleWordHighlights(idx, firstGlobalOffset, firstGlobalOffset + firstText.length);
     };
 
     utterance.onboundary = (event) => {
@@ -736,7 +768,6 @@ if (!window.__readAloud) {
 
     RA.utterance = utterance;
     RA.synth.speak(utterance);
-    scheduleWordHighlights(idx, charOffset);
 
     // Watchdog: if onstart hasn't fired after 700ms the utterance was silently
     // dropped (Chrome bug).  Retry once with a fresh cancel/speak cycle.
@@ -761,6 +792,7 @@ if (!window.__readAloud) {
       utt.onstart = () => {
         RA.uttStartTime = Date.now();
         RA.uttCharOffset = sOffset;
+        scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
         if (isLast) _buildAndQueueUtterance(idx + 1);
       };
 

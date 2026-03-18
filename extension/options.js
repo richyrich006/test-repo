@@ -31,7 +31,7 @@ chrome.storage.local.get({ stats: { wordsRead: 0, weekStart: 0 } }, ({ stats }) 
 
 // ── Settings ───────────────────────────────────────────────────────────────
 
-chrome.storage.sync.get({ rate: 1.5, voiceName: '' }, ({ rate, voiceName }) => {
+chrome.storage.sync.get({ rate: 1.25, voiceName: '' }, ({ rate, voiceName }) => {
 
   // Speed buttons
   const group = document.getElementById('speed-group');
