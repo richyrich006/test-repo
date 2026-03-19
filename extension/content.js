@@ -363,6 +363,10 @@ if (!window.__readAloud) {
           </div>
           <div id="rta-status">Ready</div>
           <div class="rta-player-group">
+            <span class="rta-label">Voice</span>
+            <select id="rta-voice" title="Select voice (✦ = cloud/natural)"></select>
+          </div>
+          <div class="rta-player-group">
             <span class="rta-label">Speed</span>
             ${speedBtns}
           </div>
@@ -500,6 +504,21 @@ if (!window.__readAloud) {
         }
       });
     });
+
+    // Voice picker
+    populateVoiceSelect();
+    // Voices load asynchronously in Chrome — repopulate when they arrive
+    RA.synth.addEventListener('voiceschanged', populateVoiceSelect);
+
+    document.getElementById('rta-voice').addEventListener('change', (e) => {
+      RA.voiceName = e.target.value;
+      saveSetting('voiceName', RA.voiceName);
+      if (RA.playing) {
+        RA.synth.cancel();
+        RA.paused = false;
+        startReading(RA.chunkIndex);
+      }
+    });
   }
 
   function setPlayBtn(playing) {
@@ -528,19 +547,48 @@ if (!window.__readAloud) {
 
   // ─── TTS ──────────────────────────────────────────────────────────────────
 
+  // Score a voice for quality. Higher = better.
+  // Cloud-streamed voices (!localService) sound much more natural than local ones.
+  function voiceScore(v) {
+    if (!v.lang.startsWith('en')) return -1;
+    let s = 0;
+    if (!v.localService) s += 20;
+    if (v.name.includes('Google')) s += 8;
+    if (v.name.includes('Neural') || v.name.includes('Natural') ||
+        v.name.includes('Premium') || v.name.includes('Enhanced')) s += 5;
+    if (v.lang === 'en-US') s += 2;
+    if (v.lang === 'en-GB') s += 1;
+    return s;
+  }
+
   function getBestVoice() {
     const voices = RA.synth.getVoices();
     if (RA.voiceName) {
       const preferred = voices.find((v) => v.name === RA.voiceName);
       if (preferred) return preferred;
     }
-    return (
-      voices.find((v) => v.name.includes('Google') && v.lang.startsWith('en')) ||
-      voices.find((v) => v.name.includes('Microsoft') && v.lang.startsWith('en')) ||
-      voices.find((v) => v.lang === 'en-US') ||
-      voices.find((v) => v.lang.startsWith('en')) ||
-      voices[0]
-    );
+    // Pick highest-scoring English voice
+    return voices
+      .filter((v) => v.lang.startsWith('en'))
+      .sort((a, b) => voiceScore(b) - voiceScore(a))[0] || voices[0];
+  }
+
+  function populateVoiceSelect() {
+    const sel = document.getElementById('rta-voice');
+    if (!sel) return;
+    const voices = RA.synth.getVoices().filter((v) => v.lang.startsWith('en'));
+    voices.sort((a, b) => voiceScore(b) - voiceScore(a));
+    sel.innerHTML = '';
+    voices.forEach((v) => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = v.name.replace(/^Microsoft /, '').replace(/^Google /, 'Google ');
+      if (!v.localService) opt.textContent += ' ✦';
+      opt.selected = v.name === RA.voiceName || (!RA.voiceName && v === voices[0]);
+      sel.appendChild(opt);
+    });
+    // Sync RA.voiceName to whichever option ended up selected
+    if (!RA.voiceName && voices.length) RA.voiceName = voices[0].name;
   }
 
   function startKeepAlive() {
