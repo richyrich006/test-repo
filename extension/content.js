@@ -801,7 +801,46 @@ if (!window.__readAloud) {
     }
   }
 
+  // ─── TTS text normalisation ───────────────────────────────────────────────
+
+  // Convert a 4-digit year integer (1000–2099) to its natural spoken form.
+  // e.g. 1776 → "seventeen seventy-six", 2024 → "twenty twenty-four"
+  function yearToWords(y) {
+    const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+                  'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+                  'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+    const tensWords = ['', '', 'twenty', 'thirty', 'forty', 'fifty',
+                       'sixty', 'seventy', 'eighty', 'ninety'];
+
+    function twoDigits(n) {
+      if (n === 0) return 'hundred';
+      if (n < 20) return ones[n];
+      const t = Math.floor(n / 10), o = n % 10;
+      return o === 0 ? tensWords[t] : tensWords[t] + '-' + ones[o];
+    }
+
+    if (y >= 2010) return 'twenty ' + twoDigits(y - 2000);
+    if (y === 2000) return 'two thousand';
+    if (y >= 2001) return 'two thousand ' + ones[y - 2000];
+
+    // 1000–1999: split into two 2-digit halves ("nineteen seventy-six")
+    const high = Math.floor(y / 100);   // 10–19
+    const low  = y % 100;               // 0–99
+    if (low === 0) return ones[high] + ' hundred';
+    if (low < 10)  return ones[high] + ' oh ' + ones[low];
+    return ones[high] + ' ' + twoDigits(low);
+  }
+
+  // Normalise text before it is handed to the TTS engine.
+  // Only the spoken string is changed — displayed chunk text is untouched,
+  // so word-highlight char offsets remain valid.
+  function normalizeTTSText(text) {
+    // Replace year-range integers (1000–2099) with their spoken form
+    return text.replace(/\b(1\d{3}|20\d{2})\b/g, (m) => yearToWords(parseInt(m, 10)));
+  }
+
   // ─── Sentence splitting ───────────────────────────────────────────────────
+
 
   // Split text into short utterance strings for TTS.
   // Two-pass: first split at sentence boundaries, then further split any
@@ -871,7 +910,7 @@ if (!window.__readAloud) {
       const isLast = sIdx === sentences.length - 1;
       const sOffset = offsets[sIdx];
 
-      const utt = new SpeechSynthesisUtterance(sentence);
+      const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentence));
       utt.rate = RA.rate;
       utt.pitch = RA.pitch;
       utt.voice = getBestVoice();
@@ -962,7 +1001,7 @@ if (!window.__readAloud) {
     const firstText = sentences[startSentIdx].substring(Math.max(0, withinSent));
     const firstGlobalOffset = offsets[startSentIdx] + withinSent;
 
-    const utterance = new SpeechSynthesisUtterance(firstText);
+    const utterance = new SpeechSynthesisUtterance(normalizeTTSText(firstText));
     utterance.rate = RA.rate;
     utterance.pitch = RA.pitch;
     utterance.voice = getBestVoice();
@@ -1018,7 +1057,7 @@ if (!window.__readAloud) {
       const sOffset = offsets[i];
       const isLast = i === sentences.length - 1;
 
-      const utt = new SpeechSynthesisUtterance(sentences[i]);
+      const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentences[i]));
       utt.rate = RA.rate;
       utt.pitch = RA.pitch;
       utt.voice = getBestVoice();
