@@ -481,7 +481,7 @@ if (!window.__readAloud) {
           </div>
         </div>
         <div id="rta-actions">
-          <button id="rta-podcast" title="Generate NPR-style podcast from this article">🎙</button>
+          <button id="rta-podcast" title="Generate NPR-style news article">🎙</button>
           <button id="rta-discussion" title="Generate 2-person discussion podcast (ElevenLabs)">👥</button>
           <button id="rta-save" title="Save to reading list">🔖</button>
           <button id="rta-options" title="Settings">⚙</button>

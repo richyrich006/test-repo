@@ -1,33 +1,192 @@
 'use strict';
 
-// ── ReadAloud Podcast Engine ──────────────────────────────────────────────────
-// Converts an article into an NPR-style audio podcast using the Anthropic API
-// for script generation, Jamendo API for real background music, and the
-// browser's SpeechSynthesis API for multi-speaker narration.
+// ── ReadAloud NPR News Article Engine ─────────────────────────────────────────
+// Converts an article into an NPR-style radio news report using:
+//   • Anthropic API   → generate anchor script
+//   • ElevenLabs API  → synthesize authoritative news voices
+//   • Jamendo API     → real intro music (plays once at the top, then fades out)
 
 window.__rtaPodcast = (() => {
 
-  // ── Jamendo Music Player ───────────────────────────────────────────────────
-  // Fetches a real royalty-free track from Jamendo and routes it through
-  // Web Audio API for volume ducking under speech.
-  //
-  // Free client IDs: register at https://developer.jamendo.com
-  // The ID below is the public test key from Jamendo's own docs.
+  // ── ElevenLabs voice candidates ───────────────────────────────────────────
+  // Prioritised list of known free pre-made voices. The engine tries them in
+  // order and skips any that ElevenLabs rejects as library-only on the plan.
+  // HOST = primary anchor (male), REPORTER = field correspondent (female).
+
+  const EL_VOICES = {
+    host: [
+      'onwK4e9ZLuTAKqWW03F9', // Daniel  — deep, authoritative
+      'JBFqnCBsd6RMkjVDRZzb', // George  — measured, trustworthy
+      'TX3LPaxmHKxFdv7VOQHJ', // Liam    — clear, professional
+      'nPczCjzI2devNBz1zQrb', // Brian   — warm baritone
+      'N2lVS1w4EtoT3dr4eOWO', // Callum  — composed
+    ],
+    reporter: [
+      'Xb7hH8MSUJpSbSDYk0k2', // Alice     — crisp, professional
+      'XB0fDUnXU5powFXDhCwa', // Charlotte — articulate
+      'XrExE9yKIg1WjnnlVkGX', // Matilda   — clear, even
+      'pFZP5JQG7iQjIQuC4Bku', // Lily      — composed
+      'SAz9YHcvj6GT2YYXdXww', // River     — measured
+    ],
+  };
+
+  // ── ElevenLabs TTS ─────────────────────────────────────────────────────────
+
+  function fetchAndPlay(text, voiceId, apiKey) {
+    return new Promise(async (resolve, reject) => {
+      if (isAborted()) { reject(new Error('aborted')); return; }
+
+      let resp;
+      try {
+        resp = await chrome.runtime.sendMessage({
+          action: 'elevenLabsFetch',
+          voiceId,
+          apiKey,
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_turbo_v2_5',
+            // Higher stability = more consistent, anchor-like delivery
+            voice_settings: { stability: 0.72, similarity_boost: 0.55 },
+          }),
+        });
+      } catch (err) { reject(err); return; }
+
+      if (!resp.ok) {
+        reject(new Error(resp.error || `ElevenLabs error ${resp.status}`));
+        return;
+      }
+
+      const binary = atob(resp.audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+
+      const audio = new Audio(url);
+      _currentAudio = audio;
+
+      audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; reject(new Error('Playback failed')); };
+      audio.play().catch((err) => { URL.revokeObjectURL(url); _currentAudio = null; reject(err); });
+    });
+  }
+
+  // Speak one script segment via ElevenLabs, auto-advancing candidates on
+  // voice-not-found errors, falling back to browser TTS if all fail.
+  async function speakSegment(text, voiceState, roleKey, apiKey) {
+    if (voiceState.useBrowser) {
+      return speakBrowser(text, voiceState[`browser_${roleKey}`], voiceState.rate);
+    }
+
+    const candidates = EL_VOICES[roleKey];
+    const idxKey = `${roleKey}Idx`;
+
+    while (voiceState[idxKey] < candidates.length) {
+      if (isAborted()) return;
+      try {
+        await fetchAndPlay(text, candidates[voiceState[idxKey]], apiKey);
+        return; // success — keep using this voice
+      } catch (err) {
+        const isVoiceErr = /voice.not.found|voice_not_found|not.find.voice|library/i.test(err.message);
+        if (!isVoiceErr) throw err;
+        voiceState[idxKey]++;
+      }
+    }
+
+    // All ElevenLabs candidates exhausted — fall back to browser TTS
+    console.warn('ReadAloud Podcast: ElevenLabs voices exhausted, switching to browser TTS');
+    voiceState.useBrowser = true;
+    return speakBrowser(text, voiceState[`browser_${roleKey}`], voiceState.rate);
+  }
+
+  // ── Browser TTS fallback ───────────────────────────────────────────────────
+
+  function waitForVoices() {
+    return new Promise((resolve) => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) { resolve(voices); return; }
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        resolve(window.speechSynthesis.getVoices());
+      }, { once: true });
+    });
+  }
+
+  function pickBrowserVoices(voices) {
+    const en = (voices || []).filter((v) => v.lang.startsWith('en'));
+    const score = (v) => {
+      let s = 0;
+      if (!v.localService) s += 20;
+      if (v.name.includes('Google')) s += 8;
+      if (v.name.includes('Neural') || v.name.includes('Premium') ||
+          v.name.includes('Enhanced')) s += 5;
+      if (v.lang === 'en-US') s += 2;
+      return s;
+    };
+    const sorted = [...en].sort((a, b) => score(b) - score(a));
+    const host = sorted[0] || null;
+    const reporter = sorted.find((v, i) => {
+      if (i === 0) return false;
+      const hf = /female|woman|girl/i.test(host?.name || '');
+      const vf = /female|woman|girl/i.test(v.name);
+      return hf !== vf;
+    }) || sorted[1] || host;
+    return { host, reporter };
+  }
+
+  function speakBrowser(text, voice, rate) {
+    return new Promise((resolve) => {
+      const synth = window.speechSynthesis;
+      const sentences = text
+        .split(/(?<=[.!?])\s+(?=[A-Z"'\u201C])/u)
+        .map((s) => s.trim()).filter(Boolean);
+      if (sentences.length === 0) { resolve(); return; }
+
+      const keepAlive = setInterval(() => synth.resume(), 5000);
+      const done = () => { clearInterval(keepAlive); resolve(); };
+      let idx = 0;
+
+      const speakNext = () => {
+        if (isAborted() || idx >= sentences.length) { done(); return; }
+        const sentence = sentences[idx++];
+        const utt = new SpeechSynthesisUtterance(sentence);
+        utt.voice = voice;
+        utt.rate = rate * 0.95;
+        utt.pitch = 1;
+
+        let advanced = false;
+        const advance = () => {
+          if (advanced) return; advanced = true; clearTimeout(timer); speakNext();
+        };
+        const wc = sentence.split(/\s+/).length;
+        const timer = setTimeout(advance, (wc / ((rate || 1) * 150)) * 60000 + 500);
+        utt.onend = advance;
+        utt.onerror = (e) => {
+          if (advanced) return; advanced = true; clearTimeout(timer);
+          if (e.error === 'interrupted') { done(); return; }
+          speakNext();
+        };
+        synth.speak(utt);
+      };
+      speakNext();
+    });
+  }
+
+  // ── Jamendo Intro Music ────────────────────────────────────────────────────
+  // Plays a real royalty-free track for the intro only — fades out completely
+  // before the anchor starts speaking.
 
   const JAMENDO_CLIENT_ID = 'b6747d04';
   const JAMENDO_GENRES = ['lounge', 'ambient', 'jazz', 'classical'];
-  // SomaFM streams used as fallback if Jamendo is unavailable
   const SOMAFM_FALLBACKS = [
     'https://ice1.somafm.com/groovesalad-256-mp3',
     'https://ice1.somafm.com/dronezone-256-mp3',
-    'https://ice1.somafm.com/lush-256-mp3',
   ];
 
-  class JamendoMusic {
+  class IntroMusic {
     constructor() {
       this.audioEl = null;
       this.running = false;
-      this.trackInfo = null; // { title, artist } for "now playing" display
+      this.trackInfo = null;
       this._fadeRaf = null;
     }
 
@@ -38,42 +197,38 @@ window.__rtaPodcast = (() => {
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`Jamendo API ${resp.status}`);
       const data = await resp.json();
-      if (!data.results?.length) throw new Error('No Jamendo tracks returned');
+      if (!data.results?.length) throw new Error('No tracks');
       const track = data.results[Math.floor(Math.random() * data.results.length)];
       return { audioUrl: track.audio, title: track.name, artist: track.artist_name };
     }
 
-    // Smooth volume fade using rAF
     _fadeTo(target, durationMs) {
       if (this._fadeRaf) cancelAnimationFrame(this._fadeRaf);
       const el = this.audioEl;
-      if (!el) return;
+      if (!el) return Promise.resolve();
       const start = el.volume;
       const startTime = performance.now();
-      const tick = () => {
-        if (!this.audioEl) return;
-        const t = Math.min((performance.now() - startTime) / durationMs, 1);
-        this.audioEl.volume = start + (target - start) * t;
-        if (t < 1) this._fadeRaf = requestAnimationFrame(tick);
-      };
-      this._fadeRaf = requestAnimationFrame(tick);
+      return new Promise((resolve) => {
+        const tick = () => {
+          if (!this.audioEl) { resolve(); return; }
+          const t = Math.min((performance.now() - startTime) / durationMs, 1);
+          this.audioEl.volume = start + (target - start) * t;
+          if (t < 1) { this._fadeRaf = requestAnimationFrame(tick); }
+          else resolve();
+        };
+        this._fadeRaf = requestAnimationFrame(tick);
+      });
     }
 
     async start() {
       if (this.running) return;
 
-      // ── Step 1: unlock autoplay WITHIN the user gesture ──────────────────
-      // Muted autoplay is always allowed. We start muted so that the play()
-      // call happens synchronously here (before any await breaks the gesture
-      // chain). The real src is swapped in after the async Jamendo fetch.
+      // Unlock autoplay within the user gesture (muted play before any await)
       this.audioEl = new Audio();
       this.audioEl.muted = true;
       this.audioEl.loop = true;
-      // play() with no src rejects immediately; we ignore that rejection —
-      // the important thing is Chrome marks this element as "user-activated".
       this.audioEl.play().catch(() => {});
 
-      // ── Step 2: fetch a track (async — gesture chain already unlocked) ──
       let audioUrl;
       try {
         const track = await this._fetchJamendoTrack();
@@ -84,39 +239,29 @@ window.__rtaPodcast = (() => {
         this.trackInfo = null;
       }
 
-      // ── Step 3: swap in real src and unmute ───────────────────────────────
       this.audioEl.volume = 0;
       this.audioEl.muted = false;
       this.audioEl.src = audioUrl;
       await this.audioEl.play();
       this.running = true;
 
-      // Fade in to 35% over 2.5 s
-      this._fadeTo(0.35, 2500);
+      // Fade in to 60% (prominent intro level) over 1.5 s
+      await this._fadeTo(0.6, 1500);
     }
 
-    // Duck to ~8% while speech plays
-    duck() { this._fadeTo(0.08, 600); }
-
-    // Restore to 35%
-    unduck() { this._fadeTo(0.35, 800); }
-
-    stop() {
+    // Fade out and stop completely — awaitable so callers know when it's silent
+    async fadeOutAndStop(durationMs = 2000) {
       if (!this.running) return;
-      this._fadeTo(0, 2500);
-      setTimeout(() => {
-        try { this.audioEl.pause(); this.audioEl.src = ''; } catch (_) {}
-        this.audioEl = null;
-        this.running = false;
-      }, 3000);
+      await this._fadeTo(0, durationMs);
+      try { this.audioEl.pause(); this.audioEl.src = ''; } catch (_) {}
+      this.audioEl = null;
+      this.running = false;
     }
   }
 
   // ── Script generation ──────────────────────────────────────────────────────
-  // Uses claude-haiku for fast generation (~2-3s vs ~8s with Sonnet).
-  // Shorter target (400-600 words) also speeds things up without losing quality.
 
-  const SYSTEM_PROMPT = `You are a seasoned NPR radio script writer. Convert a news article into a polished, engaging NPR-style podcast segment.
+  const SYSTEM_PROMPT = `You are a seasoned NPR news anchor and radio scriptwriter. Convert a news article into a polished NPR-style radio news report.
 
 FORMAT RULES (follow exactly):
 - First line must be: [INTRO_MUSIC]
@@ -126,19 +271,18 @@ FORMAT RULES (follow exactly):
 - No other tags, stage directions, or formatting
 
 STYLE RULES:
-- Host name: Alex. Correspondent name: Jordan (use sparingly — only for complex stories needing a second perspective)
-- Tone: calm, intelligent, authoritative but accessible — classic NPR
-- Open with a compelling news hook that draws the listener in
-- Use active voice, present tense where natural
-- Short, punchy sentences. Smooth transitions between ideas
-- Close with: "Reporting for ReadAloud, I'm Alex."
-- Target ~400–600 words of spoken text (about 3–4 minutes of audio at broadcast pace)`;
+- Anchor name: Alex. Correspondent name: Jordan (use [REPORTER] sparingly — only for stories needing a field perspective or expert voice)
+- Tone: authoritative, measured, clear — classic NPR anchor delivery
+- Lead with the most important fact; no throat-clearing or preamble
+- Active voice, present tense where natural. Short declarative sentences
+- No filler phrases ("In this piece we'll discuss…", "Let's dive in")
+- Close with: "I'm Alex. This is ReadAloud."
+- Target ~400–600 words of spoken text (about 3–4 minutes at broadcast pace)`;
 
   async function generateScript(articleText, title) {
     const { podcastApiKey = '' } = await chrome.storage.sync.get('podcastApiKey');
     if (!podcastApiKey) throw new Error('NO_API_KEY');
 
-    // Truncate article to ~2 000 words to reduce latency
     const truncated = articleText.split(/\s+/).slice(0, 2000).join(' ');
     const userMessage = `Article title: ${title}\n\nArticle text:\n${truncated}`;
 
@@ -173,7 +317,6 @@ STYLE RULES:
     for (const line of raw.split('\n')) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-
       if (trimmed === '[INTRO_MUSIC]') { segments.push({ type: 'INTRO_MUSIC' }); continue; }
       if (trimmed === '[OUTRO_MUSIC]') { segments.push({ type: 'OUTRO_MUSIC' }); continue; }
 
@@ -182,11 +325,7 @@ STYLE RULES:
 
       const tag = match[1].toUpperCase();
       const text = match[2];
-
-      if (tag === 'HOST' || tag === 'REPORTER') {
-        segments.push({ type: tag, text });
-        continue;
-      }
+      if (tag === 'HOST' || tag === 'REPORTER') { segments.push({ type: tag, text }); continue; }
 
       if (!speakerMap[tag]) {
         speakerMap[tag] = Object.keys(speakerMap).length === 0 ? 'HOST' : 'REPORTER';
@@ -196,121 +335,20 @@ STYLE RULES:
     return segments;
   }
 
-  // ── Voice selection ────────────────────────────────────────────────────────
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-  function waitForVoices() {
-    return new Promise((resolve) => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) { resolve(voices); return; }
-      window.speechSynthesis.addEventListener('voiceschanged', () => {
-        resolve(window.speechSynthesis.getVoices());
-      }, { once: true });
-    });
-  }
-
-  function getPodcastVoices(voices) {
-    voices = (voices || []).filter((v) => v.lang.startsWith('en'));
-
-    const score = (v) => {
-      let s = 0;
-      if (!v.localService) s += 20;
-      if (v.name.includes('Google')) s += 8;
-      if (v.name.includes('Neural') || v.name.includes('Natural') ||
-          v.name.includes('Premium') || v.name.includes('Enhanced')) s += 5;
-      if (v.lang === 'en-US') s += 2;
-      return s;
-    };
-
-    const sorted = [...voices].sort((a, b) => score(b) - score(a));
-    const host = sorted[0] || null;
-    const reporter = sorted.find((v, i) => {
-      if (i === 0) return false;
-      const hostFemale = /female|woman|girl|she/i.test(host?.name || '');
-      const vFemale = /female|woman|girl|she/i.test(v.name);
-      return hostFemale !== vFemale;
-    }) || sorted[1] || host;
-
-    return { host, reporter };
-  }
-
-  // ── TTS orchestration ──────────────────────────────────────────────────────
-
-  function speakSegment(text, voice, rate, pitch) {
-    return new Promise((resolve) => {
-      const synth = window.speechSynthesis;
-      const sentences = text
-        .split(/(?<=[.!?])\s+(?=[A-Z"'\u201C])/u)
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      if (sentences.length === 0) { resolve(); return; }
-
-      const keepAlive = setInterval(() => synth.resume(), 5000);
-      const done = () => { clearInterval(keepAlive); resolve(); };
-
-      let idx = 0;
-
-      const speakNext = () => {
-        if (isAborted() || idx >= sentences.length) { done(); return; }
-
-        const sentence = sentences[idx++];
-        const utt = new SpeechSynthesisUtterance(sentence);
-        utt.voice = voice;
-        utt.rate = rate;
-        utt.pitch = pitch;
-
-        let advanced = false;
-        const advance = () => {
-          if (advanced) return;
-          advanced = true;
-          clearTimeout(timer);
-          speakNext();
-        };
-
-        const wordCount = sentence.split(/\s+/).length;
-        // +500 ms grace period: if onend fires we cancel this; if it never
-        // fires (Chrome TTS bug) we move on quickly instead of stalling 3 s.
-        const expectedMs = (wordCount / ((rate || 1) * 150)) * 60000 + 500;
-        const timer = setTimeout(advance, expectedMs);
-
-        utt.onend = advance;
-        utt.onerror = (e) => {
-          if (advanced) return;
-          advanced = true;
-          clearTimeout(timer);
-          if (e.error === 'interrupted') { done(); return; }
-          console.warn('podcast TTS:', e.error);
-          speakNext();
-        };
-
-        synth.speak(utt);
-      };
-
-      speakNext();
-    });
-  }
-
-  function sleep(ms) {
-    return new Promise((r) => setTimeout(r, ms));
-  }
-
-  // ── Abort signal helpers ───────────────────────────────────────────────────
+  // ── Abort helpers ──────────────────────────────────────────────────────────
 
   let _abortController = null;
+  function isAborted() { return _abortController?.signal.aborted ?? false; }
 
-  function isAborted() {
-    return _abortController?.signal.aborted ?? false;
-  }
-
-  // ── Public state ───────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
 
   let _active = false;
   let _music = null;
+  let _currentAudio = null;
 
   // ── Main entrypoint ────────────────────────────────────────────────────────
-  // Music fetch and script generation run in parallel so the listener hears
-  // the intro music almost immediately (typically < 2 s) rather than waiting
-  // for the full LLM round-trip before anything plays.
 
   async function start(chunks, title, onStatus) {
     if (_active) return;
@@ -318,19 +356,22 @@ STYLE RULES:
     _abortController = new AbortController();
 
     const status = (msg) => { if (onStatus) onStatus(msg); };
-    const music = new JamendoMusic();
+    const music = new IntroMusic();
     _music = music;
 
     try {
-      // Kick off music fetch and script generation in parallel
-      status('Loading podcast…');
+      const { elevenLabsApiKey = '' } = await chrome.storage.sync.get('elevenLabsApiKey');
+      if (!elevenLabsApiKey) {
+        status('⚠ Add your ElevenLabs API key in Settings for NPR voices.');
+        chrome.runtime.sendMessage({ action: 'openOptions' });
+        return;
+      }
 
+      // Kick off music + script generation in parallel
+      status('Loading news report…');
       const [rawScript] = await Promise.all([
         generateScript(chunks.join('\n\n'), title || document.title),
-        music.start().catch((err) => {
-          // Non-fatal: log and continue without music
-          console.warn('ReadAloud Podcast music:', err);
-        }),
+        music.start().catch((err) => console.warn('ReadAloud intro music:', err)),
       ]);
 
       if (isAborted()) return;
@@ -338,53 +379,55 @@ STYLE RULES:
       const segments = parseScript(rawScript);
       if (segments.length === 0) throw new Error('Empty script returned');
 
-      const voices = getPodcastVoices(await waitForVoices());
+      // Set up voice state (ElevenLabs with browser fallback)
+      const bv = pickBrowserVoices(await waitForVoices());
       const { rate = 1 } = await chrome.storage.sync.get('rate').catch(() => ({ rate: 1 }));
+      const voiceState = {
+        hostIdx: 0, reporterIdx: 0,
+        browser_host: bv.host, browser_reporter: bv.reporter,
+        useBrowser: false, rate,
+      };
 
-      // Show "now playing" track name if we got one from Jamendo
       const nowPlaying = music.trackInfo
         ? `🎵 ${music.trackInfo.title} — ${music.trackInfo.artist}`
-        : 'Now playing podcast…';
+        : 'Now on air…';
       status(nowPlaying);
 
       for (const seg of segments) {
         if (isAborted()) break;
 
         if (seg.type === 'INTRO_MUSIC') {
-          // Music is already playing — just let it breathe for 3 s before speech
-          await sleep(3000);
-          if (!isAborted()) music.duck();
-          await sleep(400);
+          // Let the music play prominently for 4 s, then fade it out before speaking
+          await sleep(4000);
+          if (!isAborted() && _music) {
+            await music.fadeOutAndStop(2000);
+            _music = null;
+          }
 
         } else if (seg.type === 'OUTRO_MUSIC') {
-          music.unduck();
-          await sleep(2500);
-          music.stop();
-          _music = null;
+          // Music already gone — nothing to do
+          continue;
 
         } else {
-          const isReporter = seg.type === 'REPORTER';
-          await speakSegment(
-            seg.text,
-            isReporter ? voices.reporter : voices.host,
-            rate * 0.95,
-            isReporter ? 0.85 : 1
-          );
-          if (!isAborted()) await sleep(150); // brief pause between speakers
+          const roleKey = seg.type === 'REPORTER' ? 'reporter' : 'host';
+          status('On air…');
+          await speakSegment(seg.text, voiceState, roleKey, elevenLabsApiKey);
+          if (!isAborted()) await sleep(150);
         }
       }
 
     } catch (err) {
       if (err.message === 'NO_API_KEY') {
-        status('⚠ Add your API key in Settings to use Podcast mode.');
+        status('⚠ Add your Anthropic API key in Settings to use News Report mode.');
         chrome.runtime.sendMessage({ action: 'openOptions' });
       } else {
-        status('Podcast error: ' + err.message);
-        console.error('ReadAloud Podcast:', err);
+        status('News report error: ' + err.message);
+        console.error('ReadAloud News Report:', err);
       }
     } finally {
       window.speechSynthesis.cancel();
-      if (_music) { _music.stop(); _music = null; }
+      if (_currentAudio) { try { _currentAudio.pause(); } catch (_) {} _currentAudio = null; }
+      if (_music) { _music.fadeOutAndStop(500); _music = null; }
       _active = false;
       if (onStatus) onStatus(null);
     }
@@ -394,7 +437,8 @@ STYLE RULES:
     if (!_active) return;
     window.speechSynthesis.cancel();
     if (_abortController) _abortController.abort();
-    if (_music) { _music.stop(); _music = null; }
+    if (_currentAudio) { try { _currentAudio.pause(); } catch (_) {} _currentAudio = null; }
+    if (_music) { _music.fadeOutAndStop(500); _music = null; }
     _active = false;
   }
 
