@@ -662,6 +662,11 @@ if (!window.__readAloud) {
     RA.wordTimers = [];
   }
 
+  // Chrome fires onstart when it begins *processing* the utterance, not when
+  // audio actually reaches the speakers.  This constant compensates for that gap
+  // so timer-based highlights don't run ahead of the audio.
+  const AUDIO_STARTUP_MS = 120;
+
   // Schedule per-word highlight timeouts, anchored to the moment a sentence
   // utterance actually starts (called from onstart, not before speak()).
   // maxOffset limits scheduling to the current sentence's words only — this
@@ -684,9 +689,19 @@ if (!window.__readAloud) {
 
     for (let i = startIdx; i < words.length; i++) {
       const word = words[i];
-      if (parseInt(word.dataset.s, 10) >= maxOffset) break;
-      const delay = elapsed;
-      elapsed += Math.max(word.textContent.trim().length * msPerChar, 60 / RA.rate);
+      const wordStart = parseInt(word.dataset.s, 10);
+      if (wordStart >= maxOffset) break;
+
+      // Use span from this word's start to the next word's start — this
+      // includes the word characters AND the whitespace gap that follows,
+      // avoiding cumulative drift caused by omitting inter-word pauses.
+      const nextWordStart = i + 1 < words.length
+        ? parseInt(words[i + 1].dataset.s, 10)
+        : wordStart + word.textContent.trim().length;
+      const charSpan = nextWordStart - wordStart;
+
+      const delay = elapsed + AUDIO_STARTUP_MS;
+      elapsed += Math.max(charSpan * msPerChar, 60 / RA.rate);
 
       RA.wordTimers.push(
         setTimeout(() => {
@@ -705,18 +720,32 @@ if (!window.__readAloud) {
     const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
     if (!para) return;
 
+    // Some Chrome voices report charIndex pointing to the whitespace *before*
+    // the word (e.g. charIndex=5 for "world" in "hello world" where world
+    // starts at s=6).  If no span contains charIndex exactly, snap forward
+    // to the first span whose start is closest to charIndex.
+    let matched = null;
     for (const span of para.querySelectorAll('.rta-word')) {
       const s = parseInt(span.dataset.s, 10);
       const e = parseInt(span.dataset.e, 10);
       if (charIndex >= s && charIndex < e) {
-        span.classList.add('rta-hl');
-        // Auto-scroll word into view if it's scrolled off-screen.
-        // Use 80px margins to keep it clear of the fixed player bar at the bottom.
-        const rect = span.getBoundingClientRect();
-        if (rect.top < 80 || rect.bottom > window.innerHeight - 80) {
-          span.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+        matched = span;
         break;
+      }
+      if (s > charIndex && !matched) {
+        // charIndex fell in the whitespace gap before this span — snap to it
+        matched = span;
+        break;
+      }
+    }
+
+    if (matched) {
+      matched.classList.add('rta-hl');
+      // Auto-scroll word into view if it's scrolled off-screen.
+      // Use 80px margins to keep it clear of the fixed player bar at the bottom.
+      const rect = matched.getBoundingClientRect();
+      if (rect.top < 80 || rect.bottom > window.innerHeight - 80) {
+        matched.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }
   }
