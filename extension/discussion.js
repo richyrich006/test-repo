@@ -8,25 +8,92 @@
 
 window.__rtaDiscussion = (() => {
 
-  // ── Voice selection (resolved at runtime from user's ElevenLabs account) ───
-  // Hardcoded IDs broke when ElevenLabs moved Adam/Rachel to the paid Voice
-  // Library.  Instead we fetch the caller's available voices and pick one
-  // apparent-male and one apparent-female voice so it always works.
+  // ── Browser TTS fallback ───────────────────────────────────────────────────
+  // Used when ElevenLabs voice resolution fails for any reason (401, plan
+  // restrictions, network).  Mirrors the logic in podcast.js.
+
+  function waitForVoices() {
+    return new Promise((resolve) => {
+      const v = window.speechSynthesis.getVoices();
+      if (v.length > 0) { resolve(v); return; }
+      window.speechSynthesis.addEventListener('voiceschanged',
+        () => resolve(window.speechSynthesis.getVoices()), { once: true });
+    });
+  }
+
+  function pickBrowserVoices(voices) {
+    const en = (voices || []).filter((v) => v.lang.startsWith('en'));
+    const score = (v) => {
+      let s = 0;
+      if (!v.localService) s += 20;
+      if (v.name.includes('Google')) s += 8;
+      if (v.lang === 'en-US') s += 2;
+      return s;
+    };
+    const sorted = [...en].sort((a, b) => score(b) - score(a));
+    const host = sorted[0] || null;
+    const guest = sorted.find((v, i) => {
+      if (i === 0) return false;
+      const hostF = /female|woman|girl/i.test(host?.name || '');
+      const vF    = /female|woman|girl/i.test(v.name);
+      return hostF !== vF;
+    }) || sorted[1] || host;
+    return { alex: host, sarah: guest };
+  }
+
+  function speakBrowser(text, voice) {
+    return new Promise((resolve) => {
+      const synth = window.speechSynthesis;
+      const sentences = text
+        .split(/(?<=[.!?])\s+(?=[A-Z"'\u201C])/u)
+        .map((s) => s.trim()).filter(Boolean);
+      if (sentences.length === 0) { resolve(); return; }
+      const keepAlive = setInterval(() => synth.resume(), 5000);
+      const done = () => { clearInterval(keepAlive); resolve(); };
+      let idx = 0;
+      const speakNext = () => {
+        if (isAborted() || idx >= sentences.length) { done(); return; }
+        const sentence = sentences[idx++];
+        const utt = new SpeechSynthesisUtterance(sentence);
+        utt.voice = voice;
+        utt.rate = 0.95;
+        let advanced = false;
+        const advance = () => { if (advanced) return; advanced = true; clearTimeout(timer); speakNext(); };
+        const timer = setTimeout(advance, (sentence.split(/\s+/).length / 142) * 60000 + 3000);
+        utt.onend = advance;
+        utt.onerror = (e) => {
+          if (advanced) return; advanced = true; clearTimeout(timer);
+          if (e.error === 'interrupted') { done(); return; }
+          console.warn('Discussion TTS:', e.error); speakNext();
+        };
+        synth.speak(utt);
+      };
+      speakNext();
+    });
+  }
+
+  // ── Voice selection ─────────────────────────────────────────────────────────
+  // Try ElevenLabs first; fall back to browser SpeechSynthesis on any failure.
+
   async function resolveVoices(apiKey) {
-    const resp = await chrome.runtime.sendMessage({ action: 'elevenLabsVoices', apiKey });
-    if (!resp.ok) throw new Error(resp.error || `ElevenLabs voices error ${resp.status}`);
-
-    const voices = resp.data.voices || [];
-    if (voices.length === 0) throw new Error('No ElevenLabs voices available for this account');
-
-    const gender = (v) => (v.labels?.gender || '').toLowerCase();
-    const males   = voices.filter((v) => gender(v) === 'male');
-    const females = voices.filter((v) => gender(v) === 'female');
-
-    // Prefer gender-distinct pair; fall back to first two voices
-    const alex  = (males[0]   || voices[0]).voice_id;
-    const sarah = (females[0] || voices[1] || voices[0]).voice_id;
-    return { alex, sarah };
+    try {
+      const resp = await chrome.runtime.sendMessage({ action: 'elevenLabsVoices', apiKey });
+      if (!resp.ok) throw new Error(`ElevenLabs ${resp.status}`);
+      const voices = resp.data.voices || [];
+      if (voices.length === 0) throw new Error('no voices');
+      const gender = (v) => (v.labels?.gender || '').toLowerCase();
+      const males   = voices.filter((v) => gender(v) === 'male');
+      const females = voices.filter((v) => gender(v) === 'female');
+      return {
+        mode: 'elevenlabs',
+        alex:  (males[0]   || voices[0]).voice_id,
+        sarah: (females[0] || voices[1] || voices[0]).voice_id,
+      };
+    } catch (err) {
+      console.warn('ReadAloud Discussion: ElevenLabs unavailable, using browser TTS:', err.message);
+      const bv = pickBrowserVoices(await waitForVoices());
+      return { mode: 'browser', alex: bv.alex, sarah: bv.sarah };
+    }
   }
 
   // ── Ambient music (same as podcast.js) ────────────────────────────────────
@@ -251,8 +318,12 @@ STYLE:
           _music = null;
 
         } else {
-          const voiceId = seg.type === 'SARAH' ? voices.sarah : voices.alex;
-          await fetchAndPlay(seg.text, voiceId, elevenLabsApiKey);
+          const voice = seg.type === 'SARAH' ? voices.sarah : voices.alex;
+          if (voices.mode === 'elevenlabs') {
+            await fetchAndPlay(seg.text, voice, elevenLabsApiKey);
+          } else {
+            await speakBrowser(seg.text, voice);
+          }
           if (!isAborted()) await sleep(250);
         }
       }
