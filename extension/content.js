@@ -632,10 +632,14 @@ if (!window.__readAloud) {
     // Podcast button
     document.getElementById('rta-podcast').addEventListener('click', () => {
       const pod = window.__rtaPodcast;
-      if (!pod) return;
+      if (!pod) {
+        showToast('Podcast engine not loaded — try reloading the extension.');
+        return;
+      }
 
       if (pod.isActive()) {
         pod.stop();
+        hidePodcastToast();
         return;
       }
 
@@ -656,8 +660,10 @@ if (!window.__readAloud) {
         if (statusMsg === null) {
           // Podcast finished
           btn.classList.remove('rta-podcast-active');
+          hidePodcastToast();
           setStatus('Ready');
         } else {
+          showPodcastToast(statusMsg);
           setStatus(statusMsg);
         }
       });
@@ -673,6 +679,31 @@ if (!window.__readAloud) {
   function setStatus(text) {
     const el = document.getElementById('rta-status');
     if (el) el.textContent = text;
+  }
+
+  // Persistent toast for podcast status (stays until explicitly hidden).
+  function showPodcastToast(msg) {
+    let toast = document.getElementById('rta-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'rta-toast';
+      document.body.appendChild(toast);
+    }
+    clearTimeout(toast._t);
+    toast.textContent = msg;
+    toast.classList.add('rta-toast-show');
+    // Auto-hide only for error/done messages
+    if (msg.startsWith('⚠') || msg.startsWith('Podcast error')) {
+      toast._t = setTimeout(() => toast.classList.remove('rta-toast-show'), 5000);
+    }
+  }
+
+  function hidePodcastToast() {
+    const toast = document.getElementById('rta-toast');
+    if (toast) {
+      clearTimeout(toast._t);
+      toast.classList.remove('rta-toast-show');
+    }
   }
 
   function setActivePara(idx) {
