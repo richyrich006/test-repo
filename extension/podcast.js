@@ -141,8 +141,8 @@ STYLE RULES:
 
     const userMessage = `Article title: ${title}\n\nArticle text:\n${truncated}`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+    const resp = await chrome.runtime.sendMessage({
+      action: 'anthropicFetch',
       headers: {
         'x-api-key': podcastApiKey,
         'anthropic-version': '2023-06-01',
@@ -157,12 +157,10 @@ STYLE RULES:
     });
 
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error ${resp.status}`);
+      throw new Error(resp.data?.error?.message || resp.error || `API error ${resp.status}`);
     }
 
-    const data = await resp.json();
-    return data.content[0].text;
+    return resp.data.content[0].text;
   }
 
   // ── Script parsing ─────────────────────────────────────────────────────────

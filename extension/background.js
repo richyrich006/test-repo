@@ -76,6 +76,23 @@ chrome.runtime.onStartup.addListener(setActionIcon);
 // Activation is handled by popup.js.
 // Background only needs to handle messages that require privileged APIs
 // unavailable in content scripts.
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.action === 'openOptions') chrome.runtime.openOptionsPage();
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.action === 'openOptions') {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+
+  if (msg.action === 'anthropicFetch') {
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: msg.headers,
+      body: msg.body,
+    })
+      .then(async (resp) => {
+        const data = await resp.json().catch(() => ({}));
+        sendResponse({ ok: resp.ok, status: resp.status, data });
+      })
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true; // keep channel open for async sendResponse
+  }
 });
