@@ -121,7 +121,7 @@ if (!window.__readAloud) {
       const paras = Array.from(container.querySelectorAll('p, li, div, blockquote'))
         .filter((el) => isLeafDiv(el))
         .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
-        .filter((t) => t.length > 20 && !(t.length < 120 && BOILERPLATE_RE.test(t)));
+        .filter((t) => t.length > 20 && !(t.length < 120 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
       if (paras.length >= 3) return paras;
     }
     return null;
@@ -148,7 +148,7 @@ if (!window.__readAloud) {
     const paras = Array.from(document.querySelectorAll('p'))
       .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel'))
       .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
-      .filter((t) => t.length > 40 && !(t.length < 150 && BOILERPLATE_RE.test(t)));
+      .filter((t) => t.length > 40 && !(t.length < 150 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
 
     return paras.length >= 3 ? paras : null;
   }
@@ -167,6 +167,19 @@ if (!window.__readAloud) {
     'i'
   );
 
+  // Detect concatenated navigation link text — a hallmark of scraped <nav>/<ul>
+  // menus where multiple <a> tags are siblings and their textContent gets joined
+  // without whitespace.  Legitimate prose rarely has 3+ lowercase→uppercase
+  // transitions (e.g. "PlaygroundText", "SpeechVoice", "EffectsMusic").
+  function isNavConcatenation(text) {
+    const camelJoins = (text.match(/[a-z][A-Z]/g) || []).length;
+    if (camelJoins >= 3) return true;
+    // Also catch very low space density: < 1 space per 12 chars in a long-ish chunk
+    const spaces = (text.match(/ /g) || []).length;
+    if (text.length > 40 && spaces < text.length / 12) return true;
+    return false;
+  }
+
   function getParagraphs(article) {
     const div = document.createElement('div');
     div.innerHTML = article.content;
@@ -178,6 +191,7 @@ if (!window.__readAloud) {
       const text = el.textContent.replace(/\s+/g, ' ').trim();
       if (text.length < 20) return;
       if (text.length < 120 && BOILERPLATE_RE.test(text)) return;
+      if (isNavConcatenation(text)) return;
       paras.push(text);
     });
 
@@ -185,7 +199,7 @@ if (!window.__readAloud) {
       return article.textContent
         .split(/\n+/)
         .map((s) => s.replace(/\s+/g, ' ').trim())
-        .filter((s) => s.length > 20 && !(s.length < 120 && BOILERPLATE_RE.test(s)));
+        .filter((s) => s.length > 20 && !(s.length < 120 && BOILERPLATE_RE.test(s)) && !isNavConcatenation(s));
     }
 
     return paras;
