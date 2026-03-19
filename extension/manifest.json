@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Read any article aloud — automatically skips ads, headers, footers, and clutter.",
   "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["https://api.anthropic.com/*"],
+  "host_permissions": ["https://api.anthropic.com/*", "https://api.elevenlabs.io/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -15,7 +15,7 @@
   "content_scripts": [
     {
       "matches": ["*://*/*"],
-      "js": ["Readability.js", "podcast.js", "content.js"],
+      "js": ["Readability.js", "podcast.js", "discussion.js", "content.js"],
       "css": ["player.css"],
       "run_at": "document_idle"
     }

@@ -22,6 +22,11 @@ if (!window.__readAloud) {
     uttCharOffset: 0,   // charOffset passed to startReading for current utterance
     pauseChunk: 0,      // chunk index saved on pause
     pauseOffset: 0,     // char offset saved on pause
+    // ElevenLabs
+    elevenLabsApiKey: '',
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
+    _elAudio: null,     // currently playing ElevenLabs Audio element
+    _elStop: false,     // signal to stop the elevenLabsReadChunk loop
   };
 
   // Kick off async voice loading immediately so voices are ready before the
@@ -280,6 +285,7 @@ if (!window.__readAloud) {
     const idx = parseInt(para.getAttribute('data-rta-chunk'), 10);
     const charOffset = parseInt(span.dataset.s, 10);
     if (isNaN(idx) || isNaN(charOffset)) return;
+    stopElAudio();
     RA.synth.cancel();
     RA.paused = false;
     RA.playing = true;
@@ -290,6 +296,7 @@ if (!window.__readAloud) {
     const el = e.currentTarget;
     const idx = parseInt(el.getAttribute('data-rta-chunk'), 10);
     if (isNaN(idx)) return;
+    stopElAudio();
     RA.synth.cancel();
     RA.paused = false;
     RA.playing = true;
@@ -349,14 +356,17 @@ if (!window.__readAloud) {
     } catch (_) { return 0; }
   }
 
-  // Load rate + voiceName from sync storage and apply to RA state.
+  // Load rate + voiceName + ElevenLabs settings from sync storage and apply to RA state.
   async function loadSettings() {
     try {
-      const { rate = 1.25, pitch = 1, voiceName = '' } =
-        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName']);
+      const { rate = 1.25, pitch = 1, voiceName = '',
+              elevenLabsApiKey = '', elevenLabsVoiceId = '21m00Tcm4TlvDq8ikWAM' } =
+        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName', 'elevenLabsApiKey', 'elevenLabsVoiceId']);
       RA.rate = rate;
       RA.pitch = pitch;
       RA.voiceName = voiceName;
+      RA.elevenLabsApiKey = elevenLabsApiKey;
+      RA.elevenLabsVoiceId = elevenLabsVoiceId;
     } catch (_) {}
   }
 
@@ -458,6 +468,7 @@ if (!window.__readAloud) {
         </div>
         <div id="rta-actions">
           <button id="rta-podcast" title="Generate NPR-style podcast from this article">🎙</button>
+          <button id="rta-discussion" title="Generate 2-person discussion podcast (ElevenLabs)">👥</button>
           <button id="rta-save" title="Save to reading list">🔖</button>
           <button id="rta-options" title="Settings">⚙</button>
           <button id="rta-collapse" title="Expand">+</button>
@@ -542,17 +553,23 @@ if (!window.__readAloud) {
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
       } else if (RA.playing) {
-        // Estimate current char position before canceling so we can resume later.
-        // RA.synth.pause() is unreliable in Chrome — queued sentences keep playing.
-        // cancel() reliably clears the queue.
-        const elapsed = Date.now() - RA.uttStartTime;
-        const charsPerMs = (12.5 * RA.rate) / 1000;
-        RA.pauseChunk = RA.chunkIndex;
-        RA.pauseOffset = Math.min(
-          Math.round(RA.uttCharOffset + elapsed * charsPerMs),
-          RA.chunks[RA.chunkIndex].length - 1
-        );
-        RA.synth.cancel();
+        // ElevenLabs mode: stop audio and save paragraph position
+        if (RA.elevenLabsApiKey) {
+          RA.pauseChunk = RA.chunkIndex;
+          RA.pauseOffset = 0;
+          stopElAudio();
+        } else {
+          // Estimate current char position before canceling so we can resume later.
+          // RA.synth.pause() is unreliable in Chrome — queued sentences keep playing.
+          const elapsed = Date.now() - RA.uttStartTime;
+          const charsPerMs = (12.5 * RA.rate) / 1000;
+          RA.pauseChunk = RA.chunkIndex;
+          RA.pauseOffset = Math.min(
+            Math.round(RA.uttCharOffset + elapsed * charsPerMs),
+            RA.chunks[RA.chunkIndex].length - 1
+          );
+          RA.synth.cancel();
+        }
         RA.paused = true;
         RA.playing = false;
         setPlayBtn(false);
@@ -645,6 +662,7 @@ if (!window.__readAloud) {
 
       // Pause article reading if active
       if (RA.playing) {
+        stopElAudio();
         RA.synth.cancel();
         RA.playing = false;
         RA.paused = false;
@@ -658,7 +676,45 @@ if (!window.__readAloud) {
 
       pod.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
-          // Podcast finished
+          btn.classList.remove('rta-podcast-active');
+          hidePodcastToast();
+          setStatus('Ready');
+        } else {
+          showPodcastToast(statusMsg);
+          setStatus(statusMsg);
+        }
+      });
+    });
+
+    // Discussion podcast button (ElevenLabs multi-voice)
+    document.getElementById('rta-discussion').addEventListener('click', () => {
+      const disc = window.__rtaDiscussion;
+      if (!disc) {
+        showToast('Discussion engine not loaded — try reloading the extension.');
+        return;
+      }
+
+      if (disc.isActive()) {
+        disc.stop();
+        hidePodcastToast();
+        return;
+      }
+
+      if (RA.playing) {
+        stopElAudio();
+        RA.synth.cancel();
+        RA.playing = false;
+        RA.paused = false;
+        setPlayBtn(false);
+        stopKeepAlive();
+        clearWordTimers();
+      }
+
+      const btn = document.getElementById('rta-discussion');
+      btn.classList.add('rta-podcast-active');
+
+      disc.start(RA.chunks, document.title, (statusMsg) => {
+        if (statusMsg === null) {
           btn.classList.remove('rta-podcast-active');
           hidePodcastToast();
           setStatus('Ready');
@@ -761,6 +817,84 @@ if (!window.__readAloud) {
     });
     // Sync RA.voiceName to whichever option ended up selected
     if (!RA.voiceName && voices.length) RA.voiceName = voices[0].name;
+  }
+
+  // ─── ElevenLabs TTS ───────────────────────────────────────────────────────
+
+  function stopElAudio() {
+    RA._elStop = true;
+    if (RA._elAudio) {
+      RA._elAudio.pause();
+      RA._elAudio.src = '';
+      RA._elAudio = null;
+    }
+  }
+
+  function fetchAndPlayElevenLabs(text, apiKey, voiceId) {
+    return new Promise(async (resolve, reject) => {
+      if (RA._elStop) { reject(new Error('stopped')); return; }
+
+      let resp;
+      try {
+        resp = await chrome.runtime.sendMessage({
+          action: 'elevenLabsFetch',
+          voiceId,
+          apiKey,
+          body: JSON.stringify({
+            text: normalizeTTSText(text),
+            model_id: 'eleven_turbo_v2_5',
+            voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+          }),
+        });
+      } catch (err) { reject(err); return; }
+
+      if (!resp.ok) {
+        reject(new Error(resp.error || `ElevenLabs error ${resp.status}`));
+        return;
+      }
+
+      const binary = atob(resp.audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+
+      const audio = new Audio(url);
+      RA._elAudio = audio;
+
+      audio.onended = () => { URL.revokeObjectURL(url); RA._elAudio = null; resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); RA._elAudio = null; reject(new Error('Audio playback failed')); };
+      audio.play().catch((err) => { URL.revokeObjectURL(url); RA._elAudio = null; reject(err); });
+    });
+  }
+
+  async function elevenLabsReadChunk(startIdx) {
+    RA._elStop = false;
+    for (let idx = startIdx; idx < RA.chunks.length; idx++) {
+      if (RA._elStop || !RA.playing) break;
+
+      RA.chunkIndex = idx;
+      setActivePara(idx);
+      setStatus(timeRemainingStr(idx));
+
+      try {
+        await fetchAndPlayElevenLabs(RA.chunks[idx], RA.elevenLabsApiKey, RA.elevenLabsVoiceId);
+        if (!RA._elStop) trackWords(RA.chunks[idx]);
+      } catch (err) {
+        if (err.message !== 'stopped') {
+          console.warn('ReadAloud ElevenLabs:', err);
+          setStatus('ElevenLabs error: ' + err.message);
+        }
+        break;
+      }
+    }
+
+    if (!RA._elStop && RA.playing) {
+      setStatus('Done');
+      setPlayBtn(false);
+      RA.playing = false;
+      stopKeepAlive();
+    }
   }
 
   function startKeepAlive() {
@@ -1032,8 +1166,24 @@ if (!window.__readAloud) {
       return;
     }
 
+    stopElAudio();
     clearWordTimers();
     clearTimeout(RA.noStartTimer);
+
+    // Route to ElevenLabs when an API key is configured
+    if (RA.elevenLabsApiKey) {
+      RA.chunkIndex = idx;
+      RA.uttStartTime = Date.now();
+      RA.uttCharOffset = charOffset;
+      RA.playing = true;
+      RA.paused = false;
+      setPlayBtn(true);
+      setActivePara(idx);
+      setStatus(timeRemainingStr(idx));
+      startKeepAlive();
+      elevenLabsReadChunk(idx);
+      return;
+    }
 
     // Cancel any previous or stuck utterance before queuing new ones.
     // Chrome silently drops the very first speak() call after page load if the
@@ -1163,6 +1313,16 @@ if (!window.__readAloud) {
   // Skip forward or backward by `seconds` seconds using estimated char position.
   function skip(seconds) {
     if (!RA.playing && !RA.paused) return;
+    // For ElevenLabs mode, skip by paragraph count (char-level estimation doesn't apply)
+    if (RA.elevenLabsApiKey) {
+      const delta = seconds > 0 ? 1 : -1;
+      const targetIdx = Math.max(0, Math.min(RA.chunkIndex + delta, RA.chunks.length - 1));
+      stopElAudio();
+      RA.paused = false;
+      RA.playing = true;
+      startReading(targetIdx, 0);
+      return;
+    }
     const charsPerMs = (12.5 * RA.rate) / 1000; // ~12.5 chars/sec at 1×
     const elapsed = Date.now() - RA.uttStartTime;
     let targetChar = RA.uttCharOffset + elapsed * charsPerMs + seconds * 1000 * charsPerMs;
@@ -1186,6 +1346,7 @@ if (!window.__readAloud) {
   }
 
   function jump(idx) {
+    stopElAudio();
     RA.synth.cancel();
     RA.paused = false;
     if (RA.playing) {
@@ -1312,6 +1473,7 @@ if (!window.__readAloud) {
   }
 
   function teardown() {
+    stopElAudio();
     RA.synth.cancel();
     stopKeepAlive();
     clearWordTimers();

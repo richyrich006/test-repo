@@ -82,6 +82,33 @@
       <p class="api-key-note">Stored locally on this device only. Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> — the 🎙 button in the player will prompt you if not set.</p>
     </section>
 
+    <!-- ElevenLabs ──────────────────────────────────────────────────────── -->
+    <section class="card">
+      <h2>ElevenLabs (High-Quality TTS)</h2>
+      <p class="section-desc">Use ElevenLabs for natural-sounding voices when reading articles and for the 👥 Discussion Podcast. Free tier gives ~10,000 chars/month (~1,600 words). Get a key at <a href="https://elevenlabs.io" target="_blank" rel="noopener">elevenlabs.io</a>.</p>
+      <div class="setting-row">
+        <label class="setting-label" for="el-api-key">ElevenLabs API key</label>
+        <div class="api-key-row">
+          <input type="password" id="el-api-key" placeholder="your-elevenlabs-key" autocomplete="off" spellcheck="false">
+          <button id="el-api-key-save" class="btn-save">Save</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <label class="setting-label" for="el-voice-select">Reading voice</label>
+        <select id="el-voice-select">
+          <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Female, neutral)</option>
+          <option value="pNInz6obpgDQGcFmaJgB">Adam (Male, deep)</option>
+          <option value="EXAVITQu4vr4xnSDxMaL">Bella (Female, soft)</option>
+          <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Male, conversational)</option>
+          <option value="ErXwobaYiN019PkySvjV">Antoni (Male, well-rounded)</option>
+          <option value="VR6AewLTigWG4xSOukaG">Arnold (Male, crisp)</option>
+          <option value="AZnzlk1XvdvUeBnXmlld">Domi (Female, strong)</option>
+          <option value="yoZ06aMxZJJ28mfd3POQ">Sam (Male, raspy)</option>
+        </select>
+      </div>
+      <p class="api-key-note">When an ElevenLabs key is set, it will be used for article reading and discussion podcasts. Falls back to browser voices if not set.</p>
+    </section>
+
     <!-- Reading list ─────────────────────────────────────────────────────── -->
     <section class="card">
       <div class="section-header">

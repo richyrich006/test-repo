@@ -93,6 +93,35 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         sendResponse({ ok: resp.ok, status: resp.status, data });
       })
       .catch((err) => sendResponse({ ok: false, error: err.message }));
-    return true; // keep channel open for async sendResponse
+    return true;
+  }
+
+  if (msg.action === 'elevenLabsFetch') {
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${msg.voiceId}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': msg.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: msg.body,
+    })
+      .then(async (resp) => {
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          sendResponse({ ok: false, status: resp.status, error: err?.detail?.message || `ElevenLabs error ${resp.status}` });
+          return;
+        }
+        const buffer = await resp.arrayBuffer();
+        // Convert binary to base64 for message passing
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        sendResponse({ ok: true, audio: btoa(binary) });
+      })
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;
   }
 });

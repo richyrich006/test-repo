@@ -111,6 +111,30 @@ chrome.storage.sync.get({ podcastApiKey: '' }, ({ podcastApiKey }) => {
   });
 });
 
+// ── ElevenLabs API key ─────────────────────────────────────────────────────
+
+chrome.storage.sync.get({ elevenLabsApiKey: '', elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM' }, ({ elevenLabsApiKey, elevenLabsVoiceId }) => {
+  const input = document.getElementById('el-api-key');
+  const saveBtn = document.getElementById('el-api-key-save');
+  const voiceSel = document.getElementById('el-voice-select');
+  if (!input || !saveBtn || !voiceSel) return;
+
+  if (elevenLabsApiKey) input.value = elevenLabsApiKey;
+  voiceSel.value = elevenLabsVoiceId;
+
+  saveBtn.addEventListener('click', () => {
+    const key = input.value.trim();
+    chrome.storage.sync.set({ elevenLabsApiKey: key, elevenLabsVoiceId: voiceSel.value }, () => {
+      saveBtn.textContent = 'Saved ✓';
+      setTimeout(() => { saveBtn.textContent = 'Save'; }, 2000);
+    });
+  });
+
+  voiceSel.addEventListener('change', () => {
+    chrome.storage.sync.set({ elevenLabsVoiceId: voiceSel.value });
+  });
+});
+
 // ── Reading list ───────────────────────────────────────────────────────────
 
 chrome.storage.local.get({ readingList: [] }, ({ readingList }) => {
