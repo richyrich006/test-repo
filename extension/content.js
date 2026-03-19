@@ -9,6 +9,7 @@ if (!window.__readAloud) {
     chunks: [],         // array of paragraph strings
     chunkIndex: 0,      // which paragraph we're on
     rate: 1.25,
+    pitch: 1,           // SpeechSynthesisUtterance pitch 0.8–1.3
     voiceName: '',      // preferred voice name ('' = auto-select)
     playing: false,
     paused: false,
@@ -33,12 +34,30 @@ if (!window.__readAloud) {
   // ─── Article extraction via Readability.js ────────────────────────────────
 
   const JUNK_SELECTORS = [
+    // Forms / opt-ins
     'form', '[class*="newsletter"]', '[class*="signup"]', '[class*="sign-up"]',
     '[class*="subscribe"]', '[id*="newsletter"]', '[id*="signup"]', '[id*="subscribe"]',
+    // Legal / tracking
     '[class*="cookie"]', '[class*="consent"]', '[class*="gdpr"]',
-    '[class*="promo"]', '[class*="banner"]', '[class*="advert"]',
+    // Ads / promotions
+    '[class*="promo"]', '[class*="banner"]', '[class*="advert"]', '[class*="sponsor"]',
+    // Related content
     '[class*="related"]', '[class*="recommended"]', '[class*="more-stories"]',
-    '[class*="social-share"]', '[class*="share-bar"]',
+    // Social / sharing
+    '[class*="social-share"]', '[class*="share-bar"]', '[class*="share-btn"]',
+    '[class*="sharing"]', '[id*="share"]',
+    // Navigation junk above/below the article
+    '[class*="breadcrumb"]', '[id*="breadcrumb"]', 'nav[aria-label*="breadcrumb"]',
+    '[class*="site-nav"]', '[class*="nav-bar"]', '[class*="top-bar"]',
+    // Author / byline / metadata blocks
+    '[class*="byline"]', '[class*="author-bio"]', '[class*="author-box"]',
+    '[class*="author-info"]', '[class*="article-meta"]', '[class*="post-meta"]',
+    '[class*="entry-meta"]', '[class*="story-meta"]',
+    // Tags / categories sidebar-style blocks
+    '[class*="tag-list"]', '[class*="tags-list"]', '[class*="topic-list"]',
+    '[class*="label-list"]',
+    // Comments
+    '[class*="comment"]', '[id*="comment"]', '[id="disqus_thread"]',
   ].join(',');
 
   function extractArticle() {
@@ -77,16 +96,28 @@ if (!window.__readAloud) {
     for (const sel of ARTICLE_BODY_SELECTORS) {
       const container = document.querySelector(sel);
       if (!container) continue;
-      const paras = Array.from(container.querySelectorAll('p, div, blockquote'))
+      const paras = Array.from(container.querySelectorAll('p, li, div, blockquote'))
         .filter((el) => isLeafDiv(el))
         .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
-        .filter((t) => t.length > 40 && !(t.length < 120 && BOILERPLATE_RE.test(t)));
+        .filter((t) => t.length > 20 && !(t.length < 120 && BOILERPLATE_RE.test(t)));
       if (paras.length >= 3) return paras;
     }
     return null;
   }
 
-  const BOILERPLATE_RE = /sign[\s-]?up|newsletter|subscribe|email address|your info will be|privacy policy|cookie|follow us|advertisement|sponsored|terms of (use|service)/i;
+  const BOILERPLATE_RE = new RegExp(
+    'sign[\\s-]?up|newsletter|subscribe|email address|your info will be' +
+    '|privacy policy|cookie|follow us|advertisement|sponsored|terms of (use|service)' +
+    // Author / date lines that slip through Readability
+    '|^by [a-z]|^written by|^published (by|on)|^posted (by|on)|^updated (by|on)' +
+    // Read-time / word-count badges
+    '|\\d+\\s*min(ute)?s?\\s*read|\\d+\\s*min(ute)?s?\\s*to read|reading time' +
+    // Tag / category labels
+    '|^(tags?|categor|topics?|labels?)\\s*:|filed under' +
+    // Share prompts
+    '|share (this|on|via)|copy link',
+    'i'
+  );
 
   function getParagraphs(article) {
     const div = document.createElement('div');
@@ -278,9 +309,10 @@ if (!window.__readAloud) {
   // Load rate + voiceName from sync storage and apply to RA state.
   async function loadSettings() {
     try {
-      const { rate = 1.25, voiceName = '' } =
-        await chrome.storage.sync.get(['rate', 'voiceName']);
+      const { rate = 1.25, pitch = 1, voiceName = '' } =
+        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName']);
       RA.rate = rate;
+      RA.pitch = pitch;
       RA.voiceName = voiceName;
     } catch (_) {}
   }
@@ -347,6 +379,11 @@ if (!window.__readAloud) {
       .map((s) => `<button class="rta-speed${s === RA.rate ? ' rta-speed-active' : ''}" data-speed="${s}">${s}x</button>`)
       .join('');
 
+    const pitches = [{ v: 0.8, label: 'Low' }, { v: 1, label: 'Mid' }, { v: 1.2, label: 'High' }];
+    const pitchBtns = pitches
+      .map((p) => `<button class="rta-pitch${p.v === RA.pitch ? ' rta-pitch-active' : ''}" data-pitch="${p.v}">${p.label}</button>`)
+      .join('');
+
     const panel = document.createElement('div');
     panel.id = 'rta-panel';
     panel.innerHTML = `
@@ -365,6 +402,10 @@ if (!window.__readAloud) {
           <div class="rta-player-group">
             <span class="rta-label">Voice</span>
             <select id="rta-voice" title="Select voice (✦ = cloud/natural)"></select>
+          </div>
+          <div class="rta-player-group">
+            <span class="rta-label">Pitch</span>
+            ${pitchBtns}
           </div>
           <div class="rta-player-group">
             <span class="rta-label">Speed</span>
@@ -497,6 +538,20 @@ if (!window.__readAloud) {
         saveSetting('rate', RA.rate);
         document.querySelectorAll('.rta-speed').forEach((b) => b.classList.remove('rta-speed-active'));
         btn.classList.add('rta-speed-active');
+        if (RA.playing) {
+          RA.synth.cancel();
+          RA.paused = false;
+          startReading(RA.chunkIndex);
+        }
+      });
+    });
+
+    document.querySelectorAll('.rta-pitch').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        RA.pitch = parseFloat(btn.dataset.pitch);
+        saveSetting('pitch', RA.pitch);
+        document.querySelectorAll('.rta-pitch').forEach((b) => b.classList.remove('rta-pitch-active'));
+        btn.classList.add('rta-pitch-active');
         if (RA.playing) {
           RA.synth.cancel();
           RA.paused = false;
@@ -738,6 +793,7 @@ if (!window.__readAloud) {
 
       const utt = new SpeechSynthesisUtterance(sentence);
       utt.rate = RA.rate;
+      utt.pitch = RA.pitch;
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
@@ -828,6 +884,7 @@ if (!window.__readAloud) {
 
     const utterance = new SpeechSynthesisUtterance(firstText);
     utterance.rate = RA.rate;
+    utterance.pitch = RA.pitch;
     utterance.voice = getBestVoice();
 
     utterance.onstart = () => {
@@ -883,6 +940,7 @@ if (!window.__readAloud) {
 
       const utt = new SpeechSynthesisUtterance(sentences[i]);
       utt.rate = RA.rate;
+      utt.pitch = RA.pitch;
       utt.voice = getBestVoice();
 
       utt.onstart = () => {

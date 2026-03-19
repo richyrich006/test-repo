@@ -176,6 +176,22 @@
 }
 #rta-voice:hover { background: #e5e5e5; }
 
+.rta-pitch {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.12s;
+}
+.rta-pitch:hover { background: #e5e5e5; }
+.rta-pitch-active {
+  background: #111;
+  color: #fff;
+}
+
 .rta-speed {
   background: #f2f2f2;
   border: none;
@@ -266,6 +282,9 @@
   .rta-play-btn { background: #f0f0f0 !important; color: #000 !important; }
   #rta-voice { background: #2c2c2e; color: #ccc; }
   #rta-voice:hover { background: #3a3a3c; }
+  .rta-pitch { background: #2c2c2e; color: #ccc; }
+  .rta-pitch:hover { background: #3a3a3c; }
+  .rta-pitch-active { background: #f0f0f0; color: #000; }
   .rta-speed { background: #2c2c2e; color: #ccc; }
   .rta-speed:hover { background: #3a3a3c; }
   .rta-speed-active { background: #f0f0f0; color: #000; }
