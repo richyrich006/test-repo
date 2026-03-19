@@ -170,6 +170,9 @@ STYLE RULES:
 
   function parseScript(raw) {
     const segments = [];
+    // Maps whatever names the model invents → HOST or REPORTER
+    const speakerMap = {};
+
     for (const line of raw.split('\n')) {
       const trimmed = line.trim();
       if (!trimmed) continue;
@@ -177,10 +180,24 @@ STYLE RULES:
       if (trimmed === '[INTRO_MUSIC]') { segments.push({ type: 'INTRO_MUSIC' }); continue; }
       if (trimmed === '[OUTRO_MUSIC]') { segments.push({ type: 'OUTRO_MUSIC' }); continue; }
 
-      const match = trimmed.match(/^\[(HOST|REPORTER)\]\s+(.+)$/);
-      if (match) {
-        segments.push({ type: match[1], text: match[2] });
+      // Accept any [WORD] tag as a speaker, not just HOST/REPORTER
+      const match = trimmed.match(/^\[([A-Z][A-Z0-9_]*)\]\s+(.+)$/i);
+      if (!match) continue;
+
+      const tag = match[1].toUpperCase();
+      const text = match[2];
+
+      // Known tags pass through as-is
+      if (tag === 'HOST' || tag === 'REPORTER') {
+        segments.push({ type: tag, text });
+        continue;
       }
+
+      // Unknown name (e.g. SARAH, ALEX, JORDAN) — first seen → HOST, rest → REPORTER
+      if (!speakerMap[tag]) {
+        speakerMap[tag] = Object.keys(speakerMap).length === 0 ? 'HOST' : 'REPORTER';
+      }
+      segments.push({ type: speakerMap[tag], text });
     }
     return segments;
   }
