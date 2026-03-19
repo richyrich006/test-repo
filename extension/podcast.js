@@ -22,6 +22,7 @@ window.__rtaPodcast = (() => {
     start() {
       if (this.running) return;
       this.ctx = new AudioContext();
+      this.ctx.resume(); // Required: browser suspends AudioContext created outside a user gesture
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
@@ -86,11 +87,11 @@ window.__rtaPodcast = (() => {
       this.masterGain.gain.linearRampToValueAtTime(1, this.ctx.currentTime + 2.5);
     }
 
-    // Duck to ~25% volume while speech is playing
+    // Duck to ~40% volume while speech is playing
     duck(rampMs = 600) {
       if (!this.masterGain || !this.running) return;
       const t = this.ctx.currentTime + rampMs / 1000;
-      this.masterGain.gain.linearRampToValueAtTime(0.25, t);
+      this.masterGain.gain.linearRampToValueAtTime(0.4, t);
     }
 
     // Bring back to full volume
