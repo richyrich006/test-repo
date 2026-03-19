@@ -81,11 +81,28 @@ if (!window.__readAloud) {
     'article',
     '[role="article"]',
     '[class*="article-body"]',
+    '[class*="article-content"]',
     '[class*="article-text"]',
-    '[class*="story-body"]',
-    '[class*="post-content"]',
-    '[class*="entry-content"]',
     '[class*="article__body"]',
+    '[class*="article__content"]',
+    '[class*="story-body"]',
+    '[class*="story-content"]',
+    '[class*="story__body"]',
+    '[class*="post-content"]',
+    '[class*="post-body"]',
+    '[class*="entry-content"]',
+    '[class*="content-body"]',
+    '[class*="body-copy"]',
+    '[class*="body-text"]',
+    '[class*="news-article"]',
+    '[class*="main-content"]',
+    '[data-testid*="article-body"]',
+    '[data-testid*="story-body"]',
+    '[data-testid*="article-content"]',
+    '[data-testid*="article"]',
+    '[data-component*="ArticleBody"]',
+    '[data-module*="ArticleBody"]',
+    '[data-qa*="article-body"]',
     'main',
     '[role="main"]',
   ];
@@ -103,6 +120,32 @@ if (!window.__readAloud) {
       if (paras.length >= 3) return paras;
     }
     return null;
+  }
+
+  // Last-resort extractor: grab every <p> in the page body, skipping known
+  // non-content regions (nav, header, footer, sidebar, dialogs, ads).
+  // Works on sites with hashed CSS class names or non-standard article markup
+  // where selector-based approaches fail.
+  function extractLastResort() {
+    const SKIP = [
+      'header', 'footer', 'nav', 'aside',
+      '[role="navigation"]', '[role="banner"]', '[role="complementary"]',
+      '[role="dialog"]', '[role="alertdialog"]',
+      '[class*="sidebar"]', '[id*="sidebar"]',
+      '[class*="related"]', '[class*="recommended"]',
+      '[class*="newsletter"]', '[class*="subscribe"]',
+      '[class*="comment"]', '[id*="comment"]',
+      '[class*="ad-"]', '[class*="-ad"]', '[class*="advert"]',
+      '[class*="promo"]', '[class*="banner"]',
+      '#rta-panel',
+    ].join(', ');
+
+    const paras = Array.from(document.querySelectorAll('p'))
+      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel'))
+      .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
+      .filter((t) => t.length > 40 && !(t.length < 150 && BOILERPLATE_RE.test(t)));
+
+    return paras.length >= 3 ? paras : null;
   }
 
   const BOILERPLATE_RE = new RegExp(
@@ -1119,12 +1162,23 @@ if (!window.__readAloud) {
         return;
       }
     } else {
-      const article = extractArticle();
-      paragraphs = article ? getParagraphs(article) : [];
+      const tryExtract = () => {
+        const article = extractArticle();
+        let result = article ? getParagraphs(article) : [];
+        // Readability didn't get enough — try live DOM selectors
+        if (result.length < 3) result = extractFallback() || [];
+        // Still nothing — brute-force grab every <p> outside nav/footer/ads
+        if (result.length < 3) result = extractLastResort() || [];
+        return result;
+      };
 
-      // Readability couldn't extract enough content — try the live DOM directly
+      paragraphs = tryExtract();
+
+      // JS-heavy / SPA sites may not have rendered the article yet at script
+      // injection time.  If we got nothing, wait 1.5 s and try once more.
       if (paragraphs.length < 3) {
-        paragraphs = extractFallback() || [];
+        await new Promise((r) => setTimeout(r, 1500));
+        paragraphs = tryExtract();
       }
     }
 
