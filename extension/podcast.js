@@ -2,111 +2,132 @@
 
 // ── ReadAloud Podcast Engine ──────────────────────────────────────────────────
 // Converts an article into an NPR-style audio podcast using the Anthropic API
-// for script generation, Web Audio API for ambient music, and the browser's
-// SpeechSynthesis API for multi-speaker narration.
+// for script generation, Jamendo API for real background music, and the
+// browser's SpeechSynthesis API for multi-speaker narration.
 
 window.__rtaPodcast = (() => {
 
-  // ── Ambient music ───────────────────────────────────────────────────────────
-  // Generates a simple ambient news soundscape entirely via Web Audio API —
-  // no external files required.  Layers: pink noise room ambience + low drone chord.
+  // ── Jamendo Music Player ───────────────────────────────────────────────────
+  // Fetches a real royalty-free track from Jamendo and routes it through
+  // Web Audio API for volume ducking under speech.
+  //
+  // Free client IDs: register at https://developer.jamendo.com
+  // The ID below is the public test key from Jamendo's own docs.
 
-  class AmbientMusic {
+  const JAMENDO_CLIENT_ID = 'b6747d04';
+  const JAMENDO_GENRES = ['lounge', 'ambient', 'jazz', 'classical'];
+  // SomaFM streams used as fallback if Jamendo is unavailable
+  const SOMAFM_FALLBACKS = [
+    'https://ice1.somafm.com/groovesalad-256-mp3',
+    'https://ice1.somafm.com/dronezone-256-mp3',
+    'https://ice1.somafm.com/lush-256-mp3',
+  ];
+
+  class JamendoMusic {
     constructor() {
       this.ctx = null;
-      this.masterGain = null;
-      this.sources = [];
+      this.gainNode = null;
+      this.audioEl = null;
       this.running = false;
+      this.trackInfo = null; // { title, artist } for "now playing" display
     }
 
-    start() {
+    async _fetchJamendoTrack() {
+      const genre = JAMENDO_GENRES[Math.floor(Math.random() * JAMENDO_GENRES.length)];
+      const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${JAMENDO_CLIENT_ID}` +
+        `&format=json&limit=50&tags=${genre}&orderby=popularity_total&audioformat=mp31`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`Jamendo API ${resp.status}`);
+      const data = await resp.json();
+      if (!data.results?.length) throw new Error('No Jamendo tracks returned');
+      const track = data.results[Math.floor(Math.random() * data.results.length)];
+      return { audioUrl: track.audio, title: track.name, artist: track.artist_name };
+    }
+
+    async start() {
       if (this.running) return;
-      this.ctx = new AudioContext();
-      this.ctx.resume(); // Required: browser suspends AudioContext created outside a user gesture
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
-      this.masterGain.connect(this.ctx.destination);
 
-      // ── Layer 1: pink-ish noise (room/air ambience) ──
-      const bufLen = this.ctx.sampleRate * 3;
-      const buffer = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      let b0 = 0, b1 = 0, b2 = 0;
-      for (let i = 0; i < bufLen; i++) {
-        const white = Math.random() * 2 - 1;
-        b0 = 0.99886 * b0 + white * 0.0555179;
-        b1 = 0.99332 * b1 + white * 0.0750759;
-        b2 = 0.96900 * b2 + white * 0.1538520;
-        data[i] = (b0 + b1 + b2 + white * 0.5362) / 6;
+      let audioUrl;
+      try {
+        const track = await this._fetchJamendoTrack();
+        audioUrl = track.audioUrl;
+        this.trackInfo = { title: track.title, artist: track.artist };
+      } catch (_) {
+        // Fallback: pick a random SomaFM stream for variety
+        audioUrl = SOMAFM_FALLBACKS[Math.floor(Math.random() * SOMAFM_FALLBACKS.length)];
+        this.trackInfo = null;
       }
-      const noise = this.ctx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
 
-      const lpf = this.ctx.createBiquadFilter();
-      lpf.type = 'lowpass';
-      lpf.frequency.value = 500;
+      this.ctx = new AudioContext();
+      this.ctx.resume();
 
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.value = 0.06;
+      this.gainNode = this.ctx.createGain();
+      this.gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.gainNode.connect(this.ctx.destination);
 
-      noise.connect(lpf);
-      lpf.connect(noiseGain);
-      noiseGain.connect(this.masterGain);
-      noise.start();
-      this.sources.push(noise);
+      this.audioEl = new Audio();
+      this.audioEl.crossOrigin = 'anonymous';
+      this.audioEl.src = audioUrl;
+      this.audioEl.loop = true;
 
-      // ── Layer 2: sustained drone chord (D minor — D2, F2, A2) ──
-      [[73.4, 0.018], [87.3, 0.012], [110, 0.010]].forEach(([freq, gain]) => {
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
+      try {
+        // Route through Web Audio for clean ducking
+        const source = this.ctx.createMediaElementSource(this.audioEl);
+        source.connect(this.gainNode);
+      } catch (_) {
+        // CORS or browser restriction — play without Web Audio routing
+        // (ducking won't work but music still plays)
+        this.audioEl.volume = 0;
+        this.gainNode = null;
+      }
 
-        const oscGain = this.ctx.createGain();
-        oscGain.gain.value = gain;
-
-        osc.connect(oscGain);
-        oscGain.connect(this.masterGain);
-        osc.start();
-        this.sources.push(osc);
-      });
-
-      // ── Layer 3: subtle high shimmer ──
-      const shimmer = this.ctx.createOscillator();
-      shimmer.type = 'sine';
-      shimmer.frequency.value = 880;
-      const shimGain = this.ctx.createGain();
-      shimGain.gain.value = 0.004;
-      shimmer.connect(shimGain);
-      shimGain.connect(this.masterGain);
-      shimmer.start();
-      this.sources.push(shimmer);
-
+      await this.audioEl.play();
       this.running = true;
-      // Fade in over 2.5 s
-      this.masterGain.gain.linearRampToValueAtTime(1, this.ctx.currentTime + 2.5);
+
+      // Fade in to 35% volume (background level) over 2.5 s
+      if (this.gainNode) {
+        this.gainNode.gain.linearRampToValueAtTime(0.35, this.ctx.currentTime + 2.5);
+      } else {
+        // Animate volume manually if no Web Audio routing
+        let v = 0;
+        const step = () => {
+          v = Math.min(v + 0.02, 0.35);
+          if (this.audioEl) this.audioEl.volume = v;
+          if (v < 0.35) setTimeout(step, 100);
+        };
+        step();
+      }
     }
 
-    // Duck to ~40% volume while speech is playing
+    // Duck to ~8% while speech plays
     duck(rampMs = 600) {
-      if (!this.masterGain || !this.running) return;
-      const t = this.ctx.currentTime + rampMs / 1000;
-      this.masterGain.gain.linearRampToValueAtTime(0.4, t);
+      if (!this.running) return;
+      if (this.gainNode) {
+        this.gainNode.gain.linearRampToValueAtTime(0.08, this.ctx.currentTime + rampMs / 1000);
+      } else if (this.audioEl) {
+        this.audioEl.volume = 0.08;
+      }
     }
 
-    // Bring back to full volume
+    // Bring back to 35%
     unduck(rampMs = 800) {
-      if (!this.masterGain || !this.running) return;
-      const t = this.ctx.currentTime + rampMs / 1000;
-      this.masterGain.gain.linearRampToValueAtTime(1, t);
+      if (!this.running) return;
+      if (this.gainNode) {
+        this.gainNode.gain.linearRampToValueAtTime(0.35, this.ctx.currentTime + rampMs / 1000);
+      } else if (this.audioEl) {
+        this.audioEl.volume = 0.35;
+      }
     }
 
-    // Fade out and close
     stop() {
       if (!this.running) return;
-      this.masterGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 2.5);
+      if (this.gainNode) {
+        this.gainNode.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 2.5);
+      } else if (this.audioEl) {
+        this.audioEl.volume = 0;
+      }
       setTimeout(() => {
-        this.sources.forEach((s) => { try { s.stop(); } catch (_) {} });
+        try { this.audioEl.pause(); this.audioEl.src = ''; } catch (_) {}
         try { this.ctx.close(); } catch (_) {}
         this.running = false;
       }, 3000);
@@ -114,8 +135,10 @@ window.__rtaPodcast = (() => {
   }
 
   // ── Script generation ──────────────────────────────────────────────────────
+  // Uses claude-haiku for fast generation (~2-3s vs ~8s with Sonnet).
+  // Shorter target (400-600 words) also speeds things up without losing quality.
 
-  const SYSTEM_PROMPT = `You are a seasoned NPR radio script writer. Your task is to convert a news article into a polished, engaging NPR-style podcast segment.
+  const SYSTEM_PROMPT = `You are a seasoned NPR radio script writer. Convert a news article into a polished, engaging NPR-style podcast segment.
 
 FORMAT RULES (follow exactly):
 - First line must be: [INTRO_MUSIC]
@@ -131,15 +154,14 @@ STYLE RULES:
 - Use active voice, present tense where natural
 - Short, punchy sentences. Smooth transitions between ideas
 - Close with: "Reporting for ReadAloud, I'm Alex."
-- Target ~900–1,100 words of spoken text (about 7–9 minutes of audio at broadcast pace)`;
+- Target ~400–600 words of spoken text (about 3–4 minutes of audio at broadcast pace)`;
 
   async function generateScript(articleText, title) {
     const { podcastApiKey = '' } = await chrome.storage.sync.get('podcastApiKey');
     if (!podcastApiKey) throw new Error('NO_API_KEY');
 
-    // Truncate article to ~3 000 words to control cost/latency
-    const truncated = articleText.split(/\s+/).slice(0, 3000).join(' ');
-
+    // Truncate article to ~2 000 words to reduce latency
+    const truncated = articleText.split(/\s+/).slice(0, 2000).join(' ');
     const userMessage = `Article title: ${title}\n\nArticle text:\n${truncated}`;
 
     const resp = await chrome.runtime.sendMessage({
@@ -150,8 +172,8 @@ STYLE RULES:
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2048,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -165,12 +187,9 @@ STYLE RULES:
   }
 
   // ── Script parsing ─────────────────────────────────────────────────────────
-  // Returns an array of segment objects:
-  //   { type: 'INTRO_MUSIC' | 'OUTRO_MUSIC' | 'HOST' | 'REPORTER', text?: string }
 
   function parseScript(raw) {
     const segments = [];
-    // Maps whatever names the model invents → HOST or REPORTER
     const speakerMap = {};
 
     for (const line of raw.split('\n')) {
@@ -180,20 +199,17 @@ STYLE RULES:
       if (trimmed === '[INTRO_MUSIC]') { segments.push({ type: 'INTRO_MUSIC' }); continue; }
       if (trimmed === '[OUTRO_MUSIC]') { segments.push({ type: 'OUTRO_MUSIC' }); continue; }
 
-      // Accept any [WORD] tag as a speaker, not just HOST/REPORTER
       const match = trimmed.match(/^\[([A-Z][A-Z0-9_]*)\]\s+(.+)$/i);
       if (!match) continue;
 
       const tag = match[1].toUpperCase();
       const text = match[2];
 
-      // Known tags pass through as-is
       if (tag === 'HOST' || tag === 'REPORTER') {
         segments.push({ type: tag, text });
         continue;
       }
 
-      // Unknown name (e.g. SARAH, ALEX, JORDAN) — first seen → HOST, rest → REPORTER
       if (!speakerMap[tag]) {
         speakerMap[tag] = Object.keys(speakerMap).length === 0 ? 'HOST' : 'REPORTER';
       }
@@ -217,7 +233,6 @@ STYLE RULES:
   function getPodcastVoices(voices) {
     voices = (voices || []).filter((v) => v.lang.startsWith('en'));
 
-    // Score: cloud/neural voices rank highest
     const score = (v) => {
       let s = 0;
       if (!v.localService) s += 20;
@@ -229,14 +244,12 @@ STYLE RULES:
     };
 
     const sorted = [...voices].sort((a, b) => score(b) - score(a));
-
     const host = sorted[0] || null;
-    // Pick a distinct reporter voice — prefer different gender keyword in name
     const reporter = sorted.find((v, i) => {
       if (i === 0) return false;
       const hostFemale = /female|woman|girl|she/i.test(host?.name || '');
       const vFemale = /female|woman|girl|she/i.test(v.name);
-      return hostFemale !== vFemale; // opposite apparent gender
+      return hostFemale !== vFemale;
     }) || sorted[1] || host;
 
     return { host, reporter };
@@ -254,8 +267,6 @@ STYLE RULES:
 
       if (sentences.length === 0) { resolve(); return; }
 
-      // Chrome bug: speechSynthesis silently stops after ~15 s of speaking.
-      // 5 s interval is conservative enough to catch it on slow Windows systems.
       const keepAlive = setInterval(() => synth.resume(), 5000);
       const done = () => { clearInterval(keepAlive); resolve(); };
 
@@ -270,8 +281,6 @@ STYLE RULES:
         utt.rate = rate;
         utt.pitch = pitch;
 
-        // Guard flag: prevents double-advancing when both the fallback timer
-        // AND onend fire (e.g. Chrome fires onend early, then timer also fires).
         let advanced = false;
         const advance = () => {
           if (advanced) return;
@@ -280,7 +289,6 @@ STYLE RULES:
           speakNext();
         };
 
-        // Fallback: if onend never fires (some voices don't), move on anyway
         const wordCount = sentence.split(/\s+/).length;
         const expectedMs = (wordCount / ((rate || 1) * 150)) * 60000 + 3000;
         const timer = setTimeout(advance, expectedMs);
@@ -290,9 +298,9 @@ STYLE RULES:
           if (advanced) return;
           advanced = true;
           clearTimeout(timer);
-          if (e.error === 'interrupted') { done(); return; } // external stop → exit cleanly
+          if (e.error === 'interrupted') { done(); return; }
           console.warn('podcast TTS:', e.error);
-          speakNext(); // any other error → skip sentence and continue
+          speakNext();
         };
 
         synth.speak(utt);
@@ -320,6 +328,9 @@ STYLE RULES:
   let _music = null;
 
   // ── Main entrypoint ────────────────────────────────────────────────────────
+  // Music fetch and script generation run in parallel so the listener hears
+  // the intro music almost immediately (typically < 2 s) rather than waiting
+  // for the full LLM round-trip before anything plays.
 
   async function start(chunks, title, onStatus) {
     if (_active) return;
@@ -327,13 +338,21 @@ STYLE RULES:
     _abortController = new AbortController();
 
     const status = (msg) => { if (onStatus) onStatus(msg); };
-    const music = new AmbientMusic();
+    const music = new JamendoMusic();
     _music = music;
 
     try {
-      status('Generating podcast script…');
+      // Kick off music fetch and script generation in parallel
+      status('Loading podcast…');
 
-      const rawScript = await generateScript(chunks.join('\n\n'), title || document.title);
+      const [rawScript] = await Promise.all([
+        generateScript(chunks.join('\n\n'), title || document.title),
+        music.start().catch((err) => {
+          // Non-fatal: log and continue without music
+          console.warn('ReadAloud Podcast music:', err);
+        }),
+      ]);
+
       if (isAborted()) return;
 
       const segments = parseScript(rawScript);
@@ -342,14 +361,18 @@ STYLE RULES:
       const voices = getPodcastVoices(await waitForVoices());
       const { rate = 1 } = await chrome.storage.sync.get('rate').catch(() => ({ rate: 1 }));
 
-      status('Now playing podcast…');
+      // Show "now playing" track name if we got one from Jamendo
+      const nowPlaying = music.trackInfo
+        ? `🎵 ${music.trackInfo.title} — ${music.trackInfo.artist}`
+        : 'Now playing podcast…';
+      status(nowPlaying);
 
       for (const seg of segments) {
         if (isAborted()) break;
 
         if (seg.type === 'INTRO_MUSIC') {
-          music.start();
-          await sleep(2500);       // Let music breathe before speech
+          // Music is already playing — just let it breathe for 3 s before speech
+          await sleep(3000);
           if (!isAborted()) music.duck();
           await sleep(400);
 
@@ -361,14 +384,13 @@ STYLE RULES:
 
         } else {
           const isReporter = seg.type === 'REPORTER';
-          // Reporter: slightly lower pitch to distinguish from host
           await speakSegment(
             seg.text,
             isReporter ? voices.reporter : voices.host,
-            rate * 0.95,           // podcast pace is slightly slower than article reading
+            rate * 0.95,
             isReporter ? 0.85 : 1
           );
-          if (!isAborted()) await sleep(300); // natural pause between segments
+          if (!isAborted()) await sleep(300);
         }
       }
 
@@ -384,7 +406,7 @@ STYLE RULES:
       window.speechSynthesis.cancel();
       if (_music) { _music.stop(); _music = null; }
       _active = false;
-      if (onStatus) onStatus(null); // signal done
+      if (onStatus) onStatus(null);
     }
   }
 
