@@ -291,6 +291,12 @@
   cursor: pointer;
 }
 
+.rta-para-inner {
+  /* Group all word-spans as a single child so flex/grid parents on the page
+     don't space out individual words (e.g. NYT date lines). */
+  display: inline;
+}
+
 .rta-word {
   border-radius: 3px;
   cursor: pointer;

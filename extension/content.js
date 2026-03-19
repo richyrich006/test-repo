@@ -218,7 +218,10 @@ if (!window.__readAloud) {
       }
       pos += part.length;
     }
-    return html;
+    // Wrap in a single inline container so any flex/grid parent on the page
+    // treats the whole paragraph as one item — prevents words from spreading
+    // out when the host page uses justify-content: space-between or similar.
+    return `<span class="rta-para-inner">${html}</span>`;
   }
 
   function escHtml(t) {
