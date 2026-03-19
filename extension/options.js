@@ -93,6 +93,24 @@ chrome.storage.sync.get({ rate: 1.25, voiceName: '' }, ({ rate, voiceName }) => 
   });
 });
 
+// ── AI Podcast API key ─────────────────────────────────────────────────────
+
+chrome.storage.sync.get({ podcastApiKey: '' }, ({ podcastApiKey }) => {
+  const input = document.getElementById('api-key');
+  const saveBtn = document.getElementById('api-key-save');
+  if (!input || !saveBtn) return;
+
+  if (podcastApiKey) input.value = podcastApiKey;
+
+  saveBtn.addEventListener('click', () => {
+    const key = input.value.trim();
+    chrome.storage.sync.set({ podcastApiKey: key }, () => {
+      saveBtn.textContent = 'Saved ✓';
+      setTimeout(() => { saveBtn.textContent = 'Save'; }, 2000);
+    });
+  });
+});
+
 // ── Reading list ───────────────────────────────────────────────────────────
 
 chrome.storage.local.get({ readingList: [] }, ({ readingList }) => {

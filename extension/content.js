@@ -457,6 +457,7 @@ if (!window.__readAloud) {
           </div>
         </div>
         <div id="rta-actions">
+          <button id="rta-podcast" title="Generate NPR-style podcast from this article">🎙</button>
           <button id="rta-save" title="Save to reading list">🔖</button>
           <button id="rta-options" title="Settings">⚙</button>
           <button id="rta-collapse" title="Expand">+</button>
@@ -626,6 +627,40 @@ if (!window.__readAloud) {
         RA.paused = false;
         startReading(RA.chunkIndex);
       }
+    });
+
+    // Podcast button
+    document.getElementById('rta-podcast').addEventListener('click', () => {
+      const pod = window.__rtaPodcast;
+      if (!pod) return;
+
+      if (pod.isActive()) {
+        pod.stop();
+        return;
+      }
+
+      // Pause article reading if active
+      if (RA.playing) {
+        RA.synth.cancel();
+        RA.playing = false;
+        RA.paused = false;
+        setPlayBtn(false);
+        stopKeepAlive();
+        clearWordTimers();
+      }
+
+      const btn = document.getElementById('rta-podcast');
+      btn.classList.add('rta-podcast-active');
+
+      pod.start(RA.chunks, document.title, (statusMsg) => {
+        if (statusMsg === null) {
+          // Podcast finished
+          btn.classList.remove('rta-podcast-active');
+          setStatus('Ready');
+        } else {
+          setStatus(statusMsg);
+        }
+      });
     });
   }
 
