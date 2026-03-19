@@ -268,7 +268,9 @@ STYLE RULES:
         };
 
         const wordCount = sentence.split(/\s+/).length;
-        const expectedMs = (wordCount / ((rate || 1) * 150)) * 60000 + 3000;
+        // +500 ms grace period: if onend fires we cancel this; if it never
+        // fires (Chrome TTS bug) we move on quickly instead of stalling 3 s.
+        const expectedMs = (wordCount / ((rate || 1) * 150)) * 60000 + 500;
         const timer = setTimeout(advance, expectedMs);
 
         utt.onend = advance;
@@ -368,7 +370,7 @@ STYLE RULES:
             rate * 0.95,
             isReporter ? 0.85 : 1
           );
-          if (!isAborted()) await sleep(300);
+          if (!isAborted()) await sleep(150); // brief pause between speakers
         }
       }
 
