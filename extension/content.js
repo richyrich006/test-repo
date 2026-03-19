@@ -370,6 +370,11 @@ if (!window.__readAloud) {
   function makeDraggable(panel) {
     let dragging = false, startX, startY;
     const handle = panel.querySelector('#rta-logo');
+    const dragAbort = new AbortController();
+    const { signal } = dragAbort;
+
+    // Store so teardown can cancel all document-level drag listeners at once
+    RA._dragAbort = dragAbort;
 
     handle.addEventListener('mousedown', (e) => {
       dragging = true;
@@ -382,7 +387,7 @@ if (!window.__readAloud) {
       panel.style.top = rect.top + 'px';
       handle.style.cursor = 'grabbing';
       e.preventDefault();
-    });
+    }, { signal });
 
     document.addEventListener('mousemove', (e) => {
       if (!dragging) return;
@@ -390,11 +395,11 @@ if (!window.__readAloud) {
       const y = Math.max(0, Math.min(e.clientY - startY, window.innerHeight - panel.offsetHeight));
       panel.style.left = x + 'px';
       panel.style.top = y + 'px';
-    });
+    }, { signal });
 
     document.addEventListener('mouseup', () => {
       if (dragging) { dragging = false; handle.style.cursor = 'grab'; }
-    });
+    }, { signal });
   }
 
   function attachEvents(paragraphs) {
@@ -992,6 +997,7 @@ if (!window.__readAloud) {
     stopKeepAlive();
     clearWordTimers();
     clearTimeout(RA.noStartTimer);
+    if (RA._dragAbort) { RA._dragAbort.abort(); RA._dragAbort = null; }
     const panel = document.getElementById('rta-panel');
     if (panel) panel.remove();
     restorePageElements();
