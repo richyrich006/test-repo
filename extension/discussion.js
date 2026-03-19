@@ -73,27 +73,70 @@ window.__rtaDiscussion = (() => {
   }
 
   // ── Voice selection ─────────────────────────────────────────────────────────
-  // Try ElevenLabs first; fall back to browser SpeechSynthesis on any failure.
+  // Avoid the /v1/voices list endpoint — it 401s on free plans.  Instead keep
+  // a prioritised candidate list of known free pre-made voices and let the
+  // playback engine skip any that ElevenLabs rejects as library-only.
 
-  async function resolveVoices(apiKey) {
-    try {
-      const resp = await chrome.runtime.sendMessage({ action: 'elevenLabsVoices', apiKey });
-      if (!resp.ok) throw new Error(`ElevenLabs ${resp.status}`);
-      const voices = resp.data.voices || [];
-      if (voices.length === 0) throw new Error('no voices');
-      const gender = (v) => (v.labels?.gender || '').toLowerCase();
-      const males   = voices.filter((v) => gender(v) === 'male');
-      const females = voices.filter((v) => gender(v) === 'female');
-      return {
-        mode: 'elevenlabs',
-        alex:  (males[0]   || voices[0]).voice_id,
-        sarah: (females[0] || voices[1] || voices[0]).voice_id,
-      };
-    } catch (err) {
-      console.warn('ReadAloud Discussion: ElevenLabs unavailable, using browser TTS:', err.message);
-      const bv = pickBrowserVoices(await waitForVoices());
-      return { mode: 'browser', alex: bv.alex, sarah: bv.sarah };
+  const EL_VOICES = {
+    male:   [
+      'TX3LPaxmHKxFdv7VOQHJ', // Liam
+      'nPczCjzI2devNBz1zQrb', // Brian
+      'onwK4e9ZLuTAKqWW03F9', // Daniel
+      'JBFqnCBsd6RMkjVDRZzb', // George
+      'N2lVS1w4EtoT3dr4eOWO', // Callum
+    ],
+    female: [
+      'Xb7hH8MSUJpSbSDYk0k2', // Alice
+      'XrExE9yKIg1WjnnlVkGX', // Matilda
+      'pFZP5JQG7iQjIQuC4Bku', // Lily
+      'XB0fDUnXU5powFXDhCwa', // Charlotte
+      'SAz9YHcvj6GT2YYXdXww', // River
+    ],
+  };
+
+  // Returns a voices object.  No API call; candidate probing happens lazily at
+  // first playback so we never spend credits just to discover working voices.
+  async function resolveVoices(_apiKey) {
+    const bv = pickBrowserVoices(await waitForVoices());
+    return {
+      mode: 'elevenlabs',          // attempt ElevenLabs; falls back per-segment
+      alex:  EL_VOICES.male[0],   alexIdx:  0,
+      sarah: EL_VOICES.female[0], sarahIdx: 0,
+      browserAlex: bv.alex, browserSarah: bv.sarah,
+      useBrowser: false,           // flipped true if all EL candidates exhausted
+    };
+  }
+
+  // Plays one segment, auto-advancing ElevenLabs candidate voices on rejection.
+  async function playSegment(seg, voices, apiKey) {
+    if (voices.useBrowser) {
+      const bv = seg.type === 'SARAH' ? voices.browserSarah : voices.browserAlex;
+      return speakBrowser(seg.text, bv);
     }
+
+    const isAlex      = seg.type !== 'SARAH';
+    const candidates  = isAlex ? EL_VOICES.male : EL_VOICES.female;
+    const idxKey      = isAlex ? 'alexIdx'       : 'sarahIdx';
+    const voiceKey    = isAlex ? 'alex'           : 'sarah';
+
+    while (voices[idxKey] < candidates.length) {
+      try {
+        await fetchAndPlay(seg.text, voices[voiceKey], apiKey);
+        return; // success — keep using this voice
+      } catch (err) {
+        const isVoiceError = /voice.not.found|voice_not_found|not.find.voice|library/i.test(err.message);
+        if (!isVoiceError) throw err; // real error (network, auth, etc.)
+        voices[idxKey]++;
+        if (voices[idxKey] < candidates.length) {
+          voices[voiceKey] = candidates[voices[idxKey]];
+        }
+      }
+    }
+    // All ElevenLabs candidates failed — switch to browser TTS permanently
+    console.warn('ReadAloud Discussion: all ElevenLabs voices exhausted, switching to browser TTS');
+    voices.useBrowser = true;
+    const bv = isAlex ? voices.browserAlex : voices.browserSarah;
+    return speakBrowser(seg.text, bv);
   }
 
   // ── Ambient music (same as podcast.js) ────────────────────────────────────
@@ -318,12 +361,7 @@ STYLE:
           _music = null;
 
         } else {
-          const voice = seg.type === 'SARAH' ? voices.sarah : voices.alex;
-          if (voices.mode === 'elevenlabs') {
-            await fetchAndPlay(seg.text, voice, elevenLabsApiKey);
-          } else {
-            await speakBrowser(seg.text, voice);
-          }
+          await playSegment(seg, voices, elevenLabsApiKey);
           if (!isAborted()) await sleep(250);
         }
       }
