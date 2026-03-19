@@ -186,8 +186,18 @@ STYLE RULES:
 
   // ── Voice selection ────────────────────────────────────────────────────────
 
-  function getPodcastVoices() {
-    const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
+  function waitForVoices() {
+    return new Promise((resolve) => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) { resolve(voices); return; }
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        resolve(window.speechSynthesis.getVoices());
+      }, { once: true });
+    });
+  }
+
+  function getPodcastVoices(voices) {
+    voices = (voices || []).filter((v) => v.lang.startsWith('en'));
 
     // Score: cloud/neural voices rank highest
     const score = (v) => {
@@ -277,7 +287,7 @@ STYLE RULES:
       const segments = parseScript(rawScript);
       if (segments.length === 0) throw new Error('Empty script returned');
 
-      const voices = getPodcastVoices();
+      const voices = getPodcastVoices(await waitForVoices());
       const { rate = 1 } = await chrome.storage.sync.get('rate').catch(() => ({ rate: 1 }));
 
       status('Now playing podcast…');
