@@ -25,11 +25,10 @@ window.__rtaPodcast = (() => {
 
   class JamendoMusic {
     constructor() {
-      this.ctx = null;
-      this.gainNode = null;
       this.audioEl = null;
       this.running = false;
       this.trackInfo = null; // { title, artist } for "now playing" display
+      this._fadeRaf = null;
     }
 
     async _fetchJamendoTrack() {
@@ -44,91 +43,70 @@ window.__rtaPodcast = (() => {
       return { audioUrl: track.audio, title: track.name, artist: track.artist_name };
     }
 
+    // Smooth volume fade using rAF
+    _fadeTo(target, durationMs) {
+      if (this._fadeRaf) cancelAnimationFrame(this._fadeRaf);
+      const el = this.audioEl;
+      if (!el) return;
+      const start = el.volume;
+      const startTime = performance.now();
+      const tick = () => {
+        if (!this.audioEl) return;
+        const t = Math.min((performance.now() - startTime) / durationMs, 1);
+        this.audioEl.volume = start + (target - start) * t;
+        if (t < 1) this._fadeRaf = requestAnimationFrame(tick);
+      };
+      this._fadeRaf = requestAnimationFrame(tick);
+    }
+
     async start() {
       if (this.running) return;
 
+      // ── Step 1: unlock autoplay WITHIN the user gesture ──────────────────
+      // Muted autoplay is always allowed. We start muted so that the play()
+      // call happens synchronously here (before any await breaks the gesture
+      // chain). The real src is swapped in after the async Jamendo fetch.
+      this.audioEl = new Audio();
+      this.audioEl.muted = true;
+      this.audioEl.loop = true;
+      // play() with no src rejects immediately; we ignore that rejection —
+      // the important thing is Chrome marks this element as "user-activated".
+      this.audioEl.play().catch(() => {});
+
+      // ── Step 2: fetch a track (async — gesture chain already unlocked) ──
       let audioUrl;
       try {
         const track = await this._fetchJamendoTrack();
         audioUrl = track.audioUrl;
         this.trackInfo = { title: track.title, artist: track.artist };
       } catch (_) {
-        // Fallback: pick a random SomaFM stream for variety
         audioUrl = SOMAFM_FALLBACKS[Math.floor(Math.random() * SOMAFM_FALLBACKS.length)];
         this.trackInfo = null;
       }
 
-      this.ctx = new AudioContext();
-      this.ctx.resume();
-
-      this.gainNode = this.ctx.createGain();
-      this.gainNode.gain.setValueAtTime(0, this.ctx.currentTime);
-      this.gainNode.connect(this.ctx.destination);
-
-      this.audioEl = new Audio();
-      this.audioEl.crossOrigin = 'anonymous';
+      // ── Step 3: swap in real src and unmute ───────────────────────────────
+      this.audioEl.volume = 0;
+      this.audioEl.muted = false;
       this.audioEl.src = audioUrl;
-      this.audioEl.loop = true;
-
-      try {
-        // Route through Web Audio for clean ducking
-        const source = this.ctx.createMediaElementSource(this.audioEl);
-        source.connect(this.gainNode);
-      } catch (_) {
-        // CORS or browser restriction — play without Web Audio routing
-        // (ducking won't work but music still plays)
-        this.audioEl.volume = 0;
-        this.gainNode = null;
-      }
-
       await this.audioEl.play();
       this.running = true;
 
-      // Fade in to 35% volume (background level) over 2.5 s
-      if (this.gainNode) {
-        this.gainNode.gain.linearRampToValueAtTime(0.35, this.ctx.currentTime + 2.5);
-      } else {
-        // Animate volume manually if no Web Audio routing
-        let v = 0;
-        const step = () => {
-          v = Math.min(v + 0.02, 0.35);
-          if (this.audioEl) this.audioEl.volume = v;
-          if (v < 0.35) setTimeout(step, 100);
-        };
-        step();
-      }
+      // Fade in to 35% over 2.5 s
+      this._fadeTo(0.35, 2500);
     }
 
     // Duck to ~8% while speech plays
-    duck(rampMs = 600) {
-      if (!this.running) return;
-      if (this.gainNode) {
-        this.gainNode.gain.linearRampToValueAtTime(0.08, this.ctx.currentTime + rampMs / 1000);
-      } else if (this.audioEl) {
-        this.audioEl.volume = 0.08;
-      }
-    }
+    duck() { this._fadeTo(0.08, 600); }
 
-    // Bring back to 35%
-    unduck(rampMs = 800) {
-      if (!this.running) return;
-      if (this.gainNode) {
-        this.gainNode.gain.linearRampToValueAtTime(0.35, this.ctx.currentTime + rampMs / 1000);
-      } else if (this.audioEl) {
-        this.audioEl.volume = 0.35;
-      }
-    }
+    // Restore to 35%
+    unduck() { this._fadeTo(0.35, 800); }
 
     stop() {
       if (!this.running) return;
-      if (this.gainNode) {
-        this.gainNode.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 2.5);
-      } else if (this.audioEl) {
-        this.audioEl.volume = 0;
-      }
+      this._fadeTo(0, 2500);
       setTimeout(() => {
         try { this.audioEl.pause(); this.audioEl.src = ''; } catch (_) {}
-        try { this.ctx.close(); } catch (_) {}
+        this.audioEl = null;
         this.running = false;
       }, 3000);
     }
