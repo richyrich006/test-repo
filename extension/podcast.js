@@ -252,39 +252,49 @@ STYLE RULES:
         .map((s) => s.trim())
         .filter(Boolean);
 
-      let idx = 0;
-      let fallbackTimer = null;
+      if (sentences.length === 0) { resolve(); return; }
 
       // Chrome bug: speechSynthesis silently stops after ~15 s of speaking.
-      // Calling resume() periodically keeps it alive.
-      const keepAlive = setInterval(() => synth.resume(), 10000);
+      // 5 s interval is conservative enough to catch it on slow Windows systems.
+      const keepAlive = setInterval(() => synth.resume(), 5000);
+      const done = () => { clearInterval(keepAlive); resolve(); };
 
-      const done = () => {
-        clearInterval(keepAlive);
-        clearTimeout(fallbackTimer);
-        resolve();
-      };
+      let idx = 0;
 
       const speakNext = () => {
-        if (idx >= sentences.length) { done(); return; }
+        if (isAborted() || idx >= sentences.length) { done(); return; }
+
         const sentence = sentences[idx++];
         const utt = new SpeechSynthesisUtterance(sentence);
         utt.voice = voice;
         utt.rate = rate;
         utt.pitch = pitch;
 
-        // Fallback timer: if onend never fires (some voices don't), move on anyway
-        const wordCount = sentence.split(/\s+/).length;
-        const expectedMs = (wordCount / ((rate || 1) * 150)) * 60000 + 3000;
-        fallbackTimer = setTimeout(speakNext, expectedMs);
-
-        utt.onend = () => { clearTimeout(fallbackTimer); speakNext(); };
-        // On error, skip sentence and continue rather than stopping the whole segment
-        utt.onerror = (e) => {
-          clearTimeout(fallbackTimer);
-          if (e.error !== 'interrupted') console.warn('podcast TTS:', e.error);
+        // Guard flag: prevents double-advancing when both the fallback timer
+        // AND onend fire (e.g. Chrome fires onend early, then timer also fires).
+        let advanced = false;
+        const advance = () => {
+          if (advanced) return;
+          advanced = true;
+          clearTimeout(timer);
           speakNext();
         };
+
+        // Fallback: if onend never fires (some voices don't), move on anyway
+        const wordCount = sentence.split(/\s+/).length;
+        const expectedMs = (wordCount / ((rate || 1) * 150)) * 60000 + 3000;
+        const timer = setTimeout(advance, expectedMs);
+
+        utt.onend = advance;
+        utt.onerror = (e) => {
+          if (advanced) return;
+          advanced = true;
+          clearTimeout(timer);
+          if (e.error === 'interrupted') { done(); return; } // external stop → exit cleanly
+          console.warn('podcast TTS:', e.error);
+          speakNext(); // any other error → skip sentence and continue
+        };
+
         synth.speak(utt);
       };
 
