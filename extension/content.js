@@ -136,14 +136,17 @@ if (!window.__readAloud) {
   // Readability normalizes Unicode punctuation when processing the document
   // clone.  Normalize both sides before comparing so smart quotes / em-dashes
   // in the live DOM still match the ASCII versions in the extracted chunks.
+  // IMPORTANT: every replacement must be 1-for-1 so string lengths are
+  // preserved — the offsets stored in data-s/data-e span attributes must
+  // still align with the raw chunk text used by startReading.
   function normForMatch(s) {
     return s
       .replace(/\s+/g, ' ')
-      .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")   // smart single quotes
-      .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')   // smart double quotes
-      .replace(/[\u2013\u2014\u2015]/g, '-')               // en/em-dash
-      .replace(/\u2026/g, '...')                           // ellipsis
-      .replace(/\u00A0/g, ' ')                             // non-breaking space
+      .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")   // smart single quotes → '
+      .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')   // smart double quotes → "
+      .replace(/[\u2013\u2014\u2015]/g, '-')               // en/em-dash → -
+      .replace(/\u2026/g, '.')                             // ellipsis → . (1-for-1)
+      .replace(/\u00A0/g, ' ')                             // non-breaking space → space
       .trim();
   }
 
@@ -172,7 +175,9 @@ if (!window.__readAloud) {
         used.add(bestEl);
         bestEl._rtaOrigHTML = bestEl.innerHTML;
         bestEl.setAttribute('data-rta-chunk', idx);
-        bestEl.innerHTML = renderParagraph(normText);
+        // Render using the original chunk text so data-s/data-e offsets
+        // stay aligned with RA.chunks[idx] used by startReading.
+        bestEl.innerHTML = renderParagraph(text);
         bestEl.classList.add('rta-para');
         bestEl.querySelectorAll('.rta-word').forEach((span) => span.addEventListener('click', handleWordClick));
         bestEl.addEventListener('click', handleParaClick);

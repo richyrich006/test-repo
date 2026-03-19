@@ -36,22 +36,18 @@ async function activateTab(tab) {
   }
 }
 
-// ── "Read this page" button ───────────────────────────────────────────────
+// ── Auto-activate on popup open ───────────────────────────────────────────
+// Clicking the extension icon immediately starts reading — no extra click needed.
 
-document.getElementById('btn-read').addEventListener('click', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-  const label = document.getElementById('read-label');
-  label.textContent = 'Starting…';
-
   try {
     await activateTab(tab);
-  } catch (e) {
-    label.textContent = 'Could not read this page';
-    return;
+    window.close();
+  } catch {
+    // Activation failed (e.g. restricted page) — stay open so user sees the UI
+    document.getElementById('read-label').textContent = 'Could not read this page';
   }
-
-  window.close();
 });
 
 // ── Settings button ───────────────────────────────────────────────────────
