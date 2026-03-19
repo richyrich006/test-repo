@@ -133,6 +133,20 @@ if (!window.__readAloud) {
 
   // ─── Page element matching ────────────────────────────────────────────────
 
+  // Readability normalizes Unicode punctuation when processing the document
+  // clone.  Normalize both sides before comparing so smart quotes / em-dashes
+  // in the live DOM still match the ASCII versions in the extracted chunks.
+  function normForMatch(s) {
+    return s
+      .replace(/\s+/g, ' ')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")   // smart single quotes
+      .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')   // smart double quotes
+      .replace(/[\u2013\u2014\u2015]/g, '-')               // en/em-dash
+      .replace(/\u2026/g, '...')                           // ellipsis
+      .replace(/\u00A0/g, ' ')                             // non-breaking space
+      .trim();
+  }
+
   function markPageElements(paragraphs) {
     const candidates = Array.from(
       document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li')
@@ -141,16 +155,16 @@ if (!window.__readAloud) {
     const used = new Set();
 
     paragraphs.forEach((text, idx) => {
-      const normText = text.replace(/\s+/g, ' ').trim();
+      const normText = normForMatch(text);
       let bestEl = null, bestScore = 0;
 
       for (const el of candidates) {
         if (used.has(el)) continue;
-        const elText = el.textContent.replace(/\s+/g, ' ').trim();
+        const elText = normForMatch(el.textContent);
         if (elText === normText) { bestEl = el; bestScore = 1; break; }
         if (normText.includes(elText) && elText.length > 15) {
           const score = elText.length / normText.length;
-          if (score > 0.7 && score > bestScore) { bestScore = score; bestEl = el; }
+          if (score > 0.6 && score > bestScore) { bestScore = score; bestEl = el; }
         }
       }
 
