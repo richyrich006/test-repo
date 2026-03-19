@@ -77,8 +77,9 @@ if (!window.__readAloud) {
     for (const sel of ARTICLE_BODY_SELECTORS) {
       const container = document.querySelector(sel);
       if (!container) continue;
-      const paras = Array.from(container.querySelectorAll('p'))
-        .map((p) => p.textContent.replace(/\s+/g, ' ').trim())
+      const paras = Array.from(container.querySelectorAll('p, div, blockquote'))
+        .filter((el) => isLeafDiv(el))
+        .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
         .filter((t) => t.length > 40 && !(t.length < 120 && BOILERPLATE_RE.test(t)));
       if (paras.length >= 3) return paras;
     }
@@ -150,10 +151,21 @@ if (!window.__readAloud) {
       .trim();
   }
 
+  // Block-level tags that disqualify a <div> from being a leaf content node.
+  const BLOCK_TAGS = new Set(['P','H1','H2','H3','H4','H5','H6','LI','DIV','BLOCKQUOTE','TABLE','UL','OL','FIGURE']);
+
+  function isLeafDiv(el) {
+    if (el.tagName !== 'DIV' && el.tagName !== 'BLOCKQUOTE') return true;
+    for (const child of el.children) {
+      if (BLOCK_TAGS.has(child.tagName)) return false;
+    }
+    return el.textContent.trim().length >= 20;
+  }
+
   function markPageElements(paragraphs) {
     const candidates = Array.from(
-      document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li')
-    ).filter((el) => !el.closest('#rta-panel'));
+      document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div, blockquote')
+    ).filter((el) => !el.closest('#rta-panel') && isLeafDiv(el));
 
     const used = new Set();
 
