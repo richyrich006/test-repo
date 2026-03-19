@@ -85,7 +85,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === 'anthropicFetch') {
     fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: msg.headers,
+      headers: { ...msg.headers, 'anthropic-dangerous-direct-browser-access': 'true' },
       body: msg.body,
     })
       .then(async (resp) => {
