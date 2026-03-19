@@ -433,11 +433,12 @@ if (!window.__readAloud) {
       <div id="rta-player">
         <div id="rta-progress"><div id="rta-progress-fill"></div></div>
         <div id="rta-logo" title="Drag to move">${LOGO_SVG}</div>
+        <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
+        <button id="rta-speed-badge" title="Click to cycle speed">${RA.rate}x</button>
         <div id="rta-controls">
           <div class="rta-player-group">
             <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
             <button class="rta-btn rta-icon-btn" id="rta-skip-back" title="Back 10s">↺<span class="rta-skip-label">10</span></button>
-            <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
             <button class="rta-btn rta-icon-btn" id="rta-skip-fwd" title="Forward 10s"><span class="rta-skip-label">10</span>↻</button>
             <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
           </div>
@@ -455,13 +456,10 @@ if (!window.__readAloud) {
             ${speedBtns}
           </div>
         </div>
-        <div id="rta-mini-controls">
-          <button class="rta-btn rta-play-btn" id="rta-mini-playpause" title="Play">▶</button>
-        </div>
         <div id="rta-actions">
           <button id="rta-save" title="Save to reading list">🔖</button>
           <button id="rta-options" title="Settings">⚙</button>
-          <button id="rta-collapse" title="Minimize">−</button>
+          <button id="rta-collapse" title="Expand">+</button>
           <button id="rta-close" title="Close">✕</button>
         </div>
       </div>
@@ -534,9 +532,9 @@ if (!window.__readAloud) {
 
     document.getElementById('rta-collapse').addEventListener('click', () => {
       const panel = document.getElementById('rta-panel');
-      const collapsed = panel.classList.toggle('rta-collapsed');
-      document.getElementById('rta-collapse').title = collapsed ? 'Expand' : 'Minimize';
-      document.getElementById('rta-collapse').textContent = collapsed ? '+' : '−';
+      const expanded = panel.classList.toggle('rta-expanded');
+      document.getElementById('rta-collapse').title = expanded ? 'Collapse' : 'Expand';
+      document.getElementById('rta-collapse').textContent = expanded ? '−' : '+';
     });
 
     const togglePlay = () => {
@@ -568,25 +566,37 @@ if (!window.__readAloud) {
       }
     };
     document.getElementById('rta-playpause').addEventListener('click', togglePlay);
-    document.getElementById('rta-mini-playpause').addEventListener('click', togglePlay);
 
     document.getElementById('rta-prev').addEventListener('click', () => jump(Math.max(0, RA.chunkIndex - 1)));
     document.getElementById('rta-next').addEventListener('click', () => jump(Math.min(paragraphs.length - 1, RA.chunkIndex + 1)));
     document.getElementById('rta-skip-back').addEventListener('click', () => skip(-10));
     document.getElementById('rta-skip-fwd').addEventListener('click', () => skip(10));
 
-    document.querySelectorAll('.rta-speed').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        RA.rate = parseFloat(btn.dataset.speed);
-        saveSetting('rate', RA.rate);
-        document.querySelectorAll('.rta-speed').forEach((b) => b.classList.remove('rta-speed-active'));
-        btn.classList.add('rta-speed-active');
-        if (RA.playing) {
-          RA.synth.cancel();
-          RA.paused = false;
-          startReading(RA.chunkIndex);
-        }
+    const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+
+    function applySpeed(newRate) {
+      RA.rate = newRate;
+      saveSetting('rate', RA.rate);
+      const badge = document.getElementById('rta-speed-badge');
+      if (badge) badge.textContent = RA.rate + 'x';
+      document.querySelectorAll('.rta-speed').forEach((b) => {
+        b.classList.toggle('rta-speed-active', parseFloat(b.dataset.speed) === RA.rate);
       });
+      if (RA.playing) {
+        RA.synth.cancel();
+        RA.paused = false;
+        startReading(RA.chunkIndex);
+      }
+    }
+
+    // Speed badge: click cycles through speed steps
+    document.getElementById('rta-speed-badge').addEventListener('click', () => {
+      const idx = SPEEDS.indexOf(RA.rate);
+      applySpeed(SPEEDS[(idx + 1) % SPEEDS.length]);
+    });
+
+    document.querySelectorAll('.rta-speed').forEach((btn) => {
+      btn.addEventListener('click', () => applySpeed(parseFloat(btn.dataset.speed)));
     });
 
     document.querySelectorAll('.rta-pitch').forEach((btn) => {
@@ -622,9 +632,7 @@ if (!window.__readAloud) {
   function setPlayBtn(playing) {
     const icon = playing ? '⏸' : '▶';
     const btn = document.getElementById('rta-playpause');
-    const mini = document.getElementById('rta-mini-playpause');
     if (btn) btn.textContent = icon;
-    if (mini) mini.textContent = icon;
   }
 
   function setStatus(text) {

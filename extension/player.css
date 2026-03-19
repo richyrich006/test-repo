@@ -16,8 +16,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px 10px 10px;
+  gap: 8px;
+  padding: 8px 12px;
   background: #fff;
   border-radius: 50px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08);
@@ -57,20 +57,33 @@
 }
 #rta-logo:hover { opacity: 0.85; }
 
+/* ── Speed badge (always visible, click cycles speed) ────────────────────── */
+
+#rta-speed-badge {
+  background: #f2f2f2;
+  border: none;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #333;
+  transition: background 0.12s;
+  font-family: inherit;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+#rta-speed-badge:hover { background: #6366f1; color: #fff; }
+
+/* ── Expanded controls (hidden by default) ───────────────────────────────── */
+
 #rta-controls {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 10px;
 }
 
-/* ── Mini-mode controls (play button shown when collapsed) ───────────────── */
-
-#rta-mini-controls {
-  display: none;
-  align-items: center;
-}
-
-#rta-panel.rta-collapsed #rta-mini-controls {
+#rta-panel.rta-expanded #rta-controls {
   display: flex;
 }
 
@@ -98,15 +111,6 @@
   transition: background 0.15s;
 }
 #rta-collapse:hover { background: #e0e0e0; }
-
-/* Collapsed (mini) state — show only logo + mini play + action buttons */
-#rta-panel.rta-collapsed #rta-controls {
-  display: none;
-}
-#rta-panel.rta-collapsed #rta-player {
-  border-radius: 50px;
-  padding: 8px 10px;
-}
 
 .rta-player-group {
   display: flex;
@@ -280,6 +284,8 @@
   .rta-btn { background: #2c2c2e; color: #e0e0e0; }
   .rta-btn:hover { background: #3a3a3c; }
   .rta-play-btn { background: #f0f0f0 !important; color: #000 !important; }
+  #rta-speed-badge { background: #2c2c2e; color: #ccc; }
+  #rta-speed-badge:hover { background: #6366f1; color: #fff; }
   #rta-voice { background: #2c2c2e; color: #ccc; }
   #rta-voice:hover { background: #3a3a3c; }
   .rta-pitch { background: #2c2c2e; color: #ccc; }
