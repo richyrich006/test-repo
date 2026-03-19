@@ -96,6 +96,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
+  if (msg.action === 'elevenLabsVoices') {
+    fetch('https://api.elevenlabs.io/v1/voices', {
+      headers: { 'xi-api-key': msg.apiKey },
+    })
+      .then(async (resp) => {
+        const data = await resp.json().catch(() => ({}));
+        sendResponse({ ok: resp.ok, status: resp.status, data });
+      })
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
   if (msg.action === 'elevenLabsFetch') {
     fetch(`https://api.elevenlabs.io/v1/text-to-speech/${msg.voiceId}`, {
       method: 'POST',

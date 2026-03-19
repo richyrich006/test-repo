@@ -8,11 +8,26 @@
 
 window.__rtaDiscussion = (() => {
 
-  // ── Voice IDs (ElevenLabs default voices) ─────────────────────────────────
-  const VOICES = {
-    ALEX:  'pNInz6obpgDQGcFmaJgB',  // Adam  — deep male
-    SARAH: '21m00Tcm4TlvDq8ikWAM',  // Rachel — neutral female
-  };
+  // ── Voice selection (resolved at runtime from user's ElevenLabs account) ───
+  // Hardcoded IDs broke when ElevenLabs moved Adam/Rachel to the paid Voice
+  // Library.  Instead we fetch the caller's available voices and pick one
+  // apparent-male and one apparent-female voice so it always works.
+  async function resolveVoices(apiKey) {
+    const resp = await chrome.runtime.sendMessage({ action: 'elevenLabsVoices', apiKey });
+    if (!resp.ok) throw new Error(resp.error || `ElevenLabs voices error ${resp.status}`);
+
+    const voices = resp.data.voices || [];
+    if (voices.length === 0) throw new Error('No ElevenLabs voices available for this account');
+
+    const gender = (v) => (v.labels?.gender || '').toLowerCase();
+    const males   = voices.filter((v) => gender(v) === 'male');
+    const females = voices.filter((v) => gender(v) === 'female');
+
+    // Prefer gender-distinct pair; fall back to first two voices
+    const alex  = (males[0]   || voices[0]).voice_id;
+    const sarah = (females[0] || voices[1] || voices[0]).voice_id;
+    return { alex, sarah };
+  }
 
   // ── Ambient music (same as podcast.js) ────────────────────────────────────
   class AmbientMusic {
@@ -209,7 +224,10 @@ STYLE:
       }
 
       status('Generating discussion script…');
-      const rawScript = await generateScript(chunks.join('\n\n'), title || document.title);
+      const [rawScript, voices] = await Promise.all([
+        generateScript(chunks.join('\n\n'), title || document.title),
+        resolveVoices(elevenLabsApiKey),
+      ]);
       if (isAborted()) return;
 
       const segments = parseScript(rawScript);
@@ -233,7 +251,7 @@ STYLE:
           _music = null;
 
         } else {
-          const voiceId = seg.type === 'SARAH' ? VOICES.SARAH : VOICES.ALEX;
+          const voiceId = seg.type === 'SARAH' ? voices.sarah : voices.alex;
           await fetchAndPlay(seg.text, voiceId, elevenLabsApiKey);
           if (!isAborted()) await sleep(250);
         }
