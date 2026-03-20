@@ -288,6 +288,9 @@ if (!window.__readAloud) {
         if (bestEl.querySelector('input, button, select, textarea')) return;
         // Skip elements inside forms, dialogs, and login/signup containers.
         if (bestEl.closest('form, [role="dialog"], [role="alertdialog"], [role="form"]')) return;
+        // Skip container elements with block-level children — replacing their innerHTML
+        // would destroy page layout (cards, wizard steps, etc.).
+        if (bestEl.querySelector('div, section, article, fieldset, table, ul, ol')) return;
         used.add(bestEl);
         bestEl._rtaOrigHTML = bestEl.innerHTML;
         bestEl.setAttribute('data-rta-chunk', idx);
