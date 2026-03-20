@@ -125,7 +125,15 @@ window.__rtaDiscussion = (() => {
         return; // success — keep using this voice
       } catch (err) {
         const isVoiceError = /voice.not.found|voice_not_found|not.find.voice|library/i.test(err.message);
-        if (!isVoiceError) throw err; // real error (network, auth, etc.)
+        const isQuotaError = /quota|429|limit|exceed|credit/i.test(err.message);
+        if (!isVoiceError && !isQuotaError) throw err; // real error (network, auth, etc.)
+        if (isQuotaError) {
+          // Credits exhausted — skip remaining EL candidates and go straight to browser TTS
+          console.warn('ReadAloud Discussion: ElevenLabs quota reached, switching to browser TTS');
+          voices.useBrowser = true;
+          const bvQ = isAlex ? voices.browserAlex : voices.browserSarah;
+          return speakBrowser(seg.text, bvQ);
+        }
         voices[idxKey]++;
         if (voices[idxKey] < candidates.length) {
           voices[voiceKey] = candidates[voices[idxKey]];

@@ -27,6 +27,7 @@ if (!window.__readAloud) {
     elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
     _elAudio: null,     // currently playing ElevenLabs Audio element
     _elStop: false,     // signal to stop the elevenLabsReadChunk loop
+    _elFallback: false, // true once ElevenLabs quota is exhausted → use browser TTS
   };
 
   // Kick off async voice loading immediately so voices are ready before the
@@ -898,10 +899,15 @@ if (!window.__readAloud) {
         await fetchAndPlayElevenLabs(RA.chunks[idx], RA.elevenLabsApiKey, RA.elevenLabsVoiceId);
         if (!RA._elStop) trackWords(RA.chunks[idx]);
       } catch (err) {
-        if (err.message !== 'stopped') {
-          console.warn('ReadAloud ElevenLabs:', err);
-          setStatus('ElevenLabs error: ' + err.message);
+        if (err.message === 'stopped') { break; }
+        if (/quota|429|limit|exceed|credit/i.test(err.message)) {
+          RA._elFallback = true;
+          setStatus('ElevenLabs quota reached — switching to free browser TTS');
+          startReading(idx, 0);
+          return;
         }
+        console.warn('ReadAloud ElevenLabs:', err);
+        setStatus('ElevenLabs error: ' + err.message);
         break;
       }
     }
@@ -1187,8 +1193,8 @@ if (!window.__readAloud) {
     clearWordTimers();
     clearTimeout(RA.noStartTimer);
 
-    // Route to ElevenLabs when an API key is configured
-    if (RA.elevenLabsApiKey) {
+    // Route to ElevenLabs when an API key is configured and quota not exhausted
+    if (RA.elevenLabsApiKey && !RA._elFallback) {
       RA.chunkIndex = idx;
       RA.uttStartTime = Date.now();
       RA.uttCharOffset = charOffset;
@@ -1505,6 +1511,7 @@ if (!window.__readAloud) {
     RA.chunkIndex = 0;
     RA.pauseChunk = 0;
     RA.pauseOffset = 0;
+    RA._elFallback = false;
   }
 
   // ─── Entry points ─────────────────────────────────────────────────────────
