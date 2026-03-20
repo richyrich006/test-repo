@@ -16,14 +16,15 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #fff;
+  gap: 6px;
+  padding: 7px 10px;
+  background: #1a1a1f;
   border-radius: 50px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
   user-select: none;
-  overflow: hidden; /* clips the progress bar to the pill shape */
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 /* ── Progress bar ────────────────────────────────────────────────────────── */
@@ -33,18 +34,20 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: rgba(99, 102, 241, 0.15);
+  height: 2px;
+  background: rgba(99, 102, 241, 0.2);
   border-radius: 50px 50px 0 0;
 }
 
 #rta-progress-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, #6366f1, #a78bfa);
   border-radius: inherit;
   transition: width 0.4s ease;
 }
+
+/* ── Logo / drag handle ──────────────────────────────────────────────────── */
 
 #rta-logo {
   display: flex;
@@ -55,32 +58,45 @@
   border-radius: 8px;
   transition: opacity 0.12s;
 }
-#rta-logo:hover { opacity: 0.85; }
+#rta-logo:hover { opacity: 0.75; }
 
 /* ── Speed badge (always visible, click cycles speed) ────────────────────── */
 
 #rta-speed-badge {
-  background: #f2f2f2;
+  background: rgba(255,255,255,0.1);
   border: none;
   border-radius: 20px;
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  color: #333;
-  transition: background 0.12s;
+  color: rgba(255,255,255,0.8);
+  transition: background 0.12s, color 0.12s;
   font-family: inherit;
   flex-shrink: 0;
   letter-spacing: 0.02em;
+  height: 26px;
+  display: flex;
+  align-items: center;
 }
 #rta-speed-badge:hover { background: #6366f1; color: #fff; }
+
+/* ── Group separator ─────────────────────────────────────────────────────── */
+
+.rta-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,0.1);
+  flex-shrink: 0;
+  align-self: center;
+}
 
 /* ── Expanded controls (hidden by default) ───────────────────────────────── */
 
 #rta-controls {
   display: none;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 #rta-panel.rta-expanded #rta-controls {
@@ -90,12 +106,13 @@
 #rta-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-left: 2px;
+  gap: 3px;
 }
 
+/* ── Collapse button ─────────────────────────────────────────────────────── */
+
 #rta-collapse {
-  background: #f2f2f2;
+  background: rgba(255,255,255,0.08);
   border: none;
   border-radius: 50%;
   width: 26px;
@@ -103,136 +120,197 @@
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  color: #555;
+  color: rgba(255,255,255,0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
-#rta-collapse:hover { background: #e0e0e0; }
+#rta-collapse:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ── Player group ────────────────────────────────────────────────────────── */
 
 .rta-player-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
-.rta-btn {
-  background: #f2f2f2;
-  border: none;
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 15px;
-  cursor: pointer;
-  color: #222;
-  transition: background 0.12s;
-}
-.rta-btn:hover { background: #e5e5e5; }
+/* ── Toggle groups (pitch / speed) ──────────────────────────────────────── */
 
-/* Skip ±10s buttons — slightly narrower than nav buttons */
-.rta-icon-btn {
-  padding: 7px 9px;
-  font-size: 13px;
+.rta-toggle-group {
   display: flex;
   align-items: center;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 1px;
+}
+
+/* ── Base button ─────────────────────────────────────────────────────────── */
+
+.rta-btn {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.85);
+  transition: background 0.12s, color 0.12s;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rta-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ── Nav buttons (prev/skip/next) ────────────────────────────────────────── */
+
+.rta-nav-btn {
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+/* Skip ±10s buttons */
+.rta-icon-btn {
   gap: 1px;
 }
 
 .rta-skip-label {
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
+  font-weight: 600;
 }
 
+/* ── Play button ─────────────────────────────────────────────────────────── */
+
 .rta-play-btn {
-  background: #111 !important;
-  color: #fff !important;
-  padding: 8px 20px;
-  font-size: 16px;
+  background: #fff !important;
+  color: #111 !important;
+  padding: 6px 18px;
+  font-size: 15px;
   border-radius: 50px;
+  font-weight: 500;
+  height: 32px;
 }
-.rta-play-btn:hover { background: #333 !important; }
+.rta-play-btn:hover { background: #e8e8ff !important; color: #6366f1 !important; }
+
+/* ── Status text ─────────────────────────────────────────────────────────── */
 
 #rta-status {
   font-size: 11px;
-  color: #888;
-  min-width: 60px;
+  color: rgba(255,255,255,0.45);
+  min-width: 55px;
   text-align: center;
 }
 
+/* ── Labels ──────────────────────────────────────────────────────────────── */
+
 .rta-label {
-  font-size: 11px;
-  color: #999;
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   margin-right: 2px;
 }
 
+/* ── Voice select ────────────────────────────────────────────────────────── */
+
 #rta-voice {
-  background: #f2f2f2;
+  background: rgba(255,255,255,0.08);
   border: none;
   border-radius: 6px;
   padding: 4px 6px;
   font-size: 11px;
-  color: #333;
+  color: rgba(255,255,255,0.8);
   cursor: pointer;
-  max-width: 160px;
+  max-width: 150px;
   outline: none;
   font-family: inherit;
+  height: 26px;
 }
-#rta-voice:hover { background: #e5e5e5; }
+#rta-voice:hover { background: rgba(255,255,255,0.14); }
+#rta-voice option { background: #2a2a2f; color: #fff; }
+
+/* ── Pitch toggle buttons ────────────────────────────────────────────────── */
 
 .rta-pitch {
-  background: #f2f2f2;
+  background: transparent;
   border: none;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 3px 8px;
   font-size: 11px;
   cursor: pointer;
-  color: #333;
-  transition: all 0.12s;
+  color: rgba(255,255,255,0.6);
+  transition: background 0.12s, color 0.12s;
+  height: 22px;
+  display: flex;
+  align-items: center;
 }
-.rta-pitch:hover { background: #e5e5e5; }
+.rta-pitch:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .rta-pitch-active {
-  background: #111;
+  background: #6366f1;
   color: #fff;
+  font-weight: 600;
 }
+.rta-pitch-active:hover { background: #7577f3; }
+
+/* ── Speed toggle buttons ────────────────────────────────────────────────── */
 
 .rta-speed {
-  background: #f2f2f2;
+  background: transparent;
   border: none;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 3px 7px;
   font-size: 11px;
   cursor: pointer;
-  color: #333;
-  transition: all 0.12s;
+  color: rgba(255,255,255,0.6);
+  transition: background 0.12s, color 0.12s;
+  height: 22px;
+  display: flex;
+  align-items: center;
 }
-.rta-speed:hover { background: #e5e5e5; }
+.rta-speed:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .rta-speed-active {
-  background: #111;
+  background: #6366f1;
   color: #fff;
+  font-weight: 600;
 }
+.rta-speed-active:hover { background: #7577f3; }
 
-/* ── Podcast button ──────────────────────────────────────────────────────── */
+/* ── Action icon buttons ─────────────────────────────────────────────────── */
 
-#rta-podcast {
-  background: #f2f2f2;
+#rta-podcast, #rta-discussion, #rta-save, #rta-options, #rta-close {
+  background: rgba(255,255,255,0.08);
   border: none;
   border-radius: 50%;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   font-size: 13px;
   cursor: pointer;
-  color: #555;
+  color: rgba(255,255,255,0.65);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.15s, transform 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
-#rta-podcast:hover { background: #e0e0e0; }
+#rta-podcast:hover, #rta-discussion:hover, #rta-save:hover,
+#rta-options:hover, #rta-close:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+#rta-close:hover { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+#rta-save { font-size: 14px; }
+#rta-options { font-size: 15px; }
 
-/* Active (podcast is playing) — pulse glow */
-#rta-podcast.rta-podcast-active {
+/* ── Podcast/Discussion active (playing) — pulse glow ───────────────────── */
+
+#rta-podcast.rta-podcast-active,
+#rta-discussion.rta-podcast-active {
   background: #6366f1;
   color: #fff;
   animation: rta-podcast-pulse 2s ease-in-out infinite;
@@ -242,25 +320,6 @@
   50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
 }
 
-#rta-close, #rta-save, #rta-options {
-  background: #f2f2f2;
-  border: none;
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  font-size: 12px;
-  cursor: pointer;
-  color: #555;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-#rta-close:hover, #rta-save:hover, #rta-options:hover { background: #e0e0e0; }
-#rta-save { font-size: 13px; }
-#rta-options { font-size: 14px; }
-
 /* ── Toast notification ───────────────────────────────────────────────────── */
 
 #rta-toast {
@@ -268,13 +327,14 @@
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%) translateY(12px);
-  background: #111;
-  color: #fff;
+  background: #1a1a1f;
+  color: rgba(255,255,255,0.9);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   padding: 10px 18px;
   border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.1);
   z-index: 2147483647;
   opacity: 0;
   pointer-events: none;
@@ -292,8 +352,6 @@
 }
 
 .rta-para-inner {
-  /* Group all word-spans as a single child so flex/grid parents on the page
-     don't space out individual words (e.g. NYT date lines). */
   display: inline;
 }
 
@@ -304,36 +362,10 @@
 }
 
 .rta-word:hover {
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .rta-word.rta-hl {
   background: #fde68a;
   color: #000;
-}
-
-/* ── Dark mode ───────────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-  #rta-player { background: #1c1c1e; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5); }
-  #rta-progress { background: rgba(99, 102, 241, 0.2); }
-  .rta-btn { background: #2c2c2e; color: #e0e0e0; }
-  .rta-btn:hover { background: #3a3a3c; }
-  .rta-play-btn { background: #f0f0f0 !important; color: #000 !important; }
-  #rta-speed-badge { background: #2c2c2e; color: #ccc; }
-  #rta-speed-badge:hover { background: #6366f1; color: #fff; }
-  #rta-voice { background: #2c2c2e; color: #ccc; }
-  #rta-voice:hover { background: #3a3a3c; }
-  .rta-pitch { background: #2c2c2e; color: #ccc; }
-  .rta-pitch:hover { background: #3a3a3c; }
-  .rta-pitch-active { background: #f0f0f0; color: #000; }
-  .rta-speed { background: #2c2c2e; color: #ccc; }
-  .rta-speed:hover { background: #3a3a3c; }
-  .rta-speed-active { background: #f0f0f0; color: #000; }
-  #rta-podcast { background: #2c2c2e; color: #aaa; }
-  #rta-podcast:hover { background: #3a3a3c; }
-  #rta-podcast.rta-podcast-active { background: #6366f1; color: #fff; }
-  #rta-close, #rta-collapse, #rta-save, #rta-options { background: #2c2c2e; color: #aaa; }
-  #rta-close:hover, #rta-collapse:hover, #rta-save:hover, #rta-options:hover { background: #3a3a3c; }
-  #rta-toast { background: #f0f0f0; color: #111; }
 }

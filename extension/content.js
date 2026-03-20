@@ -120,7 +120,7 @@ if (!window.__readAloud) {
       const container = document.querySelector(sel);
       if (!container) continue;
       const paras = Array.from(container.querySelectorAll('p, li, div, blockquote'))
-        .filter((el) => isLeafDiv(el))
+        .filter((el) => isLeafDiv(el) && !el.closest('form, [role="dialog"], [role="alertdialog"]'))
         .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
         .filter((t) => t.length > 20 && !(t.length < 120 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
       if (paras.length >= 3) return paras;
@@ -147,7 +147,7 @@ if (!window.__readAloud) {
     ].join(', ');
 
     const paras = Array.from(document.querySelectorAll('p'))
-      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel'))
+      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel') && !el.closest('form, [role="dialog"], [role="alertdialog"]'))
       .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
       .filter((t) => t.length > 40 && !(t.length < 150 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
 
@@ -281,6 +281,11 @@ if (!window.__readAloud) {
       }
 
       if (bestEl) {
+        // Skip elements containing interactive children — replacing their innerHTML
+        // destroys form controls, password toggles, links, etc.
+        if (bestEl.querySelector('input, button, select, textarea, a[href]')) return;
+        // Skip elements inside forms, dialogs, and login/signup containers.
+        if (bestEl.closest('form, [role="dialog"], [role="alertdialog"], [role="form"]')) return;
         used.add(bestEl);
         bestEl._rtaOrigHTML = bestEl.innerHTML;
         bestEl.setAttribute('data-rta-chunk', idx);
@@ -464,29 +469,36 @@ if (!window.__readAloud) {
         <button class="rta-btn rta-play-btn" id="rta-playpause" title="Play">▶</button>
         <button id="rta-speed-badge" title="Click to cycle speed">${RA.rate}x</button>
         <div id="rta-controls">
+          <div class="rta-sep"></div>
           <div class="rta-player-group">
-            <button class="rta-btn" id="rta-prev" title="Previous paragraph">⏮</button>
-            <button class="rta-btn rta-icon-btn" id="rta-skip-back" title="Back 10s">↺<span class="rta-skip-label">10</span></button>
-            <button class="rta-btn rta-icon-btn" id="rta-skip-fwd" title="Forward 10s"><span class="rta-skip-label">10</span>↻</button>
-            <button class="rta-btn" id="rta-next" title="Next paragraph">⏭</button>
+            <button class="rta-btn rta-nav-btn" id="rta-prev" title="Previous paragraph">⏮</button>
+            <button class="rta-btn rta-nav-btn rta-icon-btn" id="rta-skip-back" title="Back 10s">↺<span class="rta-skip-label">10</span></button>
+            <button class="rta-btn rta-nav-btn rta-icon-btn" id="rta-skip-fwd" title="Forward 10s"><span class="rta-skip-label">10</span>↻</button>
+            <button class="rta-btn rta-nav-btn" id="rta-next" title="Next paragraph">⏭</button>
           </div>
+          <div class="rta-sep"></div>
           <div id="rta-status">Ready</div>
+          <div class="rta-sep"></div>
           <div class="rta-player-group">
             <span class="rta-label">Voice</span>
             <select id="rta-voice" title="Select voice (✦ = cloud/natural)"></select>
           </div>
+          <div class="rta-sep"></div>
           <div class="rta-player-group">
             <span class="rta-label">Pitch</span>
-            ${pitchBtns}
+            <div class="rta-toggle-group">${pitchBtns}</div>
           </div>
+          <div class="rta-sep"></div>
           <div class="rta-player-group">
             <span class="rta-label">Speed</span>
-            ${speedBtns}
+            <div class="rta-toggle-group">${speedBtns}</div>
           </div>
         </div>
         <div id="rta-actions">
+          <div class="rta-sep"></div>
           <button id="rta-podcast" title="Generate NPR-style news article">🎙</button>
           <button id="rta-discussion" title="Generate 2-person discussion podcast (ElevenLabs)">👥</button>
+          <div class="rta-sep"></div>
           <button id="rta-save" title="Save to reading list">🔖</button>
           <button id="rta-options" title="Settings">⚙</button>
           <button id="rta-collapse" title="Expand">+</button>
