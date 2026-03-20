@@ -282,9 +282,10 @@ if (!window.__readAloud) {
       }
 
       if (bestEl) {
-        // Skip elements containing interactive children — replacing their innerHTML
-        // destroys form controls, password toggles, links, etc.
-        if (bestEl.querySelector('input, button, select, textarea, a[href]')) return;
+        // Skip elements containing interactive form controls — replacing their innerHTML
+        // destroys form controls, password toggles, etc. Links are fine since
+        // restorePageElements() restores the original HTML when reading stops.
+        if (bestEl.querySelector('input, button, select, textarea')) return;
         // Skip elements inside forms, dialogs, and login/signup containers.
         if (bestEl.closest('form, [role="dialog"], [role="alertdialog"], [role="form"]')) return;
         used.add(bestEl);
