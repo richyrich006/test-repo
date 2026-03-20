@@ -87,12 +87,11 @@ window.__rtaPodcast = (() => {
         await fetchAndPlay(text, candidates[voiceState[idxKey]], apiKey);
         return; // success — keep using this voice
       } catch (err) {
-        const isVoiceErr = /voice.not.found|voice_not_found|not.find.voice|library/i.test(err.message);
+        const isVoiceErr = /voice.not.found|voice_not_found|not.find.voice|library|free user|upgrade|subscription/i.test(err.message);
         const isQuotaErr = /quota|429|limit|exceed|credit/i.test(err.message);
-        if (!isVoiceErr && !isQuotaErr) throw err;
-        if (isQuotaErr) {
-          // Credits exhausted — skip remaining EL candidates and go straight to browser TTS
-          console.warn('ReadAloud Podcast: ElevenLabs quota reached, switching to browser TTS');
+        if (isQuotaErr || (!isVoiceErr && !isQuotaErr)) {
+          // Quota exhausted or unrecoverable error — go straight to browser TTS
+          console.warn('ReadAloud Podcast: ElevenLabs unavailable, switching to browser TTS');
           voiceState.useBrowser = true;
           return speakBrowser(text, voiceState[`browser_${roleKey}`], voiceState.rate);
         }

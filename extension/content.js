@@ -900,15 +900,12 @@ if (!window.__readAloud) {
         if (!RA._elStop) trackWords(RA.chunks[idx]);
       } catch (err) {
         if (err.message === 'stopped') { break; }
-        if (/quota|429|limit|exceed|credit/i.test(err.message)) {
-          RA._elFallback = true;
-          setStatus('ElevenLabs quota reached — switching to free browser TTS');
-          startReading(idx, 0);
-          return;
-        }
-        console.warn('ReadAloud ElevenLabs:', err);
-        setStatus('ElevenLabs error: ' + err.message);
-        break;
+        // Any ElevenLabs failure (quota exceeded, library voice restriction, etc.)
+        // — fall back to free browser TTS seamlessly
+        RA._elFallback = true;
+        setStatus('ElevenLabs unavailable — switching to free browser TTS');
+        startReading(idx, 0);
+        return;
       }
     }
 
