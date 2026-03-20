@@ -70,6 +70,7 @@ if (!window.__readAloud) {
     const docClone = document.cloneNode(true);
     if (!docClone || !docClone.documentElement) return null;
     docClone.querySelectorAll(JUNK_SELECTORS).forEach((el) => el.remove());
+    docClone.querySelectorAll('figcaption').forEach((el) => el.remove());
     try {
       const article = new Readability(docClone).parse();
       if (!article || !article.content) return null;
@@ -184,7 +185,7 @@ if (!window.__readAloud) {
   function getParagraphs(article) {
     const div = document.createElement('div');
     div.innerHTML = article.content;
-    div.querySelectorAll('form, input, button[type="submit"], [class*="newsletter"], [class*="signup"]').forEach((el) => el.remove());
+    div.querySelectorAll('form, input, button[type="submit"], [class*="newsletter"], [class*="signup"], figcaption, figure').forEach((el) => el.remove());
 
     const blocks = div.querySelectorAll('p, h1, h2, h3, h4, h5, li');
     const paras = [];
@@ -898,7 +899,7 @@ if (!window.__readAloud) {
     });
   }
 
-  async function elevenLabsReadChunk(startIdx) {
+  async function elevenLabsReadChunk(startIdx, startCharOffset = 0) {
     RA._elStop = false;
     for (let idx = startIdx; idx < RA.chunks.length; idx++) {
       if (RA._elStop || !RA.playing) break;
@@ -907,8 +908,13 @@ if (!window.__readAloud) {
       setActivePara(idx);
       setStatus(timeRemainingStr(idx));
 
+      const charOffset = idx === startIdx ? startCharOffset : 0;
+      const text = charOffset > 0 ? RA.chunks[idx].substring(charOffset) : RA.chunks[idx];
+      scheduleWordHighlights(idx, charOffset);
+
       try {
-        await fetchAndPlayElevenLabs(RA.chunks[idx], RA.elevenLabsApiKey, RA.elevenLabsVoiceId);
+        await fetchAndPlayElevenLabs(text, RA.elevenLabsApiKey, RA.elevenLabsVoiceId);
+        clearWordTimers();
         if (!RA._elStop) trackWords(RA.chunks[idx]);
       } catch (err) {
         if (err.message === 'stopped') { break; }
@@ -1213,7 +1219,7 @@ if (!window.__readAloud) {
       setActivePara(idx);
       setStatus(timeRemainingStr(idx));
       startKeepAlive();
-      elevenLabsReadChunk(idx);
+      elevenLabsReadChunk(idx, charOffset);
       return;
     }
 

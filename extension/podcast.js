@@ -282,7 +282,7 @@ STYLE RULES:
 - Lead with the most important fact; no throat-clearing or preamble
 - Active voice, present tense where natural. Short declarative sentences
 - No filler phrases ("In this piece we'll discuss…", "Let's dive in")
-- Close with: "I'm Alex. This is ReadAloud."
+- Close with: "I'm Alex."
 - Target ~400–600 words of spoken text (about 3–4 minutes at broadcast pace)`;
 
   async function generateScript(articleText, title) {

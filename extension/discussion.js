@@ -229,7 +229,7 @@ STYLE:
 - Include at least one moment of friendly disagreement or pushback
 - Keep individual turns short (2-4 sentences) for natural dialogue rhythm
 - Target ~700-900 words of spoken text total
-- Close with Alex saying: "Thanks for listening to ReadAloud. We'll catch you next time."`;
+- Close with Alex saying: "Thanks for listening. We'll catch you next time."`;
 
   async function generateScript(articleText, title) {
     const { podcastApiKey = '' } = await chrome.storage.sync.get('podcastApiKey');
