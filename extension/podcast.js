@@ -277,19 +277,19 @@ FORMAT RULES (follow exactly):
 - No other tags, stage directions, or formatting
 
 STYLE RULES:
-- Anchor name: Alex. Correspondent name: Jordan (use [REPORTER] sparingly — only for stories needing a field perspective or expert voice)
+- Anchor name: Alex. Correspondent name: Jordan (use [REPORTER] sparingly — only for one brief field quote)
 - Tone: authoritative, measured, clear — classic NPR anchor delivery
 - Lead with the most important fact; no throat-clearing or preamble
 - Active voice, present tense where natural. Short declarative sentences
 - No filler phrases ("In this piece we'll discuss…", "Let's dive in")
 - Close with: "I'm Alex."
-- Target ~400–600 words of spoken text (about 3–4 minutes at broadcast pace)`;
+- Target ~200–300 words of spoken text (about 90 seconds at broadcast pace)`;
 
   async function generateScript(articleText, title) {
     const { podcastApiKey = '' } = await chrome.storage.sync.get('podcastApiKey');
     if (!podcastApiKey) throw new Error('NO_API_KEY');
 
-    const truncated = articleText.split(/\s+/).slice(0, 2000).join(' ');
+    const truncated = articleText.split(/\s+/).slice(0, 1000).join(' ');
     const userMessage = `Article title: ${title}\n\nArticle text:\n${truncated}`;
 
     const resp = await chrome.runtime.sendMessage({
@@ -301,7 +301,7 @@ STYLE RULES:
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
+        max_tokens: 1024,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -354,6 +354,38 @@ STYLE RULES:
   let _music = null;
   let _currentAudio = null;
 
+  // ── Audio pre-fetch helpers ─────────────────────────────────────────────────
+  // Fetches audio from ElevenLabs and returns a blob URL (caller must revoke).
+  // Separated from playback so we can overlap network fetch with current playback.
+
+  async function fetchAudioBlobUrl(text, voiceId, apiKey) {
+    const resp = await chrome.runtime.sendMessage({
+      action: 'elevenLabsFetch',
+      voiceId, apiKey,
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_turbo_v2_5',
+        voice_settings: { stability: 0.72, similarity_boost: 0.55 },
+      }),
+    });
+    if (!resp.ok) throw new Error(resp.error || `ElevenLabs error ${resp.status}`);
+    const binary = atob(resp.audio);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+  }
+
+  function playBlobUrl(url) {
+    return new Promise((resolve, reject) => {
+      if (isAborted()) { URL.revokeObjectURL(url); reject(new Error('aborted')); return; }
+      const audio = new Audio(url);
+      _currentAudio = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; reject(new Error('Playback failed')); };
+      audio.play().catch((err) => { URL.revokeObjectURL(url); _currentAudio = null; reject(err); });
+    });
+  }
+
   // ── Main entrypoint ────────────────────────────────────────────────────────
 
   async function start(chunks, title, onStatus) {
@@ -399,25 +431,64 @@ STYLE RULES:
         : 'Now on air…';
       status(nowPlaying);
 
-      for (const seg of segments) {
+      // Pre-fetch: while segment[i] plays, fetch segment[i+1] audio in parallel
+      // to eliminate the per-segment network wait between spoken lines.
+      let prefetch = null; // { promise: Promise<string|null>, segIdx: number }
+
+      const kickoffPrefetch = (nextIdx) => {
+        if (voiceState.useBrowser) return; // browser TTS needs no pre-fetch
+        for (let j = nextIdx; j < segments.length; j++) {
+          const s = segments[j];
+          if (s.type !== 'HOST' && s.type !== 'REPORTER') continue;
+          const rk = s.type === 'REPORTER' ? 'reporter' : 'host';
+          const voiceId = EL_VOICES[rk][voiceState[`${rk}Idx`]];
+          prefetch = {
+            promise: fetchAudioBlobUrl(s.text, voiceId, elevenLabsApiKey).catch(() => null),
+            segIdx: j,
+          };
+          return;
+        }
+      };
+
+      for (let si = 0; si < segments.length; si++) {
+        const seg = segments[si];
         if (isAborted()) break;
 
         if (seg.type === 'INTRO_MUSIC') {
-          // Let the music play prominently for 4 s, then fade it out before speaking
-          await sleep(4000);
+          // Let the music play briefly, then fade before speaking
+          await sleep(2000);
           if (!isAborted() && _music) {
-            await music.fadeOutAndStop(2000);
+            await music.fadeOutAndStop(1000);
             _music = null;
           }
+          kickoffPrefetch(si + 1); // start fetching first speech segment during fade
 
         } else if (seg.type === 'OUTRO_MUSIC') {
-          // Music already gone — nothing to do
           continue;
 
         } else {
           const roleKey = seg.type === 'REPORTER' ? 'reporter' : 'host';
           status('On air…');
-          await speakSegment(seg.text, voiceState, roleKey, elevenLabsApiKey);
+
+          // Use pre-fetched audio if it matches this segment
+          let playedFromPrefetch = false;
+          if (prefetch && prefetch.segIdx === si) {
+            const url = await prefetch.promise;
+            prefetch = null;
+            if (url && !isAborted()) {
+              kickoffPrefetch(si + 1);
+              try {
+                await playBlobUrl(url);
+                playedFromPrefetch = true;
+              } catch (_) { /* fall through to speakSegment */ }
+            }
+          }
+
+          if (!playedFromPrefetch) {
+            kickoffPrefetch(si + 1);
+            await speakSegment(seg.text, voiceState, roleKey, elevenLabsApiKey);
+          }
+
           if (!isAborted()) await sleep(150);
         }
       }

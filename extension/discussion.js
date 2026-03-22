@@ -228,14 +228,14 @@ STYLE:
 - Explore 3-4 key points from the article with back-and-forth exchanges
 - Include at least one moment of friendly disagreement or pushback
 - Keep individual turns short (2-4 sentences) for natural dialogue rhythm
-- Target ~700-900 words of spoken text total
+- Target ~350-450 words of spoken text total
 - Close with Alex saying: "Thanks for listening. We'll catch you next time."`;
 
   async function generateScript(articleText, title) {
     const { podcastApiKey = '' } = await chrome.storage.sync.get('podcastApiKey');
     if (!podcastApiKey) throw new Error('NO_ANTHROPIC_KEY');
 
-    const truncated = articleText.split(/\s+/).slice(0, 3000).join(' ');
+    const truncated = articleText.split(/\s+/).slice(0, 1500).join(' ');
     const userMessage = `Article title: ${title}\n\nArticle text:\n${truncated}`;
 
     const resp = await chrome.runtime.sendMessage({
@@ -247,7 +247,7 @@ STYLE:
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
+        max_tokens: 1024,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -309,6 +309,36 @@ STYLE:
     });
   }
 
+  // Fetch audio only, returning a blob URL — separated from playback so the
+  // next segment can be fetched while the current one is still playing.
+  async function fetchAudioBlobUrl(text, voiceId, apiKey) {
+    const resp = await chrome.runtime.sendMessage({
+      action: 'elevenLabsFetch',
+      voiceId, apiKey,
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_turbo_v2_5',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    });
+    if (!resp.ok) throw new Error(resp.error || `ElevenLabs error ${resp.status}`);
+    const binary = atob(resp.audio);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+  }
+
+  function playBlobUrl(url) {
+    return new Promise((resolve, reject) => {
+      if (_abortController?.signal.aborted) { URL.revokeObjectURL(url); reject(new Error('aborted')); return; }
+      const audio = new Audio(url);
+      _currentAudio = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; reject(new Error('Playback failed')); };
+      audio.play().catch((err) => { URL.revokeObjectURL(url); _currentAudio = null; reject(err); });
+    });
+  }
+
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -352,7 +382,27 @@ STYLE:
 
       status('Now playing discussion podcast…');
 
-      for (const seg of segments) {
+      // Pre-fetch: while segment[i] plays, fetch segment[i+1] audio in parallel
+      // to eliminate per-segment ElevenLabs network wait between spoken lines.
+      let prefetch = null; // { promise: Promise<string|null>, segIdx: number }
+
+      const kickoffPrefetch = (nextIdx) => {
+        if (voices.useBrowser) return;
+        for (let j = nextIdx; j < segments.length; j++) {
+          const s = segments[j];
+          if (s.type !== 'ALEX' && s.type !== 'SARAH') continue;
+          const isAlex = s.type !== 'SARAH';
+          const voiceId = isAlex ? voices.alex : voices.sarah;
+          prefetch = {
+            promise: fetchAudioBlobUrl(s.text, voiceId, elevenLabsApiKey).catch(() => null),
+            segIdx: j,
+          };
+          return;
+        }
+      };
+
+      for (let si = 0; si < segments.length; si++) {
+        const seg = segments[si];
         if (isAborted()) break;
 
         if (seg.type === 'INTRO_MUSIC') {
@@ -360,6 +410,7 @@ STYLE:
           await sleep(2500);
           if (!isAborted()) music.duck();
           await sleep(400);
+          kickoffPrefetch(si + 1); // start fetching first speech segment during duck
 
         } else if (seg.type === 'OUTRO_MUSIC') {
           music.unduck();
@@ -368,7 +419,25 @@ STYLE:
           _music = null;
 
         } else {
-          await playSegment(seg, voices, elevenLabsApiKey);
+          // Use pre-fetched audio if it matches this segment
+          let playedFromPrefetch = false;
+          if (prefetch && prefetch.segIdx === si) {
+            const url = await prefetch.promise;
+            prefetch = null;
+            if (url && !isAborted()) {
+              kickoffPrefetch(si + 1);
+              try {
+                await playBlobUrl(url);
+                playedFromPrefetch = true;
+              } catch (_) { /* fall through to playSegment */ }
+            }
+          }
+
+          if (!playedFromPrefetch) {
+            kickoffPrefetch(si + 1);
+            await playSegment(seg, voices, elevenLabsApiKey);
+          }
+
           if (!isAborted()) await sleep(250);
         }
       }

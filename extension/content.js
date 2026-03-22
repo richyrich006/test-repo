@@ -585,6 +585,26 @@ if (!window.__readAloud) {
     });
 
     const togglePlay = () => {
+      // If podcast or NPR news is active, the play button acts as a stop button
+      const pod = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      if (pod && pod.isActive()) {
+        pod.stop();
+        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+        hidePodcastToast();
+        setPlayBtn(false);
+        setStatus('Ready');
+        return;
+      }
+      if (disc && disc.isActive()) {
+        disc.stop();
+        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+        hidePodcastToast();
+        setPlayBtn(false);
+        setStatus('Ready');
+        return;
+      }
+
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
       } else if (RA.playing) {
@@ -708,11 +728,13 @@ if (!window.__readAloud) {
 
       const btn = document.getElementById('rta-podcast');
       btn.classList.add('rta-podcast-active');
+      setPlayBtn(true);
 
       pod.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
           btn.classList.remove('rta-podcast-active');
           hidePodcastToast();
+          setPlayBtn(false);
           setStatus('Ready');
         } else {
           showPodcastToast(statusMsg);
@@ -747,11 +769,13 @@ if (!window.__readAloud) {
 
       const btn = document.getElementById('rta-discussion');
       btn.classList.add('rta-podcast-active');
+      setPlayBtn(true);
 
       disc.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
           btn.classList.remove('rta-podcast-active');
           hidePodcastToast();
+          setPlayBtn(false);
           setStatus('Ready');
         } else {
           showPodcastToast(statusMsg);
