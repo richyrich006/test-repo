@@ -989,7 +989,7 @@ if (!window.__readAloud) {
   // maxOffset limits scheduling to the current sentence's words only — this
   // prevents stale timers from carrying over into subsequent sentences.
   // onboundary events cancel these and take over with exact positions when fired.
-  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity) {
+  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity, startDelay = AUDIO_STARTUP_MS) {
     clearWordTimers();
     const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
     if (!para) return;
@@ -1017,7 +1017,7 @@ if (!window.__readAloud) {
         : wordStart + word.textContent.trim().length;
       const charSpan = nextWordStart - wordStart;
 
-      const delay = elapsed + AUDIO_STARTUP_MS;
+      const delay = elapsed + startDelay;
       elapsed += Math.max(charSpan * msPerChar, 60 / RA.rate);
 
       RA.wordTimers.push(
@@ -1182,6 +1182,7 @@ if (!window.__readAloud) {
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
+        if (isFirst) clearTimeout(RA.noStartTimer);
         RA.chunkIndex = idx;
         RA.uttStartTime = Date.now();
         RA.uttCharOffset = sOffset;
@@ -1191,25 +1192,38 @@ if (!window.__readAloud) {
           setActivePara(idx);
           setStatus(timeRemainingStr(idx));
         }
-        // Chain: pre-queue the next chunk while the last sentence of this one plays
-        if (isLast) _buildAndQueueUtterance(idx + 1);
       };
 
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
+        const globalOffset = sOffset + event.charIndex;
         clearWordTimers();
-        highlightWord(idx, sOffset + event.charIndex);
+        highlightWord(idx, globalOffset);
+        // Reschedule remaining words from current position so highlights stay
+        // in sync even when onboundary fires intermittently.
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentence.length, 0);
       };
 
       utt.onend = () => {
         clearWordTimers();
         if (isLast) {
           trackWords(fullText);
-          if (!RA.paused && idx + 1 >= RA.chunks.length) {
-            setStatus('Done');
-            setPlayBtn(false);
-            RA.playing = false;
-            stopKeepAlive();
+          if (!RA.paused && RA.playing) {
+            if (idx + 1 < RA.chunks.length) {
+              _buildAndQueueUtterance(idx + 1);
+              // Watchdog: if next chunk doesn't start within 1.5 s, force-restart it.
+              RA.noStartTimer = setTimeout(() => {
+                if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                  RA.synth.cancel();
+                  startReading(idx + 1, 0, true);
+                }
+              }, 1500);
+            } else {
+              setStatus('Done');
+              setPlayBtn(false);
+              RA.playing = false;
+              stopKeepAlive();
+            }
           }
         }
       };
@@ -1296,17 +1310,26 @@ if (!window.__readAloud) {
 
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
+      const globalOffset = firstGlobalOffset + event.charIndex;
       clearWordTimers();
-      highlightWord(idx, firstGlobalOffset + event.charIndex);
+      highlightWord(idx, globalOffset);
+      scheduleWordHighlights(idx, globalOffset, firstGlobalOffset + firstText.length, 0);
     };
 
     utterance.onend = () => {
       clearWordTimers();
       // If no more sentences were queued below (started at the last sentence),
       // we are responsible for chaining the next chunk.
-      if (!RA.paused && startSentIdx === sentences.length - 1) {
-        _buildAndQueueUtterance(idx + 1);
-        if (idx + 1 >= RA.chunks.length) {
+      if (!RA.paused && startSentIdx === sentences.length - 1 && RA.playing) {
+        if (idx + 1 < RA.chunks.length) {
+          _buildAndQueueUtterance(idx + 1);
+          RA.noStartTimer = setTimeout(() => {
+            if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+              RA.synth.cancel();
+              startReading(idx + 1, 0, true);
+            }
+          }, 1500);
+        } else {
           setStatus('Done');
           setPlayBtn(false);
           RA.playing = false;
@@ -1334,7 +1357,7 @@ if (!window.__readAloud) {
     }
 
     // Queue the remaining sentences of this chunk immediately so there is no
-    // gap within the paragraph.  The last one's onstart pre-queues the next chunk.
+    // gap within the paragraph.  The last one's onend chains the next chunk.
     for (let i = startSentIdx + 1; i < sentences.length; i++) {
       const sOffset = offsets[i];
       const isLast = i === sentences.length - 1;
@@ -1348,22 +1371,33 @@ if (!window.__readAloud) {
         RA.uttStartTime = Date.now();
         RA.uttCharOffset = sOffset;
         scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
-        if (isLast) _buildAndQueueUtterance(idx + 1);
       };
 
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
+        const globalOffset = sOffset + event.charIndex;
         clearWordTimers();
-        highlightWord(idx, sOffset + event.charIndex);
+        highlightWord(idx, globalOffset);
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentences[i].length, 0);
       };
 
       utt.onend = () => {
         clearWordTimers();
-        if (!RA.paused && isLast && idx + 1 >= RA.chunks.length) {
-          setStatus('Done');
-          setPlayBtn(false);
-          RA.playing = false;
-          stopKeepAlive();
+        if (!RA.paused && isLast && RA.playing) {
+          if (idx + 1 < RA.chunks.length) {
+            _buildAndQueueUtterance(idx + 1);
+            RA.noStartTimer = setTimeout(() => {
+              if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                RA.synth.cancel();
+                startReading(idx + 1, 0, true);
+              }
+            }, 1500);
+          } else {
+            setStatus('Done');
+            setPlayBtn(false);
+            RA.playing = false;
+            stopKeepAlive();
+          }
         }
       };
 
