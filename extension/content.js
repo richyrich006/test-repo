@@ -1023,23 +1023,19 @@ if (!window.__readAloud) {
   // so timer-based highlights don't run ahead of the audio.
   const AUDIO_STARTUP_MS = 120;
 
-  // Derive actual ms-per-character from two consecutive onboundary events.
-  // Returns a calibrated value when enough data exists, otherwise null.
-  // Also updates RA.lastBoundaryTime / RA.lastBoundaryChar for the next call.
+  // Derive ms-per-character as a cumulative average from sentence start to the
+  // current boundary event.  Averaging over all chars spoken so far is far more
+  // stable than a noisy boundary-to-boundary delta, especially for short words.
+  // Returns null when there isn't enough data yet to produce a reliable estimate.
   function computeCalibratedMsPerChar(globalOffset) {
-    const now = Date.now();
-    let result = null;
-    if (RA.lastBoundaryTime > 0) {
-      const charsDelta = globalOffset - RA.lastBoundaryChar;
-      const timeDelta  = now - RA.lastBoundaryTime;
-      if (charsDelta >= 2 && timeDelta >= 20) {
-        // Clamp to a sane range so a single outlier can't derail highlights
-        result = Math.max(15, Math.min(300, timeDelta / charsDelta));
-      }
-    }
-    RA.lastBoundaryTime = now;
-    RA.lastBoundaryChar = globalOffset;
-    return result;
+    if (!RA.uttStartTime || !RA.uttCharOffset) return null;
+    // Subtract AUDIO_STARTUP_MS to discount the TTS-engine startup lag that is
+    // already baked into the timer schedule (via startDelay in scheduleWordHighlights).
+    const elapsed    = Math.max(0, Date.now() - RA.uttStartTime - AUDIO_STARTUP_MS);
+    const charsSpoken = globalOffset - RA.uttCharOffset;
+    if (elapsed < 30 || charsSpoken < 4) return null;
+    // Clamp to a sane range so one bad measurement can't derail highlights
+    return Math.max(15, Math.min(300, elapsed / charsSpoken));
   }
 
   // Schedule per-word highlight timeouts, anchored to the moment a sentence
@@ -1245,11 +1241,8 @@ if (!window.__readAloud) {
       utt.onstart = () => {
         if (isFirst) clearTimeout(RA.noStartTimer);
         RA.chunkIndex = idx;
-        RA.uttStartTime = Date.now();
+        RA.uttStartTime  = Date.now();
         RA.uttCharOffset = sOffset;
-        // Reset boundary calibration at the start of each sentence
-        RA.lastBoundaryTime = 0;
-        RA.lastBoundaryChar = 0;
         // Anchor highlights to actual speech start, bounded to this sentence only
         scheduleWordHighlights(idx, sOffset, sOffset + sentence.length);
         if (isFirst) {
@@ -1370,8 +1363,8 @@ if (!window.__readAloud) {
     utterance.onstart = () => {
       // Speech actually started — cancel the silent-failure watchdog.
       clearTimeout(RA.noStartTimer);
-      RA.lastBoundaryTime = 0;
-      RA.lastBoundaryChar = 0;
+      RA.uttStartTime   = Date.now();
+      RA.uttCharOffset  = firstGlobalOffset;
       scheduleWordHighlights(idx, firstGlobalOffset, firstGlobalOffset + firstText.length);
     };
 
@@ -1436,10 +1429,8 @@ if (!window.__readAloud) {
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
-        RA.uttStartTime = Date.now();
+        RA.uttStartTime  = Date.now();
         RA.uttCharOffset = sOffset;
-        RA.lastBoundaryTime = 0;
-        RA.lastBoundaryChar = 0;
         scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
       };
 
