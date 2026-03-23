@@ -669,15 +669,12 @@ if (!window.__readAloud) {
         // TTS via onboundary, timer-approximate for ElevenLabs).
         RA.pauseOffset = RA.lastBoundaryChar;
 
-        if (RA.elevenLabsApiKey) {
-          stopElAudio();
-        } else {
-          // pause() immediately mutes the current audio output; cancel() then
-          // clears the queued utterances.  Using both together is faster than
-          // cancel() alone which can let buffered audio bleed through briefly.
-          RA.synth.pause();
-          RA.synth.cancel();
-        }
+        // Stop whichever audio backend is active.
+        // stopElAudio() is a no-op when no Audio element exists;
+        // synth.pause/cancel are no-ops when speechSynthesis isn't speaking.
+        stopElAudio();
+        RA.synth.pause();
+        RA.synth.cancel();
       } else {
         // Resume from the position saved at pause time
         RA.paused = false;
