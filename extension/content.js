@@ -548,6 +548,18 @@ if (!window.__readAloud) {
     `;
 
     document.body.appendChild(panel);
+
+    // Mini-player for podcast / discussion — floats above the main bar
+    const podMini = document.createElement('div');
+    podMini.id = 'rta-pod-mini';
+    podMini.innerHTML = `
+      <span id="rta-pod-mini-icon">🎙</span>
+      <span id="rta-pod-mini-status">Loading…</span>
+      <button id="rta-pod-mini-pp" title="Pause">⏸</button>
+      <button id="rta-pod-mini-stop" title="Stop">✕</button>
+    `;
+    document.body.appendChild(podMini);
+
     makeDraggable(panel);
     attachEvents(paragraphs);
   }
@@ -620,25 +632,6 @@ if (!window.__readAloud) {
     });
 
     const togglePlay = () => {
-      // If podcast or NPR news is active, the play button acts as a stop button
-      const pod = window.__rtaPodcast;
-      const disc = window.__rtaDiscussion;
-      if (pod && pod.isActive()) {
-        pod.stop();
-        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
-        hidePodcastToast();
-        setPlayBtn(false);
-        setStatus('Ready');
-        return;
-      }
-      if (disc && disc.isActive()) {
-        disc.stop();
-        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
-        hidePodcastToast();
-        setPlayBtn(false);
-        setStatus('Ready');
-        return;
-      }
 
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
@@ -738,7 +731,7 @@ if (!window.__readAloud) {
       }
     });
 
-    // Podcast button
+    // Podcast button — opens independent mini-player, does not interrupt TTS
     document.getElementById('rta-podcast').addEventListener('click', () => {
       const pod = window.__rtaPodcast;
       if (!pod) {
@@ -748,39 +741,25 @@ if (!window.__readAloud) {
 
       if (pod.isActive()) {
         pod.stop();
-        hidePodcastToast();
+        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+        hidePodMini();
         return;
       }
 
-      // Pause article reading if active
-      if (RA.playing) {
-        stopElAudio();
-        RA.synth.cancel();
-        RA.playing = false;
-        RA.paused = false;
-        setPlayBtn(false);
-        stopKeepAlive();
-        clearWordTimers();
-      }
-
-      const btn = document.getElementById('rta-podcast');
-      btn.classList.add('rta-podcast-active');
-      setPlayBtn(true);
+      document.getElementById('rta-podcast').classList.add('rta-podcast-active');
+      showPodMini('🎙', 'Loading news report…');
 
       pod.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
-          btn.classList.remove('rta-podcast-active');
-          hidePodcastToast();
-          setPlayBtn(false);
-          setStatus('Ready');
+          document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+          hidePodMini();
         } else {
-          showPodcastToast(statusMsg);
-          setStatus(statusMsg);
+          updatePodMiniStatus(statusMsg);
         }
       });
     });
 
-    // Discussion podcast button (ElevenLabs multi-voice)
+    // Discussion podcast button — same independent mini-player pattern
     document.getElementById('rta-discussion').addEventListener('click', () => {
       const disc = window.__rtaDiscussion;
       if (!disc) {
@@ -790,35 +769,53 @@ if (!window.__readAloud) {
 
       if (disc.isActive()) {
         disc.stop();
-        hidePodcastToast();
+        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+        hidePodMini();
         return;
       }
 
-      if (RA.playing) {
-        stopElAudio();
-        RA.synth.cancel();
-        RA.playing = false;
-        RA.paused = false;
-        setPlayBtn(false);
-        stopKeepAlive();
-        clearWordTimers();
-      }
-
-      const btn = document.getElementById('rta-discussion');
-      btn.classList.add('rta-podcast-active');
-      setPlayBtn(true);
+      document.getElementById('rta-discussion').classList.add('rta-podcast-active');
+      showPodMini('👥', 'Generating discussion script…');
 
       disc.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
-          btn.classList.remove('rta-podcast-active');
-          hidePodcastToast();
-          setPlayBtn(false);
-          setStatus('Ready');
+          document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+          hidePodMini();
         } else {
-          showPodcastToast(statusMsg);
-          setStatus(statusMsg);
+          updatePodMiniStatus(statusMsg);
         }
       });
+    });
+
+    // Mini-player play/pause
+    document.getElementById('rta-pod-mini-pp').addEventListener('click', () => {
+      const pod  = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      const engine = (pod && pod.isActive()) ? pod : (disc && disc.isActive()) ? disc : null;
+      if (!engine) return;
+      const ppBtn = document.getElementById('rta-pod-mini-pp');
+      if (engine.isPaused()) {
+        engine.resume();
+        ppBtn.textContent = '⏸';
+      } else {
+        engine.pause();
+        ppBtn.textContent = '▶';
+      }
+    });
+
+    // Mini-player stop
+    document.getElementById('rta-pod-mini-stop').addEventListener('click', () => {
+      const pod  = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      if (pod && pod.isActive()) {
+        pod.stop();
+        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+      }
+      if (disc && disc.isActive()) {
+        disc.stop();
+        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+      }
+      hidePodMini();
     });
   }
 
@@ -856,6 +853,27 @@ if (!window.__readAloud) {
       clearTimeout(toast._t);
       toast.classList.remove('rta-toast-show');
     }
+  }
+
+  // ── Podcast / discussion mini-player ────────────────────────────────────────
+
+  function showPodMini(icon, status) {
+    const mini = document.getElementById('rta-pod-mini');
+    if (!mini) return;
+    document.getElementById('rta-pod-mini-icon').textContent = icon;
+    document.getElementById('rta-pod-mini-status').textContent = status;
+    document.getElementById('rta-pod-mini-pp').textContent = '⏸';
+    mini.classList.add('rta-pod-mini-show');
+  }
+
+  function updatePodMiniStatus(msg) {
+    const el = document.getElementById('rta-pod-mini-status');
+    if (el) el.textContent = msg;
+  }
+
+  function hidePodMini() {
+    const mini = document.getElementById('rta-pod-mini');
+    if (mini) mini.classList.remove('rta-pod-mini-show');
   }
 
   function setActivePara(idx) {

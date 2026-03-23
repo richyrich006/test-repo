@@ -339,11 +339,18 @@ STYLE:
     });
   }
 
-  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms)).then(() => {
+      if (!_paused) return;
+      return new Promise((r) => { _resumeCallbacks.push(r); });
+    });
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
 
   let _active = false;
+  let _paused = false;
+  let _resumeCallbacks = [];
   let _music = null;
   let _abortController = null;
   let _currentAudio = null;
@@ -352,9 +359,29 @@ STYLE:
 
   // ── Main entrypoint ────────────────────────────────────────────────────────
 
+  function pause() {
+    if (!_active || _paused) return;
+    _paused = true;
+    if (_currentAudio) _currentAudio.pause();
+    try { window.speechSynthesis.pause(); } catch (_) {}
+  }
+
+  function resume() {
+    if (!_active || !_paused) return;
+    _paused = false;
+    if (_currentAudio) _currentAudio.play().catch(() => {});
+    try { window.speechSynthesis.resume(); } catch (_) {}
+    _resumeCallbacks.forEach((r) => r());
+    _resumeCallbacks = [];
+  }
+
+  function isPaused() { return _paused; }
+
   async function start(chunks, title, onStatus) {
     if (_active) return;
     _active = true;
+    _paused = false;
+    _resumeCallbacks = [];
     _abortController = new AbortController();
 
     const status = (msg) => { if (onStatus) onStatus(msg); };
@@ -463,10 +490,13 @@ STYLE:
     if (_abortController) _abortController.abort();
     if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
     if (_music) { _music.stop(); _music = null; }
+    _paused = false;
+    _resumeCallbacks.forEach((r) => r());
+    _resumeCallbacks = [];
     _active = false;
   }
 
   function isActive() { return _active; }
 
-  return { start, stop, isActive };
+  return { start, stop, pause, resume, isPaused, isActive };
 })();
