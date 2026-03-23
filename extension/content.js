@@ -1499,74 +1499,101 @@ if (!window.__readAloud) {
 
     if (charOffset > 0) highlightWord(idx, charOffset);
 
+    const PHRASE_WORDS = 5;
     const fullText = RA.chunks[idx];
-    const sentences = sentenceSplit(fullText);
-    const offsets = sentenceOffsets(fullText, sentences);
 
-    // Find which sentence contains charOffset
-    let startSentIdx = sentences.length - 1;
-    for (let i = 0; i < sentences.length - 1; i++) {
-      if (charOffset < offsets[i + 1]) { startSentIdx = i; break; }
+    // Build a flat array of {text, offset} phrases (~5 words each) across all
+    // sentences so cancel() only drains the current short phrase, not a full sentence.
+    const phrases = (() => {
+      const result = [];
+      const sents = sentenceSplit(fullText);
+      const sOffs = sentenceOffsets(fullText, sents);
+      for (let si = 0; si < sents.length; si++) {
+        const tokens = sents[si].match(/\S+(?:\s*)/g) || [];
+        let pOff = 0, group = [];
+        for (let ti = 0; ti < tokens.length; ti++) {
+          group.push(tokens[ti]);
+          if (group.length >= PHRASE_WORDS || ti === tokens.length - 1) {
+            const raw = group.join('');
+            const text = raw.trimEnd();
+            if (text) result.push({ text, offset: sOffs[si] + pOff });
+            pOff += raw.length;
+            group = [];
+          }
+        }
+      }
+      return result;
+    })();
+
+    // Find which phrase contains charOffset
+    let startPhraseIdx = 0;
+    for (let i = phrases.length - 1; i >= 0; i--) {
+      if (phrases[i].offset <= charOffset) { startPhraseIdx = i; break; }
     }
 
-    // First utterance: the sentence that contains charOffset, possibly trimmed
-    const withinSent = charOffset - offsets[startSentIdx];
-    const firstText = sentences[startSentIdx].substring(Math.max(0, withinSent));
-    const firstGlobalOffset = offsets[startSentIdx] + withinSent;
-
-    const utterance = new SpeechSynthesisUtterance(normalizeTTSText(firstText));
-    utterance.rate = RA.rate;
-    utterance.pitch = RA.pitch;
-    utterance.voice = getBestVoice();
-
-    utterance.onstart = () => {
-      // Speech actually started — cancel the silent-failure watchdog.
-      clearTimeout(RA.noStartTimer);
-      RA.uttStartTime   = Date.now();
-      RA.uttCharOffset  = firstGlobalOffset;
-      scheduleWordHighlights(idx, firstGlobalOffset, firstGlobalOffset + firstText.length);
-    };
-
-    utterance.onboundary = (event) => {
-      if (event.name !== 'word') return;
-      const globalOffset = firstGlobalOffset + event.charIndex;
-      RA.lastBoundaryChar = globalOffset;
-      const calMs = computeCalibratedMsPerChar(globalOffset);
-      clearWordTimers();
-      highlightWord(idx, globalOffset);
-      scheduleWordHighlights(idx, globalOffset, firstGlobalOffset + firstText.length, 0, calMs);
-    };
-
-    utterance.onend = () => {
-      clearWordTimers();
-      // If no more sentences were queued below (started at the last sentence),
-      // we are responsible for chaining the next chunk.
-      if (!RA.paused && startSentIdx === sentences.length - 1 && RA.playing) {
+    // Speak phrases one at a time — never pre-queue the next phrase so that
+    // cancel() only needs to drain the current ~5-word phrase (~1s max).
+    function speakPhrase(pi) {
+      if (!RA.playing || RA.paused) return;
+      if (pi >= phrases.length) {
+        trackWords(fullText);
         if (idx + 1 < RA.chunks.length) {
-          _buildAndQueueUtterance(idx + 1);
-          RA.noStartTimer = setTimeout(() => {
-            if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
-              RA.synth.cancel();
-              startReading(idx + 1, 0, true);
-            }
-          }, 1500);
+          startReading(idx + 1, 0);
         } else {
           setStatus('Done');
           setPlayBtn(false);
           RA.playing = false;
           stopKeepAlive();
-      stopTimeTicker();
+          stopTimeTicker();
         }
+        return;
       }
-    };
 
-    utterance.onerror = (e) => {
-      clearWordTimers();
-      if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
-    };
+      const { text: pText, offset: pOffset } = phrases[pi];
+      let speakText = pText;
+      let speakOffset = pOffset;
+      // First phrase may be trimmed to resume from charOffset mid-phrase
+      if (pi === startPhraseIdx && charOffset > pOffset) {
+        speakText = pText.substring(charOffset - pOffset);
+        speakOffset = charOffset;
+      }
+      if (!speakText.trim()) { speakPhrase(pi + 1); return; }
 
-    RA.utterance = utterance;
-    RA.synth.speak(utterance);
+      const utt = new SpeechSynthesisUtterance(normalizeTTSText(speakText));
+      utt.rate = RA.rate;
+      utt.pitch = RA.pitch;
+      utt.voice = getBestVoice();
+
+      utt.onstart = () => {
+        if (pi === startPhraseIdx) clearTimeout(RA.noStartTimer);
+        RA.uttStartTime  = Date.now();
+        RA.uttCharOffset = speakOffset;
+        scheduleWordHighlights(idx, speakOffset, speakOffset + speakText.length);
+      };
+
+      utt.onboundary = (event) => {
+        if (event.name !== 'word') return;
+        const globalOffset = speakOffset + event.charIndex;
+        RA.lastBoundaryChar = globalOffset;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
+        clearWordTimers();
+        highlightWord(idx, globalOffset);
+        scheduleWordHighlights(idx, globalOffset, speakOffset + speakText.length, 0, calMs);
+      };
+
+      utt.onend = () => {
+        clearWordTimers();
+        if (!RA.paused && RA.playing) speakPhrase(pi + 1);
+      };
+
+      utt.onerror = (e) => {
+        clearWordTimers();
+        if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+      };
+
+      RA.utterance = utt;
+      RA.synth.speak(utt);
+    }
 
     // Watchdog: if onstart hasn't fired after 700ms the utterance was silently
     // dropped (Chrome bug).  Retry once with a fresh cancel/speak cycle.
@@ -1578,61 +1605,7 @@ if (!window.__readAloud) {
       }, 700);
     }
 
-    // Queue the remaining sentences of this chunk immediately so there is no
-    // gap within the paragraph.  The last one's onend chains the next chunk.
-    for (let i = startSentIdx + 1; i < sentences.length; i++) {
-      const sOffset = offsets[i];
-      const isLast = i === sentences.length - 1;
-
-      const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentences[i]));
-      utt.rate = RA.rate;
-      utt.pitch = RA.pitch;
-      utt.voice = getBestVoice();
-
-      utt.onstart = () => {
-        RA.uttStartTime  = Date.now();
-        RA.uttCharOffset = sOffset;
-        scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
-      };
-
-      utt.onboundary = (event) => {
-        if (event.name !== 'word') return;
-        const globalOffset = sOffset + event.charIndex;
-        RA.lastBoundaryChar = globalOffset;
-        const calMs = computeCalibratedMsPerChar(globalOffset);
-        clearWordTimers();
-        highlightWord(idx, globalOffset);
-        scheduleWordHighlights(idx, globalOffset, sOffset + sentences[i].length, 0, calMs);
-      };
-
-      utt.onend = () => {
-        clearWordTimers();
-        if (!RA.paused && isLast && RA.playing) {
-          if (idx + 1 < RA.chunks.length) {
-            _buildAndQueueUtterance(idx + 1);
-            RA.noStartTimer = setTimeout(() => {
-              if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
-                RA.synth.cancel();
-                startReading(idx + 1, 0, true);
-              }
-            }, 1500);
-          } else {
-            setStatus('Done');
-            setPlayBtn(false);
-            RA.playing = false;
-            stopKeepAlive();
-      stopTimeTicker();
-          }
-        }
-      };
-
-      utt.onerror = (e) => {
-        clearWordTimers();
-        if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
-      };
-
-      RA.synth.speak(utt);
-    }
+    speakPhrase(startPhraseIdx);
   }
 
   // Skip forward or backward by `seconds` seconds using estimated char position.
