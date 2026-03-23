@@ -1061,7 +1061,7 @@ if (!window.__readAloud) {
         resp = await chrome.runtime.sendMessage({
           action: 'edgeTTSFetch',
           text: normalizeTTSText(text),
-          voiceName: RA.edgeTtsVoiceName,
+          voiceName: RA.edgeTtsVoiceName || 'en-US-AriaNeural',
           rate: RA.rate,
         });
       } catch (err) { reject(err); return; }
@@ -1462,8 +1462,11 @@ if (!window.__readAloud) {
       return;
     }
 
-    // Priority 2: Microsoft Edge TTS (free neural voices, no API key needed)
-    if (RA.edgeTtsVoiceName && !RA._edgeFallback) {
+    // Priority 2: Microsoft Edge TTS (free neural voices, no API key needed).
+    // Used by default even without explicit config — gives instant pause (like
+    // Speechify) because audio arrives as MP3 played via Audio.pause(), rather
+    // than being buffered inside Chrome's speechSynthesis black box.
+    if (!RA._edgeFallback) {
       RA.chunkIndex = idx;
       RA.uttStartTime = Date.now();
       RA.uttCharOffset = charOffset;
