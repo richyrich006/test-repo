@@ -89,6 +89,10 @@ if (!window.__readAloud) {
     '[itemprop="articleBody"]',
     'article',
     '[role="article"]',
+    // Yahoo News / Yahoo Finance (CaaS platform)
+    '.caas-body',
+    '[class*="caas-body"]',
+    '[class*="caas-article-module-body"]',
     '[class*="article-body"]',
     '[class*="article-content"]',
     '[class*="article-text"]',
@@ -555,6 +559,13 @@ if (!window.__readAloud) {
     podMini.innerHTML = `
       <span id="rta-pod-mini-icon">🎙</span>
       <span id="rta-pod-mini-status">Loading…</span>
+      <select id="rta-pod-mini-speed" title="Playback speed">
+        <option value="0.8">0.8×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.2">1.2×</option>
+        <option value="1.5">1.5×</option>
+        <option value="2">2×</option>
+      </select>
       <button id="rta-pod-mini-pp" title="Pause">⏸</button>
       <button id="rta-pod-mini-stop" title="Stop">✕</button>
     `;
@@ -747,7 +758,7 @@ if (!window.__readAloud) {
       }
 
       document.getElementById('rta-podcast').classList.add('rta-podcast-active');
-      showPodMini('🎙', 'Loading news report…');
+      showPodMini('🎙', 'Loading news report…', pod);
 
       pod.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
@@ -775,7 +786,7 @@ if (!window.__readAloud) {
       }
 
       document.getElementById('rta-discussion').classList.add('rta-podcast-active');
-      showPodMini('👥', 'Generating discussion script…');
+      showPodMini('👥', 'Generating discussion script…', disc);
 
       disc.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
@@ -785,6 +796,15 @@ if (!window.__readAloud) {
           updatePodMiniStatus(statusMsg);
         }
       });
+    });
+
+    // Mini-player speed
+    document.getElementById('rta-pod-mini-speed').addEventListener('change', (e) => {
+      const s = parseFloat(e.target.value);
+      const pod  = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      if (pod  && pod.isActive())  pod.setSpeed(s);
+      if (disc && disc.isActive()) disc.setSpeed(s);
     });
 
     // Mini-player play/pause
@@ -857,12 +877,14 @@ if (!window.__readAloud) {
 
   // ── Podcast / discussion mini-player ────────────────────────────────────────
 
-  function showPodMini(icon, status) {
+  function showPodMini(icon, status, engine) {
     const mini = document.getElementById('rta-pod-mini');
     if (!mini) return;
     document.getElementById('rta-pod-mini-icon').textContent = icon;
     document.getElementById('rta-pod-mini-status').textContent = status;
     document.getElementById('rta-pod-mini-pp').textContent = '⏸';
+    const speedEl = document.getElementById('rta-pod-mini-speed');
+    if (speedEl && engine) speedEl.value = String(engine.getSpeed());
     mini.classList.add('rta-pod-mini-show');
   }
 
@@ -1628,10 +1650,15 @@ if (!window.__readAloud) {
 
       paragraphs = tryExtract();
 
-      // JS-heavy / SPA sites may not have rendered the article yet at script
-      // injection time.  If we got nothing, wait 1.5 s and try once more.
+      // JS-heavy / SPA sites (e.g. Yahoo, Bloomberg) may not have rendered
+      // article content at injection time — retry up to twice with increasing
+      // delays to give React/hydration time to complete.
       if (paragraphs.length < 3) {
         await new Promise((r) => setTimeout(r, 1500));
+        paragraphs = tryExtract();
+      }
+      if (paragraphs.length < 3) {
+        await new Promise((r) => setTimeout(r, 2500));
         paragraphs = tryExtract();
       }
     }

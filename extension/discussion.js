@@ -56,7 +56,7 @@ window.__rtaDiscussion = (() => {
         const sentence = sentences[idx++];
         const utt = new SpeechSynthesisUtterance(sentence);
         utt.voice = voice;
-        utt.rate = 0.95;
+        utt.rate = _speed * 0.95;
         let advanced = false;
         const advance = () => { if (advanced) return; advanced = true; clearTimeout(timer); speakNext(); };
         const timer = setTimeout(advance, (sentence.split(/\s+/).length / 142) * 60000 + 3000);
@@ -301,6 +301,7 @@ STYLE:
       const url = URL.createObjectURL(blob);
 
       const audio = new Audio(url);
+      audio.playbackRate = _speed;
       _currentAudio = audio;
 
       audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
@@ -332,6 +333,7 @@ STYLE:
     return new Promise((resolve, reject) => {
       if (_abortController?.signal.aborted) { URL.revokeObjectURL(url); reject(new Error('aborted')); return; }
       const audio = new Audio(url);
+      audio.playbackRate = _speed;
       _currentAudio = audio;
       audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
       audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; reject(new Error('Playback failed')); };
@@ -351,6 +353,7 @@ STYLE:
   let _active = false;
   let _paused = false;
   let _resumeCallbacks = [];
+  let _speed = 1;
   let _music = null;
   let _abortController = null;
   let _currentAudio = null;
@@ -376,6 +379,13 @@ STYLE:
   }
 
   function isPaused() { return _paused; }
+
+  function setSpeed(s) {
+    _speed = s;
+    if (_currentAudio) _currentAudio.playbackRate = s;
+  }
+
+  function getSpeed() { return _speed; }
 
   async function start(chunks, title, onStatus) {
     if (_active) return;
@@ -498,5 +508,5 @@ STYLE:
 
   function isActive() { return _active; }
 
-  return { start, stop, pause, resume, isPaused, isActive };
+  return { start, stop, pause, resume, isPaused, setSpeed, getSpeed, isActive };
 })();
