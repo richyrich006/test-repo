@@ -30,6 +30,11 @@ if (!window.__readAloud) {
     _elAudio: null,     // currently playing ElevenLabs Audio element
     _elStop: false,     // signal to stop the elevenLabsReadChunk loop
     _elFallback: false, // true once ElevenLabs quota is exhausted → use browser TTS
+    // Microsoft Edge TTS (free, no API key)
+    edgeTtsVoiceName: '', // e.g. 'en-US-AriaNeural'; '' = disabled
+    _edgeFallback: false, // true if Edge TTS fails → fall through to browser TTS
+    // Live time-remaining ticker
+    _timeTickTimer: null,
   };
 
   // Kick off async voice loading immediately so voices are ready before the
@@ -427,12 +432,14 @@ if (!window.__readAloud) {
   async function loadSettings() {
     try {
       const { rate = 1.25, pitch = 1, voiceName = '',
-              elevenLabsApiKey = '', elevenLabsVoiceId = '21m00Tcm4TlvDq8ikWAM' } =
-        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName', 'elevenLabsApiKey', 'elevenLabsVoiceId']);
+              elevenLabsApiKey = '', elevenLabsVoiceId = '21m00Tcm4TlvDq8ikWAM',
+              edgeTtsVoiceName = '' } =
+        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName', 'elevenLabsApiKey', 'elevenLabsVoiceId', 'edgeTtsVoiceName']);
       RA.rate = rate;
       RA.pitch = pitch;
       RA.voiceName = voiceName;
       RA.elevenLabsApiKey = elevenLabsApiKey;
+      RA.edgeTtsVoiceName = edgeTtsVoiceName;
       RA.elevenLabsVoiceId = elevenLabsVoiceId;
     } catch (_) {}
   }
@@ -654,6 +661,7 @@ if (!window.__readAloud) {
         RA.playing = false;
         setPlayBtn(false);
         stopKeepAlive();
+      stopTimeTicker();
         clearWordTimers();
         clearTimeout(RA.noStartTimer);
 
@@ -1039,6 +1047,73 @@ if (!window.__readAloud) {
       setPlayBtn(false);
       RA.playing = false;
       stopKeepAlive();
+      stopTimeTicker();
+    }
+  }
+
+  // ── Microsoft Edge TTS (free neural voices, no API key) ───────────────────
+
+  function fetchAndPlayEdgeTTS(text) {
+    return new Promise(async (resolve, reject) => {
+      if (RA._elStop) { reject(new Error('stopped')); return; }
+      let resp;
+      try {
+        resp = await chrome.runtime.sendMessage({
+          action: 'edgeTTSFetch',
+          text: normalizeTTSText(text),
+          voiceName: RA.edgeTtsVoiceName,
+          rate: RA.rate,
+        });
+      } catch (err) { reject(err); return; }
+
+      if (!resp.ok) { reject(new Error(resp.error || 'Edge TTS error')); return; }
+
+      const binary = atob(resp.audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+      const audio = new Audio(url);
+      RA._elAudio = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); RA._elAudio = null; resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); RA._elAudio = null; reject(new Error('Playback failed')); };
+      audio.play().catch((err) => { URL.revokeObjectURL(url); RA._elAudio = null; reject(err); });
+    });
+  }
+
+  async function edgeTTSReadChunk(startIdx, startCharOffset = 0) {
+    RA._elStop = false;
+    for (let idx = startIdx; idx < RA.chunks.length; idx++) {
+      if (RA._elStop || !RA.playing) break;
+
+      RA.chunkIndex = idx;
+      RA.lastBoundaryChar = idx === startIdx ? startCharOffset : 0;
+      setActivePara(idx);
+      setStatus(timeRemainingStr(idx));
+
+      const charOffset = idx === startIdx ? startCharOffset : 0;
+      const text = charOffset > 0 ? RA.chunks[idx].substring(charOffset) : RA.chunks[idx];
+      scheduleWordHighlights(idx, charOffset);
+
+      try {
+        await fetchAndPlayEdgeTTS(text);
+        clearWordTimers();
+        if (!RA._elStop) trackWords(RA.chunks[idx]);
+      } catch (err) {
+        if (err.message === 'stopped' || RA._elStop) { break; }
+        // Permanent failure → fall through to browser TTS
+        RA._edgeFallback = true;
+        setStatus('Edge TTS unavailable — switching to browser TTS');
+        startReading(idx, charOffset);
+        return;
+      }
+    }
+
+    if (!RA._elStop && RA.playing) {
+      setStatus('Done');
+      setPlayBtn(false);
+      RA.playing = false;
+      stopKeepAlive();
+      stopTimeTicker();
     }
   }
 
@@ -1051,6 +1126,20 @@ if (!window.__readAloud) {
 
   function stopKeepAlive() {
     clearInterval(RA.keepAliveTimer);
+  }
+
+  // ── Live time-remaining ticker ─────────────────────────────────────────────
+  // Updates the status bar every second while playing so the countdown is live.
+
+  function startTimeTicker() {
+    clearInterval(RA._timeTickTimer);
+    RA._timeTickTimer = setInterval(() => {
+      if (RA.playing) setStatus(timeRemainingStr(RA.chunkIndex));
+    }, 1000);
+  }
+
+  function stopTimeTicker() {
+    clearInterval(RA._timeTickTimer);
   }
 
   function clearWordTimers() {
@@ -1199,8 +1288,13 @@ if (!window.__readAloud) {
   // Only the spoken string is changed — displayed chunk text is untouched,
   // so word-highlight char offsets remain valid.
   function normalizeTTSText(text) {
-    // Replace year-range integers (1000–2099) with their spoken form
-    return text.replace(/\b(1\d{3}|20\d{2})\b/g, (m) => yearToWords(parseInt(m, 10)));
+    return text
+      // Abbreviations like C.D.C., U.S., F.B.I. — remove the dots so TTS
+      // reads them as letters ("CDC") not as pauses ("C. D. C.").
+      .replace(/\b([A-Z])\.([A-Z])(?:\.([A-Z]))?(?:\.([A-Z]))?\.?(?=\s|$|[,;:!?)])/g,
+        (_, a, b, c, d) => [a, b, c, d].filter(Boolean).join(''))
+      // Replace year-range integers (1000–2099) with their spoken form
+      .replace(/\b(1\d{3}|20\d{2})\b/g, (m) => yearToWords(parseInt(m, 10)));
   }
 
   // ─── Sentence splitting ───────────────────────────────────────────────────
@@ -1322,6 +1416,7 @@ if (!window.__readAloud) {
               setPlayBtn(false);
               RA.playing = false;
               stopKeepAlive();
+      stopTimeTicker();
             }
           }
         }
@@ -1342,6 +1437,7 @@ if (!window.__readAloud) {
       setPlayBtn(false);
       RA.playing = false;
       stopKeepAlive();
+      stopTimeTicker();
       return;
     }
 
@@ -1349,21 +1445,41 @@ if (!window.__readAloud) {
     clearWordTimers();
     clearTimeout(RA.noStartTimer);
 
-    // Route to ElevenLabs when an API key is configured and quota not exhausted
+    // Priority 1: ElevenLabs (API key configured, quota not exhausted)
     if (RA.elevenLabsApiKey && !RA._elFallback) {
       RA.chunkIndex = idx;
       RA.uttStartTime = Date.now();
       RA.uttCharOffset = charOffset;
+      RA.lastBoundaryChar = charOffset;
       RA.playing = true;
       RA.paused = false;
       setPlayBtn(true);
       setActivePara(idx);
       setStatus(timeRemainingStr(idx));
       startKeepAlive();
+      startTimeTicker();
       elevenLabsReadChunk(idx, charOffset);
       return;
     }
 
+    // Priority 2: Microsoft Edge TTS (free neural voices, no API key needed)
+    if (RA.edgeTtsVoiceName && !RA._edgeFallback) {
+      RA.chunkIndex = idx;
+      RA.uttStartTime = Date.now();
+      RA.uttCharOffset = charOffset;
+      RA.lastBoundaryChar = charOffset;
+      RA.playing = true;
+      RA.paused = false;
+      setPlayBtn(true);
+      setActivePara(idx);
+      setStatus(timeRemainingStr(idx));
+      startKeepAlive();
+      startTimeTicker();
+      edgeTTSReadChunk(idx, charOffset);
+      return;
+    }
+
+    // Priority 3: Browser TTS (free, built-in)
     // Cancel any previous or stuck utterance before queuing new ones.
     // Chrome silently drops the very first speak() call after page load if the
     // TTS daemon hasn't started yet; canceling first forces it to initialise.
@@ -1379,6 +1495,7 @@ if (!window.__readAloud) {
     setActivePara(idx);
     setStatus(timeRemainingStr(idx));
     startKeepAlive();
+    startTimeTicker();
 
     if (charOffset > 0) highlightWord(idx, charOffset);
 
@@ -1438,6 +1555,7 @@ if (!window.__readAloud) {
           setPlayBtn(false);
           RA.playing = false;
           stopKeepAlive();
+      stopTimeTicker();
         }
       }
     };
@@ -1503,6 +1621,7 @@ if (!window.__readAloud) {
             setPlayBtn(false);
             RA.playing = false;
             stopKeepAlive();
+      stopTimeTicker();
           }
         }
       };
@@ -1700,6 +1819,7 @@ if (!window.__readAloud) {
     RA.pauseChunk = 0;
     RA.pauseOffset = 0;
     RA._elFallback = false;
+    RA._edgeFallback = false;
   }
 
   // ─── Entry points ─────────────────────────────────────────────────────────

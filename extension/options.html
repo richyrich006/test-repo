@@ -68,6 +68,45 @@
       </div>
     </section>
 
+    <!-- Microsoft Edge TTS ─────────────────────────────────────────────── -->
+    <section class="card">
+      <h2>Microsoft Edge TTS <span class="badge-free">Free</span></h2>
+      <p class="section-desc">Natural-sounding neural voices from Microsoft — completely free, no API key required. When selected, replaces browser TTS for article reading.</p>
+      <div class="setting-row">
+        <label class="setting-label" for="edge-voice-select">Reading voice</label>
+        <select id="edge-voice-select">
+          <option value="">Off — use browser TTS</option>
+          <optgroup label="US English">
+            <option value="en-US-AriaNeural">Aria — female, warm &amp; natural</option>
+            <option value="en-US-JennyNeural">Jenny — female, friendly</option>
+            <option value="en-US-MichelleNeural">Michelle — female, professional</option>
+            <option value="en-US-SaraNeural">Sara — female, pleasant</option>
+            <option value="en-US-GuyNeural">Guy — male, authoritative</option>
+            <option value="en-US-ChristopherNeural">Christopher — male, natural</option>
+            <option value="en-US-EricNeural">Eric — male, calm</option>
+            <option value="en-US-RogerNeural">Roger — male, engaging</option>
+            <option value="en-US-SteffanNeural">Steffan — male, professional</option>
+            <option value="en-US-BrianNeural">Brian — male, warm</option>
+          </optgroup>
+          <optgroup label="British English">
+            <option value="en-GB-SoniaNeural">Sonia — female</option>
+            <option value="en-GB-LibbyNeural">Libby — female</option>
+            <option value="en-GB-MiaNeural">Mia — female</option>
+            <option value="en-GB-RyanNeural">Ryan — male</option>
+            <option value="en-GB-ThomasNeural">Thomas — male</option>
+          </optgroup>
+          <optgroup label="Other English">
+            <option value="en-AU-NatashaNeural">Natasha — Australian female</option>
+            <option value="en-AU-WilliamNeural">William — Australian male</option>
+            <option value="en-CA-ClaraNeural">Clara — Canadian female</option>
+            <option value="en-CA-LiamNeural">Liam — Canadian male</option>
+            <option value="en-IN-NeerjaNeural">Neerja — Indian female</option>
+            <option value="en-IN-PrabhatNeural">Prabhat — Indian male</option>
+          </optgroup>
+        </select>
+      </div>
+    </section>
+
     <!-- AI Podcast ──────────────────────────────────────────────────────── -->
     <section class="card">
       <h2>AI Podcast</h2>
@@ -96,14 +135,28 @@
       <div class="setting-row">
         <label class="setting-label" for="el-voice-select">Reading voice</label>
         <select id="el-voice-select">
-          <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Female, neutral)</option>
-          <option value="pNInz6obpgDQGcFmaJgB">Adam (Male, deep)</option>
-          <option value="EXAVITQu4vr4xnSDxMaL">Bella (Female, soft)</option>
-          <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Male, conversational)</option>
-          <option value="ErXwobaYiN019PkySvjV">Antoni (Male, well-rounded)</option>
-          <option value="VR6AewLTigWG4xSOukaG">Arnold (Male, crisp)</option>
-          <option value="AZnzlk1XvdvUeBnXmlld">Domi (Female, strong)</option>
-          <option value="yoZ06aMxZJJ28mfd3POQ">Sam (Male, raspy)</option>
+          <optgroup label="Female">
+            <option value="21m00Tcm4TlvDq8ikWAM">Rachel — neutral American</option>
+            <option value="EXAVITQu4vr4xnSDxMaL">Bella — soft</option>
+            <option value="AZnzlk1XvdvUeBnXmlld">Domi — strong</option>
+            <option value="Xb7hH8MSUJpSbSDYk0k2">Alice — crisp British</option>
+            <option value="XB0fDUnXU5powFXDhCwa">Charlotte — articulate British</option>
+            <option value="XrExE9yKIg1WjnnlVkGX">Matilda — clear Australian</option>
+            <option value="pFZP5JQG7iQjIQuC4Bku">Lily — composed British</option>
+            <option value="SAz9YHcvj6GT2YYXdXww">River — neutral</option>
+          </optgroup>
+          <optgroup label="Male">
+            <option value="pNInz6obpgDQGcFmaJgB">Adam — deep</option>
+            <option value="TxGEqnHWrfWFTfGW9XjX">Josh — conversational</option>
+            <option value="ErXwobaYiN019PkySvjV">Antoni — well-rounded</option>
+            <option value="VR6AewLTigWG4xSOukaG">Arnold — crisp</option>
+            <option value="yoZ06aMxZJJ28mfd3POQ">Sam — raspy</option>
+            <option value="onwK4e9ZLuTAKqWW03F9">Daniel — authoritative British</option>
+            <option value="JBFqnCBsd6RMkjVDRZzb">George — measured British</option>
+            <option value="TX3LPaxmHKxFdv7VOQHJ">Liam — clear</option>
+            <option value="nPczCjzI2devNBz1zQrb">Brian — warm</option>
+            <option value="N2lVS1w4EtoT3dr4eOWO">Callum — composed British</option>
+          </optgroup>
         </select>
       </div>
       <p class="api-key-note">When an ElevenLabs key is set, it will be used for article reading and discussion podcasts. Falls back to browser voices if not set.</p>

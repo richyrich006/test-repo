@@ -135,6 +135,17 @@ chrome.storage.sync.get({ elevenLabsApiKey: '', elevenLabsVoiceId: '21m00Tcm4Tlv
   });
 });
 
+// ── Microsoft Edge TTS ─────────────────────────────────────────────────────
+
+chrome.storage.sync.get({ edgeTtsVoiceName: '' }, ({ edgeTtsVoiceName }) => {
+  const sel = document.getElementById('edge-voice-select');
+  if (!sel) return;
+  sel.value = edgeTtsVoiceName;
+  sel.addEventListener('change', () => {
+    chrome.storage.sync.set({ edgeTtsVoiceName: sel.value });
+  });
+});
+
 // ── Reading list ───────────────────────────────────────────────────────────
 
 chrome.storage.local.get({ readingList: [] }, ({ readingList }) => {
