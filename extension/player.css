@@ -103,6 +103,16 @@
   display: flex;
 }
 
+/* ── Compact mode: show only logo · play · speed · settings · expand ─────── */
+
+#rta-panel:not(.rta-expanded) #rta-podcast,
+#rta-panel:not(.rta-expanded) #rta-discussion,
+#rta-panel:not(.rta-expanded) #rta-save,
+#rta-panel:not(.rta-expanded) #rta-close,
+#rta-panel:not(.rta-expanded) .rta-sep {
+  display: none;
+}
+
 #rta-actions {
   display: flex;
   align-items: center;

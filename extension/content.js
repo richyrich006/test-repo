@@ -20,6 +20,8 @@ if (!window.__readAloud) {
     wordTimers: [],     // setTimeout IDs for timer-based word highlighting
     uttStartTime: 0,    // Date.now() when current utterance began
     uttCharOffset: 0,   // charOffset passed to startReading for current utterance
+    lastBoundaryTime: 0,  // Date.now() of the most recent onboundary event (for rate calibration)
+    lastBoundaryChar: 0,  // globalOffset of the most recent onboundary event
     pauseChunk: 0,      // chunk index saved on pause
     pauseOffset: 0,     // char offset saved on pause
     // ElevenLabs
@@ -1021,12 +1023,33 @@ if (!window.__readAloud) {
   // so timer-based highlights don't run ahead of the audio.
   const AUDIO_STARTUP_MS = 120;
 
+  // Derive actual ms-per-character from two consecutive onboundary events.
+  // Returns a calibrated value when enough data exists, otherwise null.
+  // Also updates RA.lastBoundaryTime / RA.lastBoundaryChar for the next call.
+  function computeCalibratedMsPerChar(globalOffset) {
+    const now = Date.now();
+    let result = null;
+    if (RA.lastBoundaryTime > 0) {
+      const charsDelta = globalOffset - RA.lastBoundaryChar;
+      const timeDelta  = now - RA.lastBoundaryTime;
+      if (charsDelta >= 2 && timeDelta >= 20) {
+        // Clamp to a sane range so a single outlier can't derail highlights
+        result = Math.max(15, Math.min(300, timeDelta / charsDelta));
+      }
+    }
+    RA.lastBoundaryTime = now;
+    RA.lastBoundaryChar = globalOffset;
+    return result;
+  }
+
   // Schedule per-word highlight timeouts, anchored to the moment a sentence
   // utterance actually starts (called from onstart, not before speak()).
   // maxOffset limits scheduling to the current sentence's words only — this
   // prevents stale timers from carrying over into subsequent sentences.
   // onboundary events cancel these and take over with exact positions when fired.
-  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity, startDelay = AUDIO_STARTUP_MS) {
+  // overrideMsPerChar: when provided (from onboundary calibration) replaces the
+  // static 13-chars/sec estimate, fixing drift at 1.25× and higher rates.
+  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity, startDelay = AUDIO_STARTUP_MS, overrideMsPerChar = null) {
     clearWordTimers();
     const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
     if (!para) return;
@@ -1037,8 +1060,9 @@ if (!window.__readAloud) {
       : 0;
     if (startIdx < 0) return;
 
-    // ~13 chars/sec at 1× (≈ 156 wpm); scales linearly with rate
-    const msPerChar = 1000 / (13 * RA.rate);
+    // ~13 chars/sec at 1× (≈ 156 wpm); scales linearly with rate.
+    // Replaced by the calibrated value from onboundary when available.
+    const msPerChar = overrideMsPerChar !== null ? overrideMsPerChar : 1000 / (13 * RA.rate);
     let elapsed = 0;
 
     for (let i = startIdx; i < words.length; i++) {
@@ -1223,6 +1247,9 @@ if (!window.__readAloud) {
         RA.chunkIndex = idx;
         RA.uttStartTime = Date.now();
         RA.uttCharOffset = sOffset;
+        // Reset boundary calibration at the start of each sentence
+        RA.lastBoundaryTime = 0;
+        RA.lastBoundaryChar = 0;
         // Anchor highlights to actual speech start, bounded to this sentence only
         scheduleWordHighlights(idx, sOffset, sOffset + sentence.length);
         if (isFirst) {
@@ -1234,11 +1261,12 @@ if (!window.__readAloud) {
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
         const globalOffset = sOffset + event.charIndex;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
         clearWordTimers();
         highlightWord(idx, globalOffset);
-        // Reschedule remaining words from current position so highlights stay
-        // in sync even when onboundary fires intermittently.
-        scheduleWordHighlights(idx, globalOffset, sOffset + sentence.length, 0);
+        // Reschedule remaining words using the observed speech rate so highlights
+        // stay locked to actual TTS speed at 1.25× / 1.5× / 2×.
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentence.length, 0, calMs);
       };
 
       utt.onend = () => {
@@ -1342,15 +1370,18 @@ if (!window.__readAloud) {
     utterance.onstart = () => {
       // Speech actually started — cancel the silent-failure watchdog.
       clearTimeout(RA.noStartTimer);
+      RA.lastBoundaryTime = 0;
+      RA.lastBoundaryChar = 0;
       scheduleWordHighlights(idx, firstGlobalOffset, firstGlobalOffset + firstText.length);
     };
 
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
       const globalOffset = firstGlobalOffset + event.charIndex;
+      const calMs = computeCalibratedMsPerChar(globalOffset);
       clearWordTimers();
       highlightWord(idx, globalOffset);
-      scheduleWordHighlights(idx, globalOffset, firstGlobalOffset + firstText.length, 0);
+      scheduleWordHighlights(idx, globalOffset, firstGlobalOffset + firstText.length, 0, calMs);
     };
 
     utterance.onend = () => {
@@ -1407,15 +1438,18 @@ if (!window.__readAloud) {
       utt.onstart = () => {
         RA.uttStartTime = Date.now();
         RA.uttCharOffset = sOffset;
+        RA.lastBoundaryTime = 0;
+        RA.lastBoundaryChar = 0;
         scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
       };
 
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
         const globalOffset = sOffset + event.charIndex;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
         clearWordTimers();
         highlightWord(idx, globalOffset);
-        scheduleWordHighlights(idx, globalOffset, sOffset + sentences[i].length, 0);
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentences[i].length, 0, calMs);
       };
 
       utt.onend = () => {
