@@ -657,18 +657,17 @@ if (!window.__readAloud) {
         clearWordTimers();
         clearTimeout(RA.noStartTimer);
 
+        // Save the last highlighted word as the resume point (exact for browser
+        // TTS via onboundary, timer-approximate for ElevenLabs).
+        RA.pauseOffset = RA.lastBoundaryChar;
+
         if (RA.elevenLabsApiKey) {
-          RA.pauseOffset = 0;
           stopElAudio();
         } else {
-          // Estimate current char position before canceling so we can resume later.
-          // RA.synth.pause() is unreliable in Chrome — queued sentences keep playing.
-          const elapsed = Date.now() - RA.uttStartTime;
-          const charsPerMs = (12.5 * RA.rate) / 1000;
-          RA.pauseOffset = Math.min(
-            Math.round(RA.uttCharOffset + elapsed * charsPerMs),
-            RA.chunks[RA.chunkIndex].length - 1
-          );
+          // pause() immediately mutes the current audio output; cancel() then
+          // clears the queued utterances.  Using both together is faster than
+          // cancel() alone which can let buffered audio bleed through briefly.
+          RA.synth.pause();
           RA.synth.cancel();
         }
       } else {
@@ -1014,6 +1013,7 @@ if (!window.__readAloud) {
       setStatus(timeRemainingStr(idx));
 
       const charOffset = idx === startIdx ? startCharOffset : 0;
+      RA.lastBoundaryChar = charOffset;
       const text = charOffset > 0 ? RA.chunks[idx].substring(charOffset) : RA.chunks[idx];
       scheduleWordHighlights(idx, charOffset);
 
@@ -1119,6 +1119,7 @@ if (!window.__readAloud) {
 
       RA.wordTimers.push(
         setTimeout(() => {
+          RA.lastBoundaryChar = wordStart; // keep resume position in sync
           const prev = document.querySelector('.rta-word.rta-hl');
           if (prev) prev.classList.remove('rta-hl');
           word.classList.add('rta-hl');
@@ -1371,6 +1372,7 @@ if (!window.__readAloud) {
     RA.chunkIndex = idx;
     RA.uttStartTime = Date.now();
     RA.uttCharOffset = charOffset;
+    RA.lastBoundaryChar = charOffset;
     RA.playing = true;
     RA.paused = false;
     setPlayBtn(true);
@@ -1411,6 +1413,7 @@ if (!window.__readAloud) {
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
       const globalOffset = firstGlobalOffset + event.charIndex;
+      RA.lastBoundaryChar = globalOffset;
       const calMs = computeCalibratedMsPerChar(globalOffset);
       clearWordTimers();
       highlightWord(idx, globalOffset);
@@ -1477,6 +1480,7 @@ if (!window.__readAloud) {
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
         const globalOffset = sOffset + event.charIndex;
+        RA.lastBoundaryChar = globalOffset;
         const calMs = computeCalibratedMsPerChar(globalOffset);
         clearWordTimers();
         highlightWord(idx, globalOffset);
