@@ -1499,45 +1499,61 @@ if (!window.__readAloud) {
 
     if (charOffset > 0) highlightWord(idx, charOffset);
 
+    const PHRASE_WORDS = 5;
     const fullText = RA.chunks[idx];
-    const sentences = sentenceSplit(fullText);
-    const offsets = sentenceOffsets(fullText, sentences);
 
-    // Find which sentence contains charOffset
-    let startSentIdx = sentences.length - 1;
-    for (let i = 0; i < sentences.length - 1; i++) {
-      if (charOffset < offsets[i + 1]) { startSentIdx = i; break; }
+    // Build flat array of {text, offset} phrases (~5 words each) across all sentences.
+    const phrases = (() => {
+      const result = [];
+      const sents = sentenceSplit(fullText);
+      const sOffs = sentenceOffsets(fullText, sents);
+      for (let si = 0; si < sents.length; si++) {
+        const tokens = sents[si].match(/\S+(?:\s*)/g) || [];
+        let pOff = 0, group = [];
+        for (let ti = 0; ti < tokens.length; ti++) {
+          group.push(tokens[ti]);
+          if (group.length >= PHRASE_WORDS || ti === tokens.length - 1) {
+            const raw = group.join('');
+            const text = raw.trimEnd();
+            if (text) result.push({ text, offset: sOffs[si] + pOff });
+            pOff += raw.length;
+            group = [];
+          }
+        }
+      }
+      return result;
+    })();
+
+    // Find which phrase contains charOffset
+    let startPhraseIdx = 0;
+    for (let i = phrases.length - 1; i >= 0; i--) {
+      if (phrases[i].offset <= charOffset) { startPhraseIdx = i; break; }
     }
 
-    // Speak sentences one at a time — never pre-queue the next sentence so that
-    // cancel() only needs to drain the current sentence (not the whole paragraph).
-    // This eliminates random mid-sentence pauses while keeping pause latency to
-    // at most one sentence length.
-    function speakSentence(si) {
-      if (!RA.playing || RA.paused) return;
-      if (si >= sentences.length) {
-        trackWords(fullText);
-        if (idx + 1 < RA.chunks.length) {
-          startReading(idx + 1, 0);
-        } else {
-          setStatus('Done');
-          setPlayBtn(false);
-          RA.playing = false;
-          stopKeepAlive();
-          stopTimeTicker();
+    // Queue a single phrase and wire up handlers.
+    // The trick for seamless playback AND immediate pause:
+    //   • Each phrase's onstart (not onend) immediately queues the NEXT phrase.
+    //     Queuing inside onstart means audio for phrase N+1 is pre-fetched while
+    //     phrase N is already playing → zero audible gap between phrases.
+    //   • When the user pauses, cancel() kills only the one pre-queued phrase.
+    //     The currently-playing phrase drains (~5 words, ≤1s), then stops.
+    function queuePhrase(pi) {
+      if (pi >= phrases.length || !RA.playing || RA.paused) {
+        if (pi >= phrases.length && RA.playing && !RA.paused) {
+          // All phrases in this chunk finished — chain to next chunk from onend.
         }
         return;
       }
 
-      const sOffset = offsets[si];
-      let speakText = sentences[si];
-      let speakOffset = sOffset;
-      // First sentence may be trimmed if resuming mid-sentence
-      if (si === startSentIdx && charOffset > sOffset) {
-        speakText = sentences[si].substring(charOffset - sOffset);
+      const { text: pText, offset: pOffset } = phrases[pi];
+      let speakText = pText;
+      let speakOffset = pOffset;
+      // First phrase may be trimmed to resume from charOffset mid-phrase.
+      if (pi === startPhraseIdx && charOffset > pOffset) {
+        speakText = pText.substring(charOffset - pOffset);
         speakOffset = charOffset;
       }
-      if (!speakText.trim()) { speakSentence(si + 1); return; }
+      if (!speakText.trim()) { queuePhrase(pi + 1); return; }
 
       const utt = new SpeechSynthesisUtterance(normalizeTTSText(speakText));
       utt.rate = RA.rate;
@@ -1545,10 +1561,13 @@ if (!window.__readAloud) {
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
-        if (si === startSentIdx) clearTimeout(RA.noStartTimer);
+        if (pi === startPhraseIdx) clearTimeout(RA.noStartTimer);
         RA.uttStartTime  = Date.now();
         RA.uttCharOffset = speakOffset;
         scheduleWordHighlights(idx, speakOffset, speakOffset + speakText.length);
+        // Pre-queue next phrase NOW (while this one plays) to eliminate the
+        // inter-utterance gap.  cancel() on pause will kill this lookahead.
+        if (pi + 1 < phrases.length) queuePhrase(pi + 1);
       };
 
       utt.onboundary = (event) => {
@@ -1563,7 +1582,21 @@ if (!window.__readAloud) {
 
       utt.onend = () => {
         clearWordTimers();
-        if (!RA.paused && RA.playing) speakSentence(si + 1);
+        if (RA.paused || !RA.playing) return;
+        if (pi + 1 >= phrases.length) {
+          // Last phrase of this chunk — chain to next chunk.
+          trackWords(fullText);
+          if (idx + 1 < RA.chunks.length) {
+            startReading(idx + 1, 0);
+          } else {
+            setStatus('Done');
+            setPlayBtn(false);
+            RA.playing = false;
+            stopKeepAlive();
+            stopTimeTicker();
+          }
+        }
+        // else: next phrase was already queued in onstart — nothing to do.
       };
 
       utt.onerror = (e) => {
@@ -1585,7 +1618,7 @@ if (!window.__readAloud) {
       }, 700);
     }
 
-    speakSentence(startSentIdx);
+    queuePhrase(startPhraseIdx);
   }
 
   // Skip forward or backward by `seconds` seconds using estimated char position.
