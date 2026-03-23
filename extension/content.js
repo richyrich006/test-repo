@@ -121,7 +121,7 @@ if (!window.__readAloud) {
       const container = document.querySelector(sel);
       if (!container) continue;
       const paras = Array.from(container.querySelectorAll('p, li, div, blockquote'))
-        .filter((el) => isLeafDiv(el) && !el.closest('form, [role="dialog"], [role="alertdialog"]'))
+        .filter((el) => isLeafDiv(el) && !el.closest('form, [role="dialog"], [role="alertdialog"]') && !isInsideColoredBox(el))
         .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
         .filter((t) => t.length > 20 && !(t.length < 120 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
       if (paras.length >= 3) return paras;
@@ -148,7 +148,7 @@ if (!window.__readAloud) {
     ].join(', ');
 
     const paras = Array.from(document.querySelectorAll('p'))
-      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel') && !el.closest('form, [role="dialog"], [role="alertdialog"]'))
+      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel') && !el.closest('form, [role="dialog"], [role="alertdialog"]') && !isInsideColoredBox(el))
       .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
       .filter((t) => t.length > 40 && !(t.length < 150 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
 
@@ -194,6 +194,10 @@ if (!window.__readAloud) {
       if (text.length < 20) return;
       if (text.length < 120 && BOILERPLATE_RE.test(text)) return;
       if (isNavConcatenation(text)) return;
+      // Skip list items / paragraphs where most of the text is inside links
+      // — these are "related articles" / "trending" link-list widgets.
+      const anchorLen = Array.from(el.querySelectorAll('a')).reduce((n, a) => n + a.textContent.trim().length, 0);
+      if (text.length > 30 && anchorLen / text.length > 0.75) return;
       paras.push(text);
     });
 
@@ -260,6 +264,33 @@ if (!window.__readAloud) {
     return el.textContent.trim().length >= 20;
   }
 
+  // Returns true when the element sits inside a visibly colored container
+  // (yellow highlight boxes, info banners, related-articles widgets, etc.).
+  // Walks up to 6 ancestors checking computed background-color; allows white,
+  // near-white, and near-black (dark-mode) backgrounds.
+  function isInsideColoredBox(el) {
+    let node = el.parentElement;
+    let depth = 0;
+    while (node && node !== document.body && depth < 6) {
+      const bg = window.getComputedStyle(node).backgroundColor;
+      const m = bg && bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (m) {
+        const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1;
+        if (alpha > 0.1) {
+          const rn = +m[1] / 255, gn = +m[2] / 255, bn = +m[3] / 255;
+          const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+          const L = (max + min) / 2;
+          const S = max === min ? 0 : (max - min) / (1 - Math.abs(2 * L - 1));
+          // Colored box: noticeable saturation + not near-white/near-black
+          if (S > 0.2 && L > 0.2 && L < 0.94) return true;
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+    return false;
+  }
+
   function markPageElements(paragraphs) {
     const candidates = Array.from(
       document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div, blockquote')
@@ -291,6 +322,8 @@ if (!window.__readAloud) {
         // Skip container elements with block-level children — replacing their innerHTML
         // would destroy page layout (cards, wizard steps, etc.).
         if (bestEl.querySelector('div, section, article, fieldset, table, ul, ol')) return;
+        // Skip elements inside colored highlight boxes (yellow widgets, info banners, etc.)
+        if (isInsideColoredBox(bestEl)) return;
         used.add(bestEl);
         bestEl._rtaOrigHTML = bestEl.innerHTML;
         bestEl.setAttribute('data-rta-chunk', idx);
@@ -608,9 +641,17 @@ if (!window.__readAloud) {
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
       } else if (RA.playing) {
-        // ElevenLabs mode: stop audio and save paragraph position
+        // Set state BEFORE stopping so onend/onerror callbacks triggered by
+        // cancel()/stopElAudio() see the paused flag and don't restart playback.
+        RA.pauseChunk = RA.chunkIndex;
+        RA.paused = true;
+        RA.playing = false;
+        setPlayBtn(false);
+        stopKeepAlive();
+        clearWordTimers();
+        clearTimeout(RA.noStartTimer);
+
         if (RA.elevenLabsApiKey) {
-          RA.pauseChunk = RA.chunkIndex;
           RA.pauseOffset = 0;
           stopElAudio();
         } else {
@@ -618,18 +659,12 @@ if (!window.__readAloud) {
           // RA.synth.pause() is unreliable in Chrome — queued sentences keep playing.
           const elapsed = Date.now() - RA.uttStartTime;
           const charsPerMs = (12.5 * RA.rate) / 1000;
-          RA.pauseChunk = RA.chunkIndex;
           RA.pauseOffset = Math.min(
             Math.round(RA.uttCharOffset + elapsed * charsPerMs),
             RA.chunks[RA.chunkIndex].length - 1
           );
           RA.synth.cancel();
         }
-        RA.paused = true;
-        RA.playing = false;
-        setPlayBtn(false);
-        stopKeepAlive();
-        clearWordTimers();
       } else {
         // Resume from the position saved at pause time
         RA.paused = false;
@@ -945,7 +980,9 @@ if (!window.__readAloud) {
         clearWordTimers();
         if (!RA._elStop) trackWords(RA.chunks[idx]);
       } catch (err) {
-        if (err.message === 'stopped') { break; }
+        // _elStop means the user paused/stopped — stopElAudio() clears the audio
+        // src which fires onerror; treat it the same as 'stopped'.
+        if (err.message === 'stopped' || RA._elStop) { break; }
         // Any ElevenLabs failure (quota exceeded, library voice restriction, etc.)
         // — fall back to free browser TTS seamlessly
         RA._elFallback = true;
