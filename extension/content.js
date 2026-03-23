@@ -1499,43 +1499,23 @@ if (!window.__readAloud) {
 
     if (charOffset > 0) highlightWord(idx, charOffset);
 
-    const PHRASE_WORDS = 5;
     const fullText = RA.chunks[idx];
+    const sentences = sentenceSplit(fullText);
+    const offsets = sentenceOffsets(fullText, sentences);
 
-    // Build a flat array of {text, offset} phrases (~5 words each) across all
-    // sentences so cancel() only drains the current short phrase, not a full sentence.
-    const phrases = (() => {
-      const result = [];
-      const sents = sentenceSplit(fullText);
-      const sOffs = sentenceOffsets(fullText, sents);
-      for (let si = 0; si < sents.length; si++) {
-        const tokens = sents[si].match(/\S+(?:\s*)/g) || [];
-        let pOff = 0, group = [];
-        for (let ti = 0; ti < tokens.length; ti++) {
-          group.push(tokens[ti]);
-          if (group.length >= PHRASE_WORDS || ti === tokens.length - 1) {
-            const raw = group.join('');
-            const text = raw.trimEnd();
-            if (text) result.push({ text, offset: sOffs[si] + pOff });
-            pOff += raw.length;
-            group = [];
-          }
-        }
-      }
-      return result;
-    })();
-
-    // Find which phrase contains charOffset
-    let startPhraseIdx = 0;
-    for (let i = phrases.length - 1; i >= 0; i--) {
-      if (phrases[i].offset <= charOffset) { startPhraseIdx = i; break; }
+    // Find which sentence contains charOffset
+    let startSentIdx = sentences.length - 1;
+    for (let i = 0; i < sentences.length - 1; i++) {
+      if (charOffset < offsets[i + 1]) { startSentIdx = i; break; }
     }
 
-    // Speak phrases one at a time — never pre-queue the next phrase so that
-    // cancel() only needs to drain the current ~5-word phrase (~1s max).
-    function speakPhrase(pi) {
+    // Speak sentences one at a time — never pre-queue the next sentence so that
+    // cancel() only needs to drain the current sentence (not the whole paragraph).
+    // This eliminates random mid-sentence pauses while keeping pause latency to
+    // at most one sentence length.
+    function speakSentence(si) {
       if (!RA.playing || RA.paused) return;
-      if (pi >= phrases.length) {
+      if (si >= sentences.length) {
         trackWords(fullText);
         if (idx + 1 < RA.chunks.length) {
           startReading(idx + 1, 0);
@@ -1549,15 +1529,15 @@ if (!window.__readAloud) {
         return;
       }
 
-      const { text: pText, offset: pOffset } = phrases[pi];
-      let speakText = pText;
-      let speakOffset = pOffset;
-      // First phrase may be trimmed to resume from charOffset mid-phrase
-      if (pi === startPhraseIdx && charOffset > pOffset) {
-        speakText = pText.substring(charOffset - pOffset);
+      const sOffset = offsets[si];
+      let speakText = sentences[si];
+      let speakOffset = sOffset;
+      // First sentence may be trimmed if resuming mid-sentence
+      if (si === startSentIdx && charOffset > sOffset) {
+        speakText = sentences[si].substring(charOffset - sOffset);
         speakOffset = charOffset;
       }
-      if (!speakText.trim()) { speakPhrase(pi + 1); return; }
+      if (!speakText.trim()) { speakSentence(si + 1); return; }
 
       const utt = new SpeechSynthesisUtterance(normalizeTTSText(speakText));
       utt.rate = RA.rate;
@@ -1565,7 +1545,7 @@ if (!window.__readAloud) {
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
-        if (pi === startPhraseIdx) clearTimeout(RA.noStartTimer);
+        if (si === startSentIdx) clearTimeout(RA.noStartTimer);
         RA.uttStartTime  = Date.now();
         RA.uttCharOffset = speakOffset;
         scheduleWordHighlights(idx, speakOffset, speakOffset + speakText.length);
@@ -1583,7 +1563,7 @@ if (!window.__readAloud) {
 
       utt.onend = () => {
         clearWordTimers();
-        if (!RA.paused && RA.playing) speakPhrase(pi + 1);
+        if (!RA.paused && RA.playing) speakSentence(si + 1);
       };
 
       utt.onerror = (e) => {
@@ -1605,7 +1585,7 @@ if (!window.__readAloud) {
       }, 700);
     }
 
-    speakPhrase(startPhraseIdx);
+    speakSentence(startSentIdx);
   }
 
   // Skip forward or backward by `seconds` seconds using estimated char position.
