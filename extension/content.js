@@ -1086,25 +1086,51 @@ if (!window.__readAloud) {
   async function edgeTTSReadChunk(startIdx, startCharOffset = 0) {
     RA._elStop = false;
 
-    // Kick off the first fetch immediately so audio is ready with minimal gap.
-    const firstCharOffset = startCharOffset;
-    const firstText = firstCharOffset > 0
-      ? RA.chunks[startIdx].substring(firstCharOffset)
-      : RA.chunks[startIdx];
-    let prefetch = fetchEdgeTTSAudio(firstText);
+    // Group consecutive paragraphs into TTS batches large enough that network
+    // round-trips are hidden by playback duration.  Short paragraphs (a sentence
+    // or two) would otherwise create an audible gap after every couple of words.
+    const MIN_BATCH_CHARS = 400;
 
-    for (let idx = startIdx; idx < RA.chunks.length; idx++) {
+    function buildBatches() {
+      const batches = [];
+      let i = startIdx;
+      while (i < RA.chunks.length) {
+        const batchIdxs = [];
+        let text = '';
+        while (i < RA.chunks.length) {
+          const chunkText = (i === startIdx && startCharOffset > 0)
+            ? RA.chunks[i].substring(startCharOffset)
+            : RA.chunks[i];
+          batchIdxs.push(i);
+          text += (text ? ' ' : '') + chunkText;
+          i++;
+          if (text.length >= MIN_BATCH_CHARS) break;
+        }
+        batches.push({ idxs: batchIdxs, text });
+      }
+      return batches;
+    }
+
+    const batches = buildBatches();
+    if (batches.length === 0) return;
+
+    let prefetch = fetchEdgeTTSAudio(batches[0].text);
+
+    for (let bi = 0; bi < batches.length; bi++) {
       if (RA._elStop || !RA.playing) break;
 
-      RA.chunkIndex = idx;
-      RA.lastBoundaryChar = idx === startIdx ? startCharOffset : 0;
-      setActivePara(idx);
-      setStatus(timeRemainingStr(idx));
+      const { idxs, text } = batches[bi];
+      const firstIdx = idxs[0];
+      const lastIdx  = idxs[idxs.length - 1];
+      const charOffset = firstIdx === startIdx ? startCharOffset : 0;
 
-      const charOffset = idx === startIdx ? startCharOffset : 0;
-      scheduleWordHighlights(idx, charOffset);
+      RA.chunkIndex = lastIdx;
+      RA.lastBoundaryChar = charOffset;
+      setActivePara(firstIdx);
+      setStatus(timeRemainingStr(firstIdx));
+      scheduleWordHighlights(firstIdx, charOffset);
 
-      // Wait for this chunk's audio (already in-flight).
+      // Wait for this batch's audio (already in-flight).
       let url;
       try {
         url = await prefetch;
@@ -1112,24 +1138,24 @@ if (!window.__readAloud) {
         if (err.message === 'stopped' || RA._elStop) { break; }
         RA._edgeFallback = true;
         setStatus('Edge TTS unavailable — switching to browser TTS');
-        startReading(idx, charOffset);
+        startReading(firstIdx, charOffset);
         return;
       }
 
-      // Start fetching the next chunk immediately while this one plays.
-      if (idx + 1 < RA.chunks.length) {
-        prefetch = fetchEdgeTTSAudio(RA.chunks[idx + 1]);
+      // Start fetching next batch immediately while this one plays.
+      if (bi + 1 < batches.length) {
+        prefetch = fetchEdgeTTSAudio(batches[bi + 1].text);
       }
 
       try {
         await playEdgeTTSAudio(url);
         clearWordTimers();
-        if (!RA._elStop) trackWords(RA.chunks[idx]);
+        if (!RA._elStop) idxs.forEach((ci) => trackWords(RA.chunks[ci]));
       } catch (err) {
         if (err.message === 'stopped' || RA._elStop) { break; }
         RA._edgeFallback = true;
         setStatus('Edge TTS unavailable — switching to browser TTS');
-        startReading(idx, charOffset);
+        startReading(firstIdx, charOffset);
         return;
       }
     }
