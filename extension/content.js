@@ -992,6 +992,7 @@ if (!window.__readAloud) {
         reject(new Error(resp.error || `ElevenLabs error ${resp.status}`));
         return;
       }
+      if (RA._elStop) { reject(new Error('stopped')); return; }
 
       const binary = atob(resp.audio);
       const bytes = new Uint8Array(binary.length);
@@ -1064,6 +1065,9 @@ if (!window.__readAloud) {
       } catch (err) { reject(err); return; }
 
       if (!resp.ok) { reject(new Error(resp.error || 'Edge TTS error')); return; }
+      // Pause may have been clicked while the fetch was in-flight — bail now
+      // before creating or playing the Audio element.
+      if (RA._elStop) { reject(new Error('stopped')); return; }
 
       const binary = atob(resp.audio);
       const bytes = new Uint8Array(binary.length);
