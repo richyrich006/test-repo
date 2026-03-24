@@ -1051,28 +1051,30 @@ if (!window.__readAloud) {
 
   // ── Microsoft Edge TTS (free neural voices, no API key) ───────────────────
 
-  function fetchAndPlayEdgeTTS(text) {
-    return new Promise(async (resolve, reject) => {
-      if (RA._elStop) { reject(new Error('stopped')); return; }
-      let resp;
-      try {
-        resp = await chrome.runtime.sendMessage({
-          action: 'edgeTTSFetch',
-          text: normalizeTTSText(text),
-          voiceName: RA.edgeTtsVoiceName || 'en-US-AriaNeural',
-          rate: RA.rate,
-        });
-      } catch (err) { reject(err); return; }
+  // Fetch Edge TTS audio and return a blob URL (does not play).
+  async function fetchEdgeTTSAudio(text) {
+    if (RA._elStop) throw new Error('stopped');
+    let resp;
+    try {
+      resp = await chrome.runtime.sendMessage({
+        action: 'edgeTTSFetch',
+        text: normalizeTTSText(text),
+        voiceName: RA.edgeTtsVoiceName || 'en-US-AriaNeural',
+        rate: RA.rate,
+      });
+    } catch (err) { throw err; }
+    if (!resp.ok) throw new Error(resp.error || 'Edge TTS error');
+    if (RA._elStop) throw new Error('stopped');
+    const binary = atob(resp.audio);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+  }
 
-      if (!resp.ok) { reject(new Error(resp.error || 'Edge TTS error')); return; }
-      // Pause may have been clicked while the fetch was in-flight — bail now
-      // before creating or playing the Audio element.
-      if (RA._elStop) { reject(new Error('stopped')); return; }
-
-      const binary = atob(resp.audio);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+  // Play a blob URL returned by fetchEdgeTTSAudio.
+  function playEdgeTTSAudio(url) {
+    return new Promise((resolve, reject) => {
+      if (RA._elStop) { URL.revokeObjectURL(url); reject(new Error('stopped')); return; }
       const audio = new Audio(url);
       RA._elAudio = audio;
       audio.onended = () => { URL.revokeObjectURL(url); RA._elAudio = null; resolve(); };
@@ -1083,6 +1085,14 @@ if (!window.__readAloud) {
 
   async function edgeTTSReadChunk(startIdx, startCharOffset = 0) {
     RA._elStop = false;
+
+    // Kick off the first fetch immediately so audio is ready with minimal gap.
+    const firstCharOffset = startCharOffset;
+    const firstText = firstCharOffset > 0
+      ? RA.chunks[startIdx].substring(firstCharOffset)
+      : RA.chunks[startIdx];
+    let prefetch = fetchEdgeTTSAudio(firstText);
+
     for (let idx = startIdx; idx < RA.chunks.length; idx++) {
       if (RA._elStop || !RA.playing) break;
 
@@ -1092,16 +1102,31 @@ if (!window.__readAloud) {
       setStatus(timeRemainingStr(idx));
 
       const charOffset = idx === startIdx ? startCharOffset : 0;
-      const text = charOffset > 0 ? RA.chunks[idx].substring(charOffset) : RA.chunks[idx];
       scheduleWordHighlights(idx, charOffset);
 
+      // Wait for this chunk's audio (already in-flight).
+      let url;
       try {
-        await fetchAndPlayEdgeTTS(text);
+        url = await prefetch;
+      } catch (err) {
+        if (err.message === 'stopped' || RA._elStop) { break; }
+        RA._edgeFallback = true;
+        setStatus('Edge TTS unavailable — switching to browser TTS');
+        startReading(idx, charOffset);
+        return;
+      }
+
+      // Start fetching the next chunk immediately while this one plays.
+      if (idx + 1 < RA.chunks.length) {
+        prefetch = fetchEdgeTTSAudio(RA.chunks[idx + 1]);
+      }
+
+      try {
+        await playEdgeTTSAudio(url);
         clearWordTimers();
         if (!RA._elStop) trackWords(RA.chunks[idx]);
       } catch (err) {
         if (err.message === 'stopped' || RA._elStop) { break; }
-        // Permanent failure → fall through to browser TTS
         RA._edgeFallback = true;
         setStatus('Edge TTS unavailable — switching to browser TTS');
         startReading(idx, charOffset);
