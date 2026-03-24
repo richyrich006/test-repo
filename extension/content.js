@@ -1051,7 +1051,7 @@ if (!window.__readAloud) {
 
   // ── Microsoft Edge TTS (free neural voices, no API key) ───────────────────
 
-  // Fetch Edge TTS audio and return a blob URL (does not play).
+  // Fetch Edge TTS audio for the given text and return a blob URL (does not play).
   async function fetchEdgeTTSAudio(text) {
     if (RA._elStop) throw new Error('stopped');
     let resp;
@@ -1071,93 +1071,82 @@ if (!window.__readAloud) {
     return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
   }
 
-  // Play a blob URL returned by fetchEdgeTTSAudio.
-  function playEdgeTTSAudio(url) {
-    return new Promise((resolve, reject) => {
-      if (RA._elStop) { URL.revokeObjectURL(url); reject(new Error('stopped')); return; }
-      const audio = new Audio(url);
-      RA._elAudio = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); RA._elAudio = null; resolve(); };
-      audio.onerror = () => { URL.revokeObjectURL(url); RA._elAudio = null; reject(new Error('Playback failed')); };
-      audio.play().catch((err) => { URL.revokeObjectURL(url); RA._elAudio = null; reject(err); });
-    });
-  }
-
+  // Read from startIdx by fetching ALL remaining text as a single request and
+  // playing it as one continuous Audio element — structurally impossible to gap.
   async function edgeTTSReadChunk(startIdx, startCharOffset = 0) {
     RA._elStop = false;
 
-    // Group consecutive paragraphs into TTS batches large enough that network
-    // round-trips are hidden by playback duration.  Short paragraphs (a sentence
-    // or two) would otherwise create an audible gap after every couple of words.
-    const MIN_BATCH_CHARS = 400;
+    // Build the full text and record each chunk's character start position.
+    const parts = [];
+    let cumChars = 0;
+    for (let i = startIdx; i < RA.chunks.length; i++) {
+      const text = (i === startIdx && startCharOffset > 0)
+        ? RA.chunks[i].substring(startCharOffset)
+        : RA.chunks[i];
+      parts.push({ idx: i, charStart: cumChars });
+      cumChars += text.length + 1; // +1 for the joining space
+    }
+    if (parts.length === 0) return;
+    const totalChars = cumChars;
 
-    function buildBatches() {
-      const batches = [];
-      let i = startIdx;
-      while (i < RA.chunks.length) {
-        const batchIdxs = [];
-        let text = '';
-        while (i < RA.chunks.length) {
-          const chunkText = (i === startIdx && startCharOffset > 0)
-            ? RA.chunks[i].substring(startCharOffset)
-            : RA.chunks[i];
-          batchIdxs.push(i);
-          text += (text ? ' ' : '') + chunkText;
-          i++;
-          if (text.length >= MIN_BATCH_CHARS) break;
-        }
-        batches.push({ idxs: batchIdxs, text });
+    const fullText = RA.chunks
+      .slice(startIdx)
+      .map((c, i) => (i === 0 && startCharOffset > 0) ? c.substring(startCharOffset) : c)
+      .join(' ');
+
+    setStatus('Loading…');
+
+    // One fetch — one WebSocket connection — one MP3 blob.
+    let url;
+    try {
+      url = await fetchEdgeTTSAudio(fullText);
+    } catch (err) {
+      if (err.message === 'stopped' || RA._elStop) return;
+      RA._edgeFallback = true;
+      setStatus('Edge TTS unavailable — switching to browser TTS');
+      startReading(startIdx, startCharOffset);
+      return;
+    }
+    if (RA._elStop) { URL.revokeObjectURL(url); return; }
+
+    // One Audio element — plays the entire article without interruption.
+    const audio = new Audio(url);
+    RA._elAudio = audio;
+
+    // Advance paragraph highlight based on playback position relative to char counts.
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration || RA._elStop) return;
+      const charPos = Math.floor((audio.currentTime / audio.duration) * totalChars);
+      // Find the last part whose charStart is <= charPos.
+      let active = parts[0];
+      for (const p of parts) {
+        if (p.charStart <= charPos) active = p;
+        else break;
       }
-      return batches;
+      if (active.idx !== RA.chunkIndex) {
+        RA.chunkIndex = active.idx;
+        setActivePara(active.idx);
+        setStatus(timeRemainingStr(active.idx));
+      }
+    });
+
+    let playbackError = false;
+    try {
+      await new Promise((resolve, reject) => {
+        audio.onended = () => { URL.revokeObjectURL(url); RA._elAudio = null; resolve(); };
+        audio.onerror = () => { URL.revokeObjectURL(url); RA._elAudio = null; reject(new Error('Playback failed')); };
+        audio.play().catch((err) => { URL.revokeObjectURL(url); RA._elAudio = null; reject(err); });
+      });
+    } catch (err) {
+      if (err.message === 'stopped' || RA._elStop) return;
+      playbackError = true;
     }
 
-    const batches = buildBatches();
-    if (batches.length === 0) return;
-
-    let prefetch = fetchEdgeTTSAudio(batches[0].text);
-
-    for (let bi = 0; bi < batches.length; bi++) {
-      if (RA._elStop || !RA.playing) break;
-
-      const { idxs, text } = batches[bi];
-      const firstIdx = idxs[0];
-      const lastIdx  = idxs[idxs.length - 1];
-      const charOffset = firstIdx === startIdx ? startCharOffset : 0;
-
-      RA.chunkIndex = lastIdx;
-      RA.lastBoundaryChar = charOffset;
-      setActivePara(firstIdx);
-      setStatus(timeRemainingStr(firstIdx));
-      scheduleWordHighlights(firstIdx, charOffset);
-
-      // Wait for this batch's audio (already in-flight).
-      let url;
-      try {
-        url = await prefetch;
-      } catch (err) {
-        if (err.message === 'stopped' || RA._elStop) { break; }
-        RA._edgeFallback = true;
-        setStatus('Edge TTS unavailable — switching to browser TTS');
-        startReading(firstIdx, charOffset);
-        return;
-      }
-
-      // Start fetching next batch immediately while this one plays.
-      if (bi + 1 < batches.length) {
-        prefetch = fetchEdgeTTSAudio(batches[bi + 1].text);
-      }
-
-      try {
-        await playEdgeTTSAudio(url);
-        clearWordTimers();
-        if (!RA._elStop) idxs.forEach((ci) => trackWords(RA.chunks[ci]));
-      } catch (err) {
-        if (err.message === 'stopped' || RA._elStop) { break; }
-        RA._edgeFallback = true;
-        setStatus('Edge TTS unavailable — switching to browser TTS');
-        startReading(firstIdx, charOffset);
-        return;
-      }
+    if (playbackError) {
+      RA._edgeFallback = true;
+      setStatus('Edge TTS unavailable — switching to browser TTS');
+      startReading(startIdx, startCharOffset);
+      return;
     }
 
     if (!RA._elStop && RA.playing) {
