@@ -501,7 +501,7 @@ if (!window.__readAloud) {
     const existing = document.getElementById('rta-panel');
     if (existing) existing.remove();
 
-    const speeds = [0.75, 1, 1.25, 1.5, 2];
+    const speeds = [0.75, 1, 1.25, 1.5, 2, 2.5, 3];
     const speedBtns = speeds
       .map((s) => `<button class="rta-speed${s === RA.rate ? ' rta-speed-active' : ''}" data-speed="${s}">${s}x</button>`)
       .join('');
@@ -690,7 +690,7 @@ if (!window.__readAloud) {
     document.getElementById('rta-skip-back').addEventListener('click', () => skip(-10));
     document.getElementById('rta-skip-fwd').addEventListener('click', () => skip(10));
 
-    const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+    const SPEEDS = [0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 
     function applySpeed(newRate) {
       RA.rate = newRate;
