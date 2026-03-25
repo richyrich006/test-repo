@@ -1891,9 +1891,6 @@ if (!window.__readAloud) {
     // URL path patterns that indicate a login/auth flow
     if (BLOCKED_PATH_RE.test(pathname)) return true;
 
-    // Page has a password field → it's a login form, not an article
-    if (document.querySelector('input[type="password"]')) return true;
-
     return false;
   }
 
@@ -1918,8 +1915,9 @@ if (!window.__readAloud) {
   async function activate(silent = false) {
     if (RA.active) { teardown(); return; }
 
-    // Never inject on auth/login/account-picker pages
-    if (isBlockedPage()) return;
+    // On auto-activate only: skip known auth/system pages so the player
+    // never appears uninvited. Manual clicks always proceed.
+    if (silent && isBlockedPage()) return;
 
     // Load persisted speed + voice before doing anything else
     await loadSettings();
