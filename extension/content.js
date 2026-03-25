@@ -1921,6 +1921,9 @@ if (!window.__readAloud) {
 
     // Load persisted speed + voice before doing anything else
     await loadSettings();
+    // Another activation may have completed while we were awaiting — bail out
+    // rather than tearing down the UI it already built.
+    if (RA.active) return;
 
     let paragraphs = [];
 
@@ -1950,10 +1953,12 @@ if (!window.__readAloud) {
       // delays to give React/hydration time to complete.
       if (paragraphs.length < 3) {
         await new Promise((r) => setTimeout(r, 1500));
+        if (RA.active) return;
         paragraphs = tryExtract();
       }
       if (paragraphs.length < 3) {
         await new Promise((r) => setTimeout(r, 2500));
+        if (RA.active) return;
         paragraphs = tryExtract();
       }
     }
@@ -1971,6 +1976,7 @@ if (!window.__readAloud) {
     RA.chunks = paragraphs;
     // Load persisted position for this URL; clamp in case article shrank
     RA.chunkIndex = Math.min(await loadPosition(), Math.max(0, paragraphs.length - 1));
+    if (RA.active) return;
     RA.active = true;
     buildUI(null, paragraphs);
     // PDF pages have no HTML paragraphs to mark; skip for PDF mode
