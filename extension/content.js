@@ -1897,19 +1897,18 @@ if (!window.__readAloud) {
     return false;
   }
 
-  // Returns true when the extracted paragraphs don't add up to enough real
-  // content to be worth reading (catches auth pickers, 404 pages, etc.).
+  // Returns true when the extracted paragraphs add up to enough real content
+  // to be worth auto-activating (catches auth pickers, 404s, stub pages, etc.).
   function hasEnoughContent(paragraphs) {
-    // Need at least 5 paragraphs of actual content
-    if (paragraphs.length < 5) return false;
+    // Require the same 3-paragraph floor used by extraction, so the check
+    // never fires on pages where extraction itself already returned nothing.
+    if (paragraphs.length < 3) return false;
 
-    // Total word count must be substantial (< 120 words ≈ < 1 minute of reading)
+    // Total word count below ~100 words means it's a label/picker page, not
+    // an article. The Google account chooser has ~15 words; a short news item
+    // has 200+.
     const totalWords = paragraphs.reduce((n, p) => n + p.split(/\s+/).filter(Boolean).length, 0);
-    if (totalWords < 120) return false;
-
-    // Average paragraph must look like a sentence, not just a name/email/label
-    const avgLen = paragraphs.reduce((n, p) => n + p.length, 0) / paragraphs.length;
-    if (avgLen < 60) return false;
+    if (totalWords < 100) return false;
 
     return true;
   }
