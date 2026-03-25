@@ -20,6 +20,8 @@ if (!window.__readAloud) {
     wordTimers: [],     // setTimeout IDs for timer-based word highlighting
     uttStartTime: 0,    // Date.now() when current utterance began
     uttCharOffset: 0,   // charOffset passed to startReading for current utterance
+    lastBoundaryTime: 0,  // Date.now() of the most recent onboundary event (for rate calibration)
+    lastBoundaryChar: 0,  // globalOffset of the most recent onboundary event
     pauseChunk: 0,      // chunk index saved on pause
     pauseOffset: 0,     // char offset saved on pause
     // ElevenLabs
@@ -28,6 +30,11 @@ if (!window.__readAloud) {
     _elAudio: null,     // currently playing ElevenLabs Audio element
     _elStop: false,     // signal to stop the elevenLabsReadChunk loop
     _elFallback: false, // true once ElevenLabs quota is exhausted → use browser TTS
+    // Microsoft Edge TTS (free, no API key)
+    edgeTtsVoiceName: '', // e.g. 'en-US-AriaNeural'; '' = disabled
+    _edgeFallback: false, // true if Edge TTS fails → fall through to browser TTS
+    // Live time-remaining ticker
+    _timeTickTimer: null,
   };
 
   // Kick off async voice loading immediately so voices are ready before the
@@ -87,6 +94,10 @@ if (!window.__readAloud) {
     '[itemprop="articleBody"]',
     'article',
     '[role="article"]',
+    // Yahoo News / Yahoo Finance (CaaS platform)
+    '.caas-body',
+    '[class*="caas-body"]',
+    '[class*="caas-article-module-body"]',
     '[class*="article-body"]',
     '[class*="article-content"]',
     '[class*="article-text"]',
@@ -121,7 +132,7 @@ if (!window.__readAloud) {
       const container = document.querySelector(sel);
       if (!container) continue;
       const paras = Array.from(container.querySelectorAll('p, li, div, blockquote'))
-        .filter((el) => isLeafDiv(el) && !el.closest('form, [role="dialog"], [role="alertdialog"]'))
+        .filter((el) => isLeafDiv(el) && !el.closest('form, [role="dialog"], [role="alertdialog"]') && !isInsideColoredBox(el))
         .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
         .filter((t) => t.length > 20 && !(t.length < 120 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
       if (paras.length >= 3) return paras;
@@ -148,7 +159,7 @@ if (!window.__readAloud) {
     ].join(', ');
 
     const paras = Array.from(document.querySelectorAll('p'))
-      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel') && !el.closest('form, [role="dialog"], [role="alertdialog"]'))
+      .filter((el) => !el.closest(SKIP) && !el.closest('#rta-panel') && !el.closest('form, [role="dialog"], [role="alertdialog"]') && !isInsideColoredBox(el))
       .map((el) => el.textContent.replace(/\s+/g, ' ').trim())
       .filter((t) => t.length > 40 && !(t.length < 150 && BOILERPLATE_RE.test(t)) && !isNavConcatenation(t));
 
@@ -194,6 +205,10 @@ if (!window.__readAloud) {
       if (text.length < 20) return;
       if (text.length < 120 && BOILERPLATE_RE.test(text)) return;
       if (isNavConcatenation(text)) return;
+      // Skip list items / paragraphs where most of the text is inside links
+      // — these are "related articles" / "trending" link-list widgets.
+      const anchorLen = Array.from(el.querySelectorAll('a')).reduce((n, a) => n + a.textContent.trim().length, 0);
+      if (text.length > 30 && anchorLen / text.length > 0.75) return;
       paras.push(text);
     });
 
@@ -260,6 +275,33 @@ if (!window.__readAloud) {
     return el.textContent.trim().length >= 20;
   }
 
+  // Returns true when the element sits inside a visibly colored container
+  // (yellow highlight boxes, info banners, related-articles widgets, etc.).
+  // Walks up to 6 ancestors checking computed background-color; allows white,
+  // near-white, and near-black (dark-mode) backgrounds.
+  function isInsideColoredBox(el) {
+    let node = el.parentElement;
+    let depth = 0;
+    while (node && node !== document.body && depth < 6) {
+      const bg = window.getComputedStyle(node).backgroundColor;
+      const m = bg && bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (m) {
+        const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1;
+        if (alpha > 0.1) {
+          const rn = +m[1] / 255, gn = +m[2] / 255, bn = +m[3] / 255;
+          const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+          const L = (max + min) / 2;
+          const S = max === min ? 0 : (max - min) / (1 - Math.abs(2 * L - 1));
+          // Colored box: noticeable saturation + not near-white/near-black
+          if (S > 0.2 && L > 0.2 && L < 0.94) return true;
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+    return false;
+  }
+
   function markPageElements(paragraphs) {
     const candidates = Array.from(
       document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div, blockquote')
@@ -291,6 +333,8 @@ if (!window.__readAloud) {
         // Skip container elements with block-level children — replacing their innerHTML
         // would destroy page layout (cards, wizard steps, etc.).
         if (bestEl.querySelector('div, section, article, fieldset, table, ul, ol')) return;
+        // Skip elements inside colored highlight boxes (yellow widgets, info banners, etc.)
+        if (isInsideColoredBox(bestEl)) return;
         used.add(bestEl);
         bestEl._rtaOrigHTML = bestEl.innerHTML;
         bestEl.setAttribute('data-rta-chunk', idx);
@@ -388,12 +432,14 @@ if (!window.__readAloud) {
   async function loadSettings() {
     try {
       const { rate = 1.25, pitch = 1, voiceName = '',
-              elevenLabsApiKey = '', elevenLabsVoiceId = '21m00Tcm4TlvDq8ikWAM' } =
-        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName', 'elevenLabsApiKey', 'elevenLabsVoiceId']);
+              elevenLabsApiKey = '', elevenLabsVoiceId = '21m00Tcm4TlvDq8ikWAM',
+              edgeTtsVoiceName = '' } =
+        await chrome.storage.sync.get(['rate', 'pitch', 'voiceName', 'elevenLabsApiKey', 'elevenLabsVoiceId', 'edgeTtsVoiceName']);
       RA.rate = rate;
       RA.pitch = pitch;
       RA.voiceName = voiceName;
       RA.elevenLabsApiKey = elevenLabsApiKey;
+      RA.edgeTtsVoiceName = edgeTtsVoiceName;
       RA.elevenLabsVoiceId = elevenLabsVoiceId;
     } catch (_) {}
   }
@@ -455,7 +501,7 @@ if (!window.__readAloud) {
     const existing = document.getElementById('rta-panel');
     if (existing) existing.remove();
 
-    const speeds = [0.75, 1, 1.25, 1.5, 2];
+    const speeds = [0.75, 1, 1.25, 1.5, 2, 2.5, 3];
     const speedBtns = speeds
       .map((s) => `<button class="rta-speed${s === RA.rate ? ' rta-speed-active' : ''}" data-speed="${s}">${s}x</button>`)
       .join('');
@@ -513,6 +559,25 @@ if (!window.__readAloud) {
     `;
 
     document.body.appendChild(panel);
+
+    // Mini-player for podcast / discussion — floats above the main bar
+    const podMini = document.createElement('div');
+    podMini.id = 'rta-pod-mini';
+    podMini.innerHTML = `
+      <span id="rta-pod-mini-icon">🎙</span>
+      <span id="rta-pod-mini-status">Loading…</span>
+      <select id="rta-pod-mini-speed" title="Playback speed">
+        <option value="0.8">0.8×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.2">1.2×</option>
+        <option value="1.5">1.5×</option>
+        <option value="2">2×</option>
+      </select>
+      <button id="rta-pod-mini-pp" title="Pause">⏸</button>
+      <button id="rta-pod-mini-stop" title="Stop">✕</button>
+    `;
+    document.body.appendChild(podMini);
+
     makeDraggable(panel);
     attachEvents(paragraphs);
   }
@@ -585,51 +650,31 @@ if (!window.__readAloud) {
     });
 
     const togglePlay = () => {
-      // If podcast or NPR news is active, the play button acts as a stop button
-      const pod = window.__rtaPodcast;
-      const disc = window.__rtaDiscussion;
-      if (pod && pod.isActive()) {
-        pod.stop();
-        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
-        hidePodcastToast();
-        setPlayBtn(false);
-        setStatus('Ready');
-        return;
-      }
-      if (disc && disc.isActive()) {
-        disc.stop();
-        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
-        hidePodcastToast();
-        setPlayBtn(false);
-        setStatus('Ready');
-        return;
-      }
 
       if (!RA.playing && !RA.paused) {
         startReading(RA.chunkIndex);
       } else if (RA.playing) {
-        // ElevenLabs mode: stop audio and save paragraph position
-        if (RA.elevenLabsApiKey) {
-          RA.pauseChunk = RA.chunkIndex;
-          RA.pauseOffset = 0;
-          stopElAudio();
-        } else {
-          // Estimate current char position before canceling so we can resume later.
-          // RA.synth.pause() is unreliable in Chrome — queued sentences keep playing.
-          const elapsed = Date.now() - RA.uttStartTime;
-          const charsPerMs = (12.5 * RA.rate) / 1000;
-          RA.pauseChunk = RA.chunkIndex;
-          RA.pauseOffset = Math.min(
-            Math.round(RA.uttCharOffset + elapsed * charsPerMs),
-            RA.chunks[RA.chunkIndex].length - 1
-          );
-          RA.synth.cancel();
-        }
+        // Set state BEFORE stopping so onend/onerror callbacks triggered by
+        // cancel()/stopElAudio() see the paused flag and don't restart playback.
+        RA.pauseChunk = RA.chunkIndex;
         RA.paused = true;
         RA.playing = false;
         setPlayBtn(false);
         stopKeepAlive();
+      stopTimeTicker();
         clearWordTimers();
+        clearTimeout(RA.noStartTimer);
+
+        // Save the last highlighted word as the resume point (exact for browser
+        // TTS via onboundary, timer-approximate for ElevenLabs).
+        RA.pauseOffset = RA.lastBoundaryChar;
+
+        // Stop whichever audio backend is active.
+        // stopElAudio() is a no-op when no Audio element exists;
+        // synth.pause/cancel are no-ops when speechSynthesis isn't speaking.
+        stopElAudio();
+        RA.synth.pause();
+        RA.synth.cancel();
       } else {
         // Resume from the position saved at pause time
         RA.paused = false;
@@ -645,7 +690,7 @@ if (!window.__readAloud) {
     document.getElementById('rta-skip-back').addEventListener('click', () => skip(-10));
     document.getElementById('rta-skip-fwd').addEventListener('click', () => skip(10));
 
-    const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+    const SPEEDS = [0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 
     function applySpeed(newRate) {
       RA.rate = newRate;
@@ -701,7 +746,7 @@ if (!window.__readAloud) {
       }
     });
 
-    // Podcast button
+    // Podcast button — opens independent mini-player, does not interrupt TTS
     document.getElementById('rta-podcast').addEventListener('click', () => {
       const pod = window.__rtaPodcast;
       if (!pod) {
@@ -711,39 +756,25 @@ if (!window.__readAloud) {
 
       if (pod.isActive()) {
         pod.stop();
-        hidePodcastToast();
+        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+        hidePodMini();
         return;
       }
 
-      // Pause article reading if active
-      if (RA.playing) {
-        stopElAudio();
-        RA.synth.cancel();
-        RA.playing = false;
-        RA.paused = false;
-        setPlayBtn(false);
-        stopKeepAlive();
-        clearWordTimers();
-      }
-
-      const btn = document.getElementById('rta-podcast');
-      btn.classList.add('rta-podcast-active');
-      setPlayBtn(true);
+      document.getElementById('rta-podcast').classList.add('rta-podcast-active');
+      showPodMini('🎙', 'Loading news report…', pod);
 
       pod.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
-          btn.classList.remove('rta-podcast-active');
-          hidePodcastToast();
-          setPlayBtn(false);
-          setStatus('Ready');
+          document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+          hidePodMini();
         } else {
-          showPodcastToast(statusMsg);
-          setStatus(statusMsg);
+          updatePodMiniStatus(statusMsg);
         }
       });
     });
 
-    // Discussion podcast button (ElevenLabs multi-voice)
+    // Discussion podcast button — same independent mini-player pattern
     document.getElementById('rta-discussion').addEventListener('click', () => {
       const disc = window.__rtaDiscussion;
       if (!disc) {
@@ -753,35 +784,62 @@ if (!window.__readAloud) {
 
       if (disc.isActive()) {
         disc.stop();
-        hidePodcastToast();
+        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+        hidePodMini();
         return;
       }
 
-      if (RA.playing) {
-        stopElAudio();
-        RA.synth.cancel();
-        RA.playing = false;
-        RA.paused = false;
-        setPlayBtn(false);
-        stopKeepAlive();
-        clearWordTimers();
-      }
-
-      const btn = document.getElementById('rta-discussion');
-      btn.classList.add('rta-podcast-active');
-      setPlayBtn(true);
+      document.getElementById('rta-discussion').classList.add('rta-podcast-active');
+      showPodMini('👥', 'Generating discussion script…', disc);
 
       disc.start(RA.chunks, document.title, (statusMsg) => {
         if (statusMsg === null) {
-          btn.classList.remove('rta-podcast-active');
-          hidePodcastToast();
-          setPlayBtn(false);
-          setStatus('Ready');
+          document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+          hidePodMini();
         } else {
-          showPodcastToast(statusMsg);
-          setStatus(statusMsg);
+          updatePodMiniStatus(statusMsg);
         }
       });
+    });
+
+    // Mini-player speed
+    document.getElementById('rta-pod-mini-speed').addEventListener('change', (e) => {
+      const s = parseFloat(e.target.value);
+      const pod  = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      if (pod  && pod.isActive())  pod.setSpeed(s);
+      if (disc && disc.isActive()) disc.setSpeed(s);
+    });
+
+    // Mini-player play/pause
+    document.getElementById('rta-pod-mini-pp').addEventListener('click', () => {
+      const pod  = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      const engine = (pod && pod.isActive()) ? pod : (disc && disc.isActive()) ? disc : null;
+      if (!engine) return;
+      const ppBtn = document.getElementById('rta-pod-mini-pp');
+      if (engine.isPaused()) {
+        engine.resume();
+        ppBtn.textContent = '⏸';
+      } else {
+        engine.pause();
+        ppBtn.textContent = '▶';
+      }
+    });
+
+    // Mini-player stop
+    document.getElementById('rta-pod-mini-stop').addEventListener('click', () => {
+      const pod  = window.__rtaPodcast;
+      const disc = window.__rtaDiscussion;
+      if (pod && pod.isActive()) {
+        pod.stop();
+        document.getElementById('rta-podcast').classList.remove('rta-podcast-active');
+      }
+      if (disc && disc.isActive()) {
+        disc.stop();
+        document.getElementById('rta-discussion').classList.remove('rta-podcast-active');
+      }
+      hidePodMini();
     });
   }
 
@@ -819,6 +877,29 @@ if (!window.__readAloud) {
       clearTimeout(toast._t);
       toast.classList.remove('rta-toast-show');
     }
+  }
+
+  // ── Podcast / discussion mini-player ────────────────────────────────────────
+
+  function showPodMini(icon, status, engine) {
+    const mini = document.getElementById('rta-pod-mini');
+    if (!mini) return;
+    document.getElementById('rta-pod-mini-icon').textContent = icon;
+    document.getElementById('rta-pod-mini-status').textContent = status;
+    document.getElementById('rta-pod-mini-pp').textContent = '⏸';
+    const speedEl = document.getElementById('rta-pod-mini-speed');
+    if (speedEl && engine) speedEl.value = String(engine.getSpeed());
+    mini.classList.add('rta-pod-mini-show');
+  }
+
+  function updatePodMiniStatus(msg) {
+    const el = document.getElementById('rta-pod-mini-status');
+    if (el) el.textContent = msg;
+  }
+
+  function hidePodMini() {
+    const mini = document.getElementById('rta-pod-mini');
+    if (mini) mini.classList.remove('rta-pod-mini-show');
   }
 
   function setActivePara(idx) {
@@ -911,6 +992,7 @@ if (!window.__readAloud) {
         reject(new Error(resp.error || `ElevenLabs error ${resp.status}`));
         return;
       }
+      if (RA._elStop) { reject(new Error('stopped')); return; }
 
       const binary = atob(resp.audio);
       const bytes = new Uint8Array(binary.length);
@@ -937,6 +1019,7 @@ if (!window.__readAloud) {
       setStatus(timeRemainingStr(idx));
 
       const charOffset = idx === startIdx ? startCharOffset : 0;
+      RA.lastBoundaryChar = charOffset;
       const text = charOffset > 0 ? RA.chunks[idx].substring(charOffset) : RA.chunks[idx];
       scheduleWordHighlights(idx, charOffset);
 
@@ -945,7 +1028,9 @@ if (!window.__readAloud) {
         clearWordTimers();
         if (!RA._elStop) trackWords(RA.chunks[idx]);
       } catch (err) {
-        if (err.message === 'stopped') { break; }
+        // _elStop means the user paused/stopped — stopElAudio() clears the audio
+        // src which fires onerror; treat it the same as 'stopped'.
+        if (err.message === 'stopped' || RA._elStop) { break; }
         // Any ElevenLabs failure (quota exceeded, library voice restriction, etc.)
         // — fall back to free browser TTS seamlessly
         RA._elFallback = true;
@@ -960,6 +1045,116 @@ if (!window.__readAloud) {
       setPlayBtn(false);
       RA.playing = false;
       stopKeepAlive();
+      stopTimeTicker();
+    }
+  }
+
+  // ── Microsoft Edge TTS (free neural voices, no API key) ───────────────────
+
+  // Fetch Edge TTS audio for the given text and return a blob URL (does not play).
+  async function fetchEdgeTTSAudio(text) {
+    if (RA._elStop) throw new Error('stopped');
+    let resp;
+    try {
+      resp = await chrome.runtime.sendMessage({
+        action: 'edgeTTSFetch',
+        text: normalizeTTSText(text),
+        voiceName: RA.edgeTtsVoiceName || 'en-US-AriaNeural',
+        rate: RA.rate,
+      });
+    } catch (err) { throw err; }
+    if (!resp.ok) throw new Error(resp.error || 'Edge TTS error');
+    if (RA._elStop) throw new Error('stopped');
+    const binary = atob(resp.audio);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+  }
+
+  // Read from startIdx by fetching ALL remaining text as a single request and
+  // playing it as one continuous Audio element — structurally impossible to gap.
+  async function edgeTTSReadChunk(startIdx, startCharOffset = 0) {
+    RA._elStop = false;
+
+    // Build the full text and record each chunk's character start position.
+    const parts = [];
+    let cumChars = 0;
+    for (let i = startIdx; i < RA.chunks.length; i++) {
+      const text = (i === startIdx && startCharOffset > 0)
+        ? RA.chunks[i].substring(startCharOffset)
+        : RA.chunks[i];
+      parts.push({ idx: i, charStart: cumChars });
+      cumChars += text.length + 1; // +1 for the joining space
+    }
+    if (parts.length === 0) return;
+    const totalChars = cumChars;
+
+    const fullText = RA.chunks
+      .slice(startIdx)
+      .map((c, i) => (i === 0 && startCharOffset > 0) ? c.substring(startCharOffset) : c)
+      .join(' ');
+
+    setStatus('Loading…');
+
+    // One fetch — one WebSocket connection — one MP3 blob.
+    let url;
+    try {
+      url = await fetchEdgeTTSAudio(fullText);
+    } catch (err) {
+      if (err.message === 'stopped' || RA._elStop) return;
+      RA._edgeFallback = true;
+      setStatus('Edge TTS unavailable — switching to browser TTS');
+      startReading(startIdx, startCharOffset);
+      return;
+    }
+    if (RA._elStop) { URL.revokeObjectURL(url); return; }
+
+    // One Audio element — plays the entire article without interruption.
+    const audio = new Audio(url);
+    RA._elAudio = audio;
+
+    // Advance paragraph highlight based on playback position relative to char counts.
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration || RA._elStop) return;
+      const charPos = Math.floor((audio.currentTime / audio.duration) * totalChars);
+      // Find the last part whose charStart is <= charPos.
+      let active = parts[0];
+      for (const p of parts) {
+        if (p.charStart <= charPos) active = p;
+        else break;
+      }
+      if (active.idx !== RA.chunkIndex) {
+        RA.chunkIndex = active.idx;
+        setActivePara(active.idx);
+        setStatus(timeRemainingStr(active.idx));
+      }
+    });
+
+    let playbackError = false;
+    try {
+      await new Promise((resolve, reject) => {
+        audio.onended = () => { URL.revokeObjectURL(url); RA._elAudio = null; resolve(); };
+        audio.onerror = () => { URL.revokeObjectURL(url); RA._elAudio = null; reject(new Error('Playback failed')); };
+        audio.play().catch((err) => { URL.revokeObjectURL(url); RA._elAudio = null; reject(err); });
+      });
+    } catch (err) {
+      if (err.message === 'stopped' || RA._elStop) return;
+      playbackError = true;
+    }
+
+    if (playbackError) {
+      RA._edgeFallback = true;
+      setStatus('Edge TTS unavailable — switching to browser TTS');
+      startReading(startIdx, startCharOffset);
+      return;
+    }
+
+    if (!RA._elStop && RA.playing) {
+      setStatus('Done');
+      setPlayBtn(false);
+      RA.playing = false;
+      stopKeepAlive();
+      stopTimeTicker();
     }
   }
 
@@ -974,6 +1169,20 @@ if (!window.__readAloud) {
     clearInterval(RA.keepAliveTimer);
   }
 
+  // ── Live time-remaining ticker ─────────────────────────────────────────────
+  // Updates the status bar every second while playing so the countdown is live.
+
+  function startTimeTicker() {
+    clearInterval(RA._timeTickTimer);
+    RA._timeTickTimer = setInterval(() => {
+      if (RA.playing) setStatus(timeRemainingStr(RA.chunkIndex));
+    }, 1000);
+  }
+
+  function stopTimeTicker() {
+    clearInterval(RA._timeTickTimer);
+  }
+
   function clearWordTimers() {
     RA.wordTimers.forEach((t) => clearTimeout(t));
     RA.wordTimers = [];
@@ -984,12 +1193,29 @@ if (!window.__readAloud) {
   // so timer-based highlights don't run ahead of the audio.
   const AUDIO_STARTUP_MS = 120;
 
+  // Derive ms-per-character as a cumulative average from sentence start to the
+  // current boundary event.  Averaging over all chars spoken so far is far more
+  // stable than a noisy boundary-to-boundary delta, especially for short words.
+  // Returns null when there isn't enough data yet to produce a reliable estimate.
+  function computeCalibratedMsPerChar(globalOffset) {
+    if (!RA.uttStartTime || !RA.uttCharOffset) return null;
+    // Subtract AUDIO_STARTUP_MS to discount the TTS-engine startup lag that is
+    // already baked into the timer schedule (via startDelay in scheduleWordHighlights).
+    const elapsed    = Math.max(0, Date.now() - RA.uttStartTime - AUDIO_STARTUP_MS);
+    const charsSpoken = globalOffset - RA.uttCharOffset;
+    if (elapsed < 30 || charsSpoken < 4) return null;
+    // Clamp to a sane range so one bad measurement can't derail highlights
+    return Math.max(15, Math.min(300, elapsed / charsSpoken));
+  }
+
   // Schedule per-word highlight timeouts, anchored to the moment a sentence
   // utterance actually starts (called from onstart, not before speak()).
   // maxOffset limits scheduling to the current sentence's words only — this
   // prevents stale timers from carrying over into subsequent sentences.
   // onboundary events cancel these and take over with exact positions when fired.
-  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity) {
+  // overrideMsPerChar: when provided (from onboundary calibration) replaces the
+  // static 13-chars/sec estimate, fixing drift at 1.25× and higher rates.
+  function scheduleWordHighlights(chunkIdx, charOffset, maxOffset = Infinity, startDelay = AUDIO_STARTUP_MS, overrideMsPerChar = null) {
     clearWordTimers();
     const para = document.querySelector(`[data-rta-chunk="${chunkIdx}"]`);
     if (!para) return;
@@ -1000,8 +1226,9 @@ if (!window.__readAloud) {
       : 0;
     if (startIdx < 0) return;
 
-    // ~13 chars/sec at 1× (≈ 156 wpm); scales linearly with rate
-    const msPerChar = 1000 / (13 * RA.rate);
+    // ~13 chars/sec at 1× (≈ 156 wpm); scales linearly with rate.
+    // Replaced by the calibrated value from onboundary when available.
+    const msPerChar = overrideMsPerChar !== null ? overrideMsPerChar : 1000 / (13 * RA.rate);
     let elapsed = 0;
 
     for (let i = startIdx; i < words.length; i++) {
@@ -1017,11 +1244,12 @@ if (!window.__readAloud) {
         : wordStart + word.textContent.trim().length;
       const charSpan = nextWordStart - wordStart;
 
-      const delay = elapsed + AUDIO_STARTUP_MS;
+      const delay = elapsed + startDelay;
       elapsed += Math.max(charSpan * msPerChar, 60 / RA.rate);
 
       RA.wordTimers.push(
         setTimeout(() => {
+          RA.lastBoundaryChar = wordStart; // keep resume position in sync
           const prev = document.querySelector('.rta-word.rta-hl');
           if (prev) prev.classList.remove('rta-hl');
           word.classList.add('rta-hl');
@@ -1101,8 +1329,13 @@ if (!window.__readAloud) {
   // Only the spoken string is changed — displayed chunk text is untouched,
   // so word-highlight char offsets remain valid.
   function normalizeTTSText(text) {
-    // Replace year-range integers (1000–2099) with their spoken form
-    return text.replace(/\b(1\d{3}|20\d{2})\b/g, (m) => yearToWords(parseInt(m, 10)));
+    return text
+      // Abbreviations like C.D.C., U.S., F.B.I. — remove the dots so TTS
+      // reads them as letters ("CDC") not as pauses ("C. D. C.").
+      .replace(/\b([A-Z])\.([A-Z])(?:\.([A-Z]))?(?:\.([A-Z]))?\.?(?=\s|$|[,;:!?)])/g,
+        (_, a, b, c, d) => [a, b, c, d].filter(Boolean).join(''))
+      // Replace year-range integers (1000–2099) with their spoken form
+      .replace(/\b(1\d{3}|20\d{2})\b/g, (m) => yearToWords(parseInt(m, 10)));
   }
 
   // ─── Sentence splitting ───────────────────────────────────────────────────
@@ -1182,8 +1415,9 @@ if (!window.__readAloud) {
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
+        if (isFirst) clearTimeout(RA.noStartTimer);
         RA.chunkIndex = idx;
-        RA.uttStartTime = Date.now();
+        RA.uttStartTime  = Date.now();
         RA.uttCharOffset = sOffset;
         // Anchor highlights to actual speech start, bounded to this sentence only
         scheduleWordHighlights(idx, sOffset, sOffset + sentence.length);
@@ -1191,25 +1425,115 @@ if (!window.__readAloud) {
           setActivePara(idx);
           setStatus(timeRemainingStr(idx));
         }
-        // Chain: pre-queue the next chunk while the last sentence of this one plays
-        if (isLast) _buildAndQueueUtterance(idx + 1);
       };
 
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
+        const globalOffset = sOffset + event.charIndex;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
         clearWordTimers();
-        highlightWord(idx, sOffset + event.charIndex);
+        highlightWord(idx, globalOffset);
+        // Reschedule remaining words using the observed speech rate so highlights
+        // stay locked to actual TTS speed at 1.25× / 1.5× / 2×.
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentence.length, 0, calMs);
       };
 
       utt.onend = () => {
         clearWordTimers();
         if (isLast) {
           trackWords(fullText);
-          if (!RA.paused && idx + 1 >= RA.chunks.length) {
-            setStatus('Done');
-            setPlayBtn(false);
-            RA.playing = false;
-            stopKeepAlive();
+          if (!RA.paused && RA.playing) {
+            if (idx + 1 < RA.chunks.length) {
+              _buildAndQueueUtterance(idx + 1);
+              // Watchdog: if next chunk doesn't start within 1.5 s, force-restart it.
+              RA.noStartTimer = setTimeout(() => {
+                if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                  RA.synth.cancel();
+                  startReading(idx + 1, 0, true);
+                }
+              }, 1500);
+            } else {
+              setStatus('Done');
+              setPlayBtn(false);
+              RA.playing = false;
+              stopKeepAlive();
+      stopTimeTicker();
+            }
+          }
+        }
+      };
+
+      utt.onerror = (e) => {
+        clearWordTimers();
+        if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+      };
+
+      RA.synth.speak(utt);
+    });
+  }
+
+  // Queue all sentences of chunk[idx] as individual utterances upfront.
+  // All sentences are queued together so Chrome's speech engine plays them
+  // back-to-back with no gap. The last sentence chains to the next chunk.
+  function _buildAndQueueUtterance(idx) {
+    if (idx >= RA.chunks.length) return;
+
+    const fullText = RA.chunks[idx];
+    const sentences = sentenceSplit(fullText);
+    const offsets = sentenceOffsets(fullText, sentences);
+
+    sentences.forEach((sentence, sIdx) => {
+      const isFirst = sIdx === 0;
+      const isLast  = sIdx === sentences.length - 1;
+      const sOffset = offsets[sIdx];
+
+      const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentence));
+      utt.rate  = RA.rate;
+      utt.pitch = RA.pitch;
+      utt.voice = getBestVoice();
+
+      utt.onstart = () => {
+        if (isFirst) clearTimeout(RA.noStartTimer);
+        RA.chunkIndex    = idx;
+        RA.uttStartTime  = Date.now();
+        RA.uttCharOffset = sOffset;
+        scheduleWordHighlights(idx, sOffset, sOffset + sentence.length);
+        if (isFirst) {
+          setActivePara(idx);
+          setStatus(timeRemainingStr(idx));
+        }
+      };
+
+      utt.onboundary = (event) => {
+        if (event.name !== 'word') return;
+        const globalOffset = sOffset + event.charIndex;
+        RA.lastBoundaryChar = globalOffset;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
+        clearWordTimers();
+        highlightWord(idx, globalOffset);
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentence.length, 0, calMs);
+      };
+
+      utt.onend = () => {
+        clearWordTimers();
+        if (isLast) {
+          trackWords(fullText);
+          if (!RA.paused && RA.playing) {
+            if (idx + 1 < RA.chunks.length) {
+              _buildAndQueueUtterance(idx + 1);
+              RA.noStartTimer = setTimeout(() => {
+                if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                  RA.synth.cancel();
+                  startReading(idx + 1, 0, true);
+                }
+              }, 1500);
+            } else {
+              setStatus('Done');
+              setPlayBtn(false);
+              RA.playing = false;
+              stopKeepAlive();
+              stopTimeTicker();
+            }
           }
         }
       };
@@ -1229,6 +1553,7 @@ if (!window.__readAloud) {
       setPlayBtn(false);
       RA.playing = false;
       stopKeepAlive();
+      stopTimeTicker();
       return;
     }
 
@@ -1236,35 +1561,55 @@ if (!window.__readAloud) {
     clearWordTimers();
     clearTimeout(RA.noStartTimer);
 
-    // Route to ElevenLabs when an API key is configured and quota not exhausted
+    // Priority 1: ElevenLabs (API key configured, quota not exhausted)
     if (RA.elevenLabsApiKey && !RA._elFallback) {
       RA.chunkIndex = idx;
       RA.uttStartTime = Date.now();
       RA.uttCharOffset = charOffset;
+      RA.lastBoundaryChar = charOffset;
       RA.playing = true;
       RA.paused = false;
       setPlayBtn(true);
       setActivePara(idx);
       setStatus(timeRemainingStr(idx));
       startKeepAlive();
+      startTimeTicker();
       elevenLabsReadChunk(idx, charOffset);
       return;
     }
 
+    // Priority 2: Microsoft Edge TTS (free neural voices, no API key needed).
+    if (!RA._edgeFallback) {
+      RA.chunkIndex = idx;
+      RA.uttStartTime = Date.now();
+      RA.uttCharOffset = charOffset;
+      RA.lastBoundaryChar = charOffset;
+      RA.playing = true;
+      RA.paused = false;
+      setPlayBtn(true);
+      setActivePara(idx);
+      setStatus(timeRemainingStr(idx));
+      startKeepAlive();
+      startTimeTicker();
+      edgeTTSReadChunk(idx, charOffset);
+      return;
+    }
+
+    // Priority 3: Browser TTS (free, built-in)
     // Cancel any previous or stuck utterance before queuing new ones.
-    // Chrome silently drops the very first speak() call after page load if the
-    // TTS daemon hasn't started yet; canceling first forces it to initialise.
     RA.synth.cancel();
 
     RA.chunkIndex = idx;
     RA.uttStartTime = Date.now();
     RA.uttCharOffset = charOffset;
+    RA.lastBoundaryChar = charOffset;
     RA.playing = true;
     RA.paused = false;
     setPlayBtn(true);
     setActivePara(idx);
     setStatus(timeRemainingStr(idx));
     startKeepAlive();
+    startTimeTicker();
 
     if (charOffset > 0) highlightWord(idx, charOffset);
 
@@ -1272,45 +1617,56 @@ if (!window.__readAloud) {
     const sentences = sentenceSplit(fullText);
     const offsets = sentenceOffsets(fullText, sentences);
 
-    // Find which sentence contains charOffset
+    // Find the sentence that contains charOffset
     let startSentIdx = sentences.length - 1;
     for (let i = 0; i < sentences.length - 1; i++) {
       if (charOffset < offsets[i + 1]) { startSentIdx = i; break; }
     }
 
-    // First utterance: the sentence that contains charOffset, possibly trimmed
+    // First utterance: the sentence containing charOffset, possibly trimmed
     const withinSent = charOffset - offsets[startSentIdx];
     const firstText = sentences[startSentIdx].substring(Math.max(0, withinSent));
     const firstGlobalOffset = offsets[startSentIdx] + withinSent;
 
     const utterance = new SpeechSynthesisUtterance(normalizeTTSText(firstText));
-    utterance.rate = RA.rate;
+    utterance.rate  = RA.rate;
     utterance.pitch = RA.pitch;
     utterance.voice = getBestVoice();
 
     utterance.onstart = () => {
-      // Speech actually started — cancel the silent-failure watchdog.
       clearTimeout(RA.noStartTimer);
+      RA.uttStartTime  = Date.now();
+      RA.uttCharOffset = firstGlobalOffset;
       scheduleWordHighlights(idx, firstGlobalOffset, firstGlobalOffset + firstText.length);
     };
 
     utterance.onboundary = (event) => {
       if (event.name !== 'word') return;
+      const globalOffset = firstGlobalOffset + event.charIndex;
+      RA.lastBoundaryChar = globalOffset;
+      const calMs = computeCalibratedMsPerChar(globalOffset);
       clearWordTimers();
-      highlightWord(idx, firstGlobalOffset + event.charIndex);
+      highlightWord(idx, globalOffset);
+      scheduleWordHighlights(idx, globalOffset, firstGlobalOffset + firstText.length, 0, calMs);
     };
 
     utterance.onend = () => {
       clearWordTimers();
-      // If no more sentences were queued below (started at the last sentence),
-      // we are responsible for chaining the next chunk.
-      if (!RA.paused && startSentIdx === sentences.length - 1) {
-        _buildAndQueueUtterance(idx + 1);
-        if (idx + 1 >= RA.chunks.length) {
+      if (!RA.paused && startSentIdx === sentences.length - 1 && RA.playing) {
+        if (idx + 1 < RA.chunks.length) {
+          _buildAndQueueUtterance(idx + 1);
+          RA.noStartTimer = setTimeout(() => {
+            if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+              RA.synth.cancel();
+              startReading(idx + 1, 0, true);
+            }
+          }, 1500);
+        } else {
           setStatus('Done');
           setPlayBtn(false);
           RA.playing = false;
           stopKeepAlive();
+          stopTimeTicker();
         }
       }
     };
@@ -1324,46 +1680,58 @@ if (!window.__readAloud) {
     RA.synth.speak(utterance);
 
     // Watchdog: if onstart hasn't fired after 700ms the utterance was silently
-    // dropped (Chrome bug).  Retry once with a fresh cancel/speak cycle.
+    // dropped (Chrome bug). Retry once with a fresh cancel/speak cycle.
     if (!_isRetry) {
       RA.noStartTimer = setTimeout(() => {
-        if (RA.playing && !RA.paused) {
-          startReading(idx, charOffset, true);
-        }
+        if (RA.playing && !RA.paused) startReading(idx, charOffset, true);
       }, 700);
     }
 
-    // Queue the remaining sentences of this chunk immediately so there is no
-    // gap within the paragraph.  The last one's onstart pre-queues the next chunk.
+    // Queue the remaining sentences of this chunk immediately so there is
+    // no gap within the paragraph. The last one's onend chains the next chunk.
     for (let i = startSentIdx + 1; i < sentences.length; i++) {
       const sOffset = offsets[i];
-      const isLast = i === sentences.length - 1;
+      const isLast  = i === sentences.length - 1;
 
       const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentences[i]));
-      utt.rate = RA.rate;
+      utt.rate  = RA.rate;
       utt.pitch = RA.pitch;
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
-        RA.uttStartTime = Date.now();
+        RA.uttStartTime  = Date.now();
         RA.uttCharOffset = sOffset;
         scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
-        if (isLast) _buildAndQueueUtterance(idx + 1);
       };
 
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
+        const globalOffset = sOffset + event.charIndex;
+        RA.lastBoundaryChar = globalOffset;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
         clearWordTimers();
-        highlightWord(idx, sOffset + event.charIndex);
+        highlightWord(idx, globalOffset);
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentences[i].length, 0, calMs);
       };
 
       utt.onend = () => {
         clearWordTimers();
-        if (!RA.paused && isLast && idx + 1 >= RA.chunks.length) {
-          setStatus('Done');
-          setPlayBtn(false);
-          RA.playing = false;
-          stopKeepAlive();
+        if (!RA.paused && isLast && RA.playing) {
+          if (idx + 1 < RA.chunks.length) {
+            _buildAndQueueUtterance(idx + 1);
+            RA.noStartTimer = setTimeout(() => {
+              if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                RA.synth.cancel();
+                startReading(idx + 1, 0, true);
+              }
+            }, 1500);
+          } else {
+            setStatus('Done');
+            setPlayBtn(false);
+            RA.playing = false;
+            stopKeepAlive();
+            stopTimeTicker();
+          }
         }
       };
 
@@ -1483,13 +1851,79 @@ if (!window.__readAloud) {
     return allChunks;
   }
 
+  // ─── Page-type guard ──────────────────────────────────────────────────────
+  // Returns true when the current page is definitely not readable article
+  // content and the player should not auto-inject.
+
+  const BLOCKED_HOSTNAMES = new Set([
+    // Google auth / account flows
+    'accounts.google.com',
+    'myaccount.google.com',
+    // Microsoft auth
+    'login.microsoftonline.com',
+    'login.live.com',
+    'account.microsoft.com',
+    'account.live.com',
+    // Apple
+    'appleid.apple.com',
+    'idmsa.apple.com',
+    // Facebook / Meta
+    'www.facebook.com',
+    // Generic auth services
+    'auth0.com',
+    'okta.com',
+    'onelogin.com',
+    'ping.force.com',
+    'sso.google.com',
+  ]);
+
+  const BLOCKED_PATH_RE = /^\/(login|signin|sign-in|sign_in|auth|oauth|oauth2|sso|saml|accounts?|account\/login|user\/login|session\/new|users\/sign_in)(\/|$|\?)/i;
+
+  function isBlockedPage() {
+    const { hostname, pathname } = location;
+
+    // Exact hostname match
+    if (BLOCKED_HOSTNAMES.has(hostname)) return true;
+
+    // Subdomain match (e.g. auth.example.com, login.example.com)
+    if (/^(auth|login|signin|sso|account|accounts|idp|identity)\./i.test(hostname)) return true;
+
+    // URL path patterns that indicate a login/auth flow
+    if (BLOCKED_PATH_RE.test(pathname)) return true;
+
+    return false;
+  }
+
+  // Returns true when the extracted paragraphs add up to enough real content
+  // to be worth auto-activating (catches auth pickers, 404s, stub pages, etc.).
+  function hasEnoughContent(paragraphs) {
+    // Require the same 3-paragraph floor used by extraction, so the check
+    // never fires on pages where extraction itself already returned nothing.
+    if (paragraphs.length < 3) return false;
+
+    // Total word count below ~100 words means it's a label/picker page, not
+    // an article. The Google account chooser has ~15 words; a short news item
+    // has 200+.
+    const totalWords = paragraphs.reduce((n, p) => n + p.split(/\s+/).filter(Boolean).length, 0);
+    if (totalWords < 100) return false;
+
+    return true;
+  }
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   async function activate(silent = false) {
     if (RA.active) { teardown(); return; }
 
+    // On auto-activate only: skip known auth/system pages so the player
+    // never appears uninvited. Manual clicks always proceed.
+    if (silent && isBlockedPage()) return;
+
     // Load persisted speed + voice before doing anything else
     await loadSettings();
+    // Another activation may have completed while we were awaiting — bail out
+    // rather than tearing down the UI it already built.
+    if (RA.active) return;
 
     let paragraphs = [];
 
@@ -1514,10 +1948,17 @@ if (!window.__readAloud) {
 
       paragraphs = tryExtract();
 
-      // JS-heavy / SPA sites may not have rendered the article yet at script
-      // injection time.  If we got nothing, wait 1.5 s and try once more.
+      // JS-heavy / SPA sites (e.g. Yahoo, Bloomberg) may not have rendered
+      // article content at injection time — retry up to twice with increasing
+      // delays to give React/hydration time to complete.
       if (paragraphs.length < 3) {
         await new Promise((r) => setTimeout(r, 1500));
+        if (RA.active) return;
+        paragraphs = tryExtract();
+      }
+      if (paragraphs.length < 3) {
+        await new Promise((r) => setTimeout(r, 2500));
+        if (RA.active) return;
         paragraphs = tryExtract();
       }
     }
@@ -1527,9 +1968,15 @@ if (!window.__readAloud) {
       return;
     }
 
+    // When auto-activating silently, require enough content to be confident
+    // this is a real article — prevents the player from appearing on thin
+    // pages like account pickers, 404s, search results, and login flows.
+    if (silent && !hasEnoughContent(paragraphs)) return;
+
     RA.chunks = paragraphs;
     // Load persisted position for this URL; clamp in case article shrank
     RA.chunkIndex = Math.min(await loadPosition(), Math.max(0, paragraphs.length - 1));
+    if (RA.active) return;
     RA.active = true;
     buildUI(null, paragraphs);
     // PDF pages have no HTML paragraphs to mark; skip for PDF mode
@@ -1555,6 +2002,7 @@ if (!window.__readAloud) {
     RA.pauseChunk = 0;
     RA.pauseOffset = 0;
     RA._elFallback = false;
+    RA._edgeFallback = false;
   }
 
   // ─── Entry points ─────────────────────────────────────────────────────────

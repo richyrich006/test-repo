@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Read any article aloud — automatically skips ads, headers, footers, and clutter.",
   "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["https://api.anthropic.com/*", "https://api.elevenlabs.io/*", "https://api.jamendo.com/*", "https://storage.jamendo.com/*"],
+  "host_permissions": ["https://api.anthropic.com/*", "https://api.elevenlabs.io/*", "https://api.jamendo.com/*", "https://storage.jamendo.com/*", "wss://speech.platform.bing.com/*"],
   "background": {
     "service_worker": "background.js"
   },

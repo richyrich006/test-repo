@@ -63,6 +63,7 @@ window.__rtaPodcast = (() => {
       const url = URL.createObjectURL(blob);
 
       const audio = new Audio(url);
+      audio.playbackRate = _speed;
       _currentAudio = audio;
 
       audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
@@ -279,10 +280,10 @@ FORMAT RULES (follow exactly):
 STYLE RULES:
 - Anchor name: Alex. Correspondent name: Jordan (use [REPORTER] sparingly — only for one brief field quote)
 - Tone: authoritative, measured, clear — classic NPR anchor delivery
-- Lead with the most important fact; no throat-clearing or preamble
+- Open with a single line like "I'm Alex. Here's what you need to know about [topic]." then go straight into the story
 - Active voice, present tense where natural. Short declarative sentences
 - No filler phrases ("In this piece we'll discuss…", "Let's dive in")
-- Close with: "I'm Alex."
+- Do NOT repeat the anchor name or say "I'm Alex" at the close — end after the final fact
 - Target ~200–300 words of spoken text (about 90 seconds at broadcast pace)`;
 
   async function generateScript(articleText, title) {
@@ -341,7 +342,12 @@ STYLE RULES:
     return segments;
   }
 
-  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms)).then(() => {
+      if (!_paused) return;
+      return new Promise((r) => { _resumeCallbacks.push(r); });
+    });
+  }
 
   // ── Abort helpers ──────────────────────────────────────────────────────────
 
@@ -351,6 +357,9 @@ STYLE RULES:
   // ── State ──────────────────────────────────────────────────────────────────
 
   let _active = false;
+  let _paused = false;
+  let _resumeCallbacks = [];
+  let _speed = 1;
   let _music = null;
   let _currentAudio = null;
 
@@ -379,6 +388,7 @@ STYLE RULES:
     return new Promise((resolve, reject) => {
       if (isAborted()) { URL.revokeObjectURL(url); reject(new Error('aborted')); return; }
       const audio = new Audio(url);
+      audio.playbackRate = _speed;
       _currentAudio = audio;
       audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
       audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; reject(new Error('Playback failed')); };
@@ -388,9 +398,36 @@ STYLE RULES:
 
   // ── Main entrypoint ────────────────────────────────────────────────────────
 
+  function pause() {
+    if (!_active || _paused) return;
+    _paused = true;
+    if (_currentAudio) _currentAudio.pause();
+    try { window.speechSynthesis.pause(); } catch (_) {}
+  }
+
+  function resume() {
+    if (!_active || !_paused) return;
+    _paused = false;
+    if (_currentAudio) _currentAudio.play().catch(() => {});
+    try { window.speechSynthesis.resume(); } catch (_) {}
+    _resumeCallbacks.forEach((r) => r());
+    _resumeCallbacks = [];
+  }
+
+  function isPaused() { return _paused; }
+
+  function setSpeed(s) {
+    _speed = s;
+    if (_currentAudio) _currentAudio.playbackRate = s;
+  }
+
+  function getSpeed() { return _speed; }
+
   async function start(chunks, title, onStatus) {
     if (_active) return;
     _active = true;
+    _paused = false;
+    _resumeCallbacks = [];
     _abortController = new AbortController();
 
     const status = (msg) => { if (onStatus) onStatus(msg); };
@@ -419,11 +456,11 @@ STYLE RULES:
 
       // Set up voice state (ElevenLabs with browser fallback)
       const bv = pickBrowserVoices(await waitForVoices());
-      const { rate = 1 } = await chrome.storage.sync.get('rate').catch(() => ({ rate: 1 }));
       const voiceState = {
         hostIdx: 0, reporterIdx: 0,
         browser_host: bv.host, browser_reporter: bv.reporter,
-        useBrowser: false, rate,
+        useBrowser: false,
+        get rate() { return _speed; }, // always reflect live speed
       };
 
       const nowPlaying = music.trackInfo
@@ -455,13 +492,10 @@ STYLE RULES:
         if (isAborted()) break;
 
         if (seg.type === 'INTRO_MUSIC') {
-          // Let the music play briefly, then fade before speaking
-          await sleep(2000);
-          if (!isAborted() && _music) {
-            await music.fadeOutAndStop(1000);
-            _music = null;
-          }
-          kickoffPrefetch(si + 1); // start fetching first speech segment during fade
+          // Brief pause so the listener hears the music start, then kick off
+          // audio pre-fetch. Music will fade out the instant speech begins.
+          await sleep(800);
+          kickoffPrefetch(si + 1);
 
         } else if (seg.type === 'OUTRO_MUSIC') {
           continue;
@@ -469,6 +503,12 @@ STYLE RULES:
         } else {
           const roleKey = seg.type === 'REPORTER' ? 'reporter' : 'host';
           status('On air…');
+
+          // Fade music out the moment the first word is spoken (natural crossfade).
+          if (_music) {
+            _music.fadeOutAndStop(700);
+            _music = null;
+          }
 
           // Use pre-fetched audio if it matches this segment
           let playedFromPrefetch = false;
@@ -516,10 +556,13 @@ STYLE RULES:
     if (_abortController) _abortController.abort();
     if (_currentAudio) { try { _currentAudio.pause(); } catch (_) {} _currentAudio = null; }
     if (_music) { _music.fadeOutAndStop(500); _music = null; }
+    _paused = false;
+    _resumeCallbacks.forEach((r) => r());
+    _resumeCallbacks = [];
     _active = false;
   }
 
   function isActive() { return _active; }
 
-  return { start, stop, isActive };
+  return { start, stop, pause, resume, isPaused, setSpeed, getSpeed, isActive };
 })();

@@ -56,7 +56,7 @@ window.__rtaDiscussion = (() => {
         const sentence = sentences[idx++];
         const utt = new SpeechSynthesisUtterance(sentence);
         utt.voice = voice;
-        utt.rate = 0.95;
+        utt.rate = _speed * 0.95;
         let advanced = false;
         const advance = () => { if (advanced) return; advanced = true; clearTimeout(timer); speakNext(); };
         const timer = setTimeout(advance, (sentence.split(/\s+/).length / 142) * 60000 + 3000);
@@ -301,6 +301,7 @@ STYLE:
       const url = URL.createObjectURL(blob);
 
       const audio = new Audio(url);
+      audio.playbackRate = _speed;
       _currentAudio = audio;
 
       audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
@@ -332,6 +333,7 @@ STYLE:
     return new Promise((resolve, reject) => {
       if (_abortController?.signal.aborted) { URL.revokeObjectURL(url); reject(new Error('aborted')); return; }
       const audio = new Audio(url);
+      audio.playbackRate = _speed;
       _currentAudio = audio;
       audio.onended = () => { URL.revokeObjectURL(url); _currentAudio = null; resolve(); };
       audio.onerror = () => { URL.revokeObjectURL(url); _currentAudio = null; reject(new Error('Playback failed')); };
@@ -339,11 +341,19 @@ STYLE:
     });
   }
 
-  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms)).then(() => {
+      if (!_paused) return;
+      return new Promise((r) => { _resumeCallbacks.push(r); });
+    });
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
 
   let _active = false;
+  let _paused = false;
+  let _resumeCallbacks = [];
+  let _speed = 1;
   let _music = null;
   let _abortController = null;
   let _currentAudio = null;
@@ -352,9 +362,36 @@ STYLE:
 
   // ── Main entrypoint ────────────────────────────────────────────────────────
 
+  function pause() {
+    if (!_active || _paused) return;
+    _paused = true;
+    if (_currentAudio) _currentAudio.pause();
+    try { window.speechSynthesis.pause(); } catch (_) {}
+  }
+
+  function resume() {
+    if (!_active || !_paused) return;
+    _paused = false;
+    if (_currentAudio) _currentAudio.play().catch(() => {});
+    try { window.speechSynthesis.resume(); } catch (_) {}
+    _resumeCallbacks.forEach((r) => r());
+    _resumeCallbacks = [];
+  }
+
+  function isPaused() { return _paused; }
+
+  function setSpeed(s) {
+    _speed = s;
+    if (_currentAudio) _currentAudio.playbackRate = s;
+  }
+
+  function getSpeed() { return _speed; }
+
   async function start(chunks, title, onStatus) {
     if (_active) return;
     _active = true;
+    _paused = false;
+    _resumeCallbacks = [];
     _abortController = new AbortController();
 
     const status = (msg) => { if (onStatus) onStatus(msg); };
@@ -463,10 +500,13 @@ STYLE:
     if (_abortController) _abortController.abort();
     if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
     if (_music) { _music.stop(); _music = null; }
+    _paused = false;
+    _resumeCallbacks.forEach((r) => r());
+    _resumeCallbacks = [];
     _active = false;
   }
 
   function isActive() { return _active; }
 
-  return { start, stop, isActive };
+  return { start, stop, pause, resume, isPaused, setSpeed, getSpeed, isActive };
 })();
