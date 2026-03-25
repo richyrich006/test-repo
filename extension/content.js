@@ -1472,6 +1472,81 @@ if (!window.__readAloud) {
     });
   }
 
+  // Queue all sentences of chunk[idx] as individual utterances upfront.
+  // All sentences are queued together so Chrome's speech engine plays them
+  // back-to-back with no gap. The last sentence chains to the next chunk.
+  function _buildAndQueueUtterance(idx) {
+    if (idx >= RA.chunks.length) return;
+
+    const fullText = RA.chunks[idx];
+    const sentences = sentenceSplit(fullText);
+    const offsets = sentenceOffsets(fullText, sentences);
+
+    sentences.forEach((sentence, sIdx) => {
+      const isFirst = sIdx === 0;
+      const isLast  = sIdx === sentences.length - 1;
+      const sOffset = offsets[sIdx];
+
+      const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentence));
+      utt.rate  = RA.rate;
+      utt.pitch = RA.pitch;
+      utt.voice = getBestVoice();
+
+      utt.onstart = () => {
+        if (isFirst) clearTimeout(RA.noStartTimer);
+        RA.chunkIndex    = idx;
+        RA.uttStartTime  = Date.now();
+        RA.uttCharOffset = sOffset;
+        scheduleWordHighlights(idx, sOffset, sOffset + sentence.length);
+        if (isFirst) {
+          setActivePara(idx);
+          setStatus(timeRemainingStr(idx));
+        }
+      };
+
+      utt.onboundary = (event) => {
+        if (event.name !== 'word') return;
+        const globalOffset = sOffset + event.charIndex;
+        RA.lastBoundaryChar = globalOffset;
+        const calMs = computeCalibratedMsPerChar(globalOffset);
+        clearWordTimers();
+        highlightWord(idx, globalOffset);
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentence.length, 0, calMs);
+      };
+
+      utt.onend = () => {
+        clearWordTimers();
+        if (isLast) {
+          trackWords(fullText);
+          if (!RA.paused && RA.playing) {
+            if (idx + 1 < RA.chunks.length) {
+              _buildAndQueueUtterance(idx + 1);
+              RA.noStartTimer = setTimeout(() => {
+                if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                  RA.synth.cancel();
+                  startReading(idx + 1, 0, true);
+                }
+              }, 1500);
+            } else {
+              setStatus('Done');
+              setPlayBtn(false);
+              RA.playing = false;
+              stopKeepAlive();
+              stopTimeTicker();
+            }
+          }
+        }
+      };
+
+      utt.onerror = (e) => {
+        clearWordTimers();
+        if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+      };
+
+      RA.synth.speak(utt);
+    });
+  }
+
   function startReading(idx, charOffset = 0, _isRetry = false) {
     if (idx >= RA.chunks.length) {
       setStatus('Done');
@@ -1504,9 +1579,6 @@ if (!window.__readAloud) {
     }
 
     // Priority 2: Microsoft Edge TTS (free neural voices, no API key needed).
-    // Used by default even without explicit config — gives instant pause (like
-    // Speechify) because audio arrives as MP3 played via Audio.pause(), rather
-    // than being buffered inside Chrome's speechSynthesis black box.
     if (!RA._edgeFallback) {
       RA.chunkIndex = idx;
       RA.uttStartTime = Date.now();
@@ -1525,8 +1597,6 @@ if (!window.__readAloud) {
 
     // Priority 3: Browser TTS (free, built-in)
     // Cancel any previous or stuck utterance before queuing new ones.
-    // Chrome silently drops the very first speak() call after page load if the
-    // TTS daemon hasn't started yet; canceling first forces it to initialise.
     RA.synth.cancel();
 
     RA.chunkIndex = idx;
@@ -1543,95 +1613,118 @@ if (!window.__readAloud) {
 
     if (charOffset > 0) highlightWord(idx, charOffset);
 
-    const PHRASE_WORDS = 5;
     const fullText = RA.chunks[idx];
+    const sentences = sentenceSplit(fullText);
+    const offsets = sentenceOffsets(fullText, sentences);
 
-    // Build flat array of {text, offset} phrases (~5 words each) across all sentences.
-    const phrases = (() => {
-      const result = [];
-      const sents = sentenceSplit(fullText);
-      const sOffs = sentenceOffsets(fullText, sents);
-      for (let si = 0; si < sents.length; si++) {
-        const tokens = sents[si].match(/\S+(?:\s*)/g) || [];
-        let pOff = 0, group = [];
-        for (let ti = 0; ti < tokens.length; ti++) {
-          group.push(tokens[ti]);
-          if (group.length >= PHRASE_WORDS || ti === tokens.length - 1) {
-            const raw = group.join('');
-            const text = raw.trimEnd();
-            if (text) result.push({ text, offset: sOffs[si] + pOff });
-            pOff += raw.length;
-            group = [];
-          }
-        }
-      }
-      return result;
-    })();
-
-    // Find which phrase contains charOffset
-    let startPhraseIdx = 0;
-    for (let i = phrases.length - 1; i >= 0; i--) {
-      if (phrases[i].offset <= charOffset) { startPhraseIdx = i; break; }
+    // Find the sentence that contains charOffset
+    let startSentIdx = sentences.length - 1;
+    for (let i = 0; i < sentences.length - 1; i++) {
+      if (charOffset < offsets[i + 1]) { startSentIdx = i; break; }
     }
 
-    // Queue a single phrase and wire up handlers.
-    // The trick for seamless playback AND immediate pause:
-    //   • Each phrase's onstart (not onend) immediately queues the NEXT phrase.
-    //     Queuing inside onstart means audio for phrase N+1 is pre-fetched while
-    //     phrase N is already playing → zero audible gap between phrases.
-    //   • When the user pauses, cancel() kills only the one pre-queued phrase.
-    //     The currently-playing phrase drains (~5 words, ≤1s), then stops.
-    function queuePhrase(pi) {
-      if (pi >= phrases.length || !RA.playing || RA.paused) {
-        if (pi >= phrases.length && RA.playing && !RA.paused) {
-          // All phrases in this chunk finished — chain to next chunk from onend.
+    // First utterance: the sentence containing charOffset, possibly trimmed
+    const withinSent = charOffset - offsets[startSentIdx];
+    const firstText = sentences[startSentIdx].substring(Math.max(0, withinSent));
+    const firstGlobalOffset = offsets[startSentIdx] + withinSent;
+
+    const utterance = new SpeechSynthesisUtterance(normalizeTTSText(firstText));
+    utterance.rate  = RA.rate;
+    utterance.pitch = RA.pitch;
+    utterance.voice = getBestVoice();
+
+    utterance.onstart = () => {
+      clearTimeout(RA.noStartTimer);
+      RA.uttStartTime  = Date.now();
+      RA.uttCharOffset = firstGlobalOffset;
+      scheduleWordHighlights(idx, firstGlobalOffset, firstGlobalOffset + firstText.length);
+    };
+
+    utterance.onboundary = (event) => {
+      if (event.name !== 'word') return;
+      const globalOffset = firstGlobalOffset + event.charIndex;
+      RA.lastBoundaryChar = globalOffset;
+      const calMs = computeCalibratedMsPerChar(globalOffset);
+      clearWordTimers();
+      highlightWord(idx, globalOffset);
+      scheduleWordHighlights(idx, globalOffset, firstGlobalOffset + firstText.length, 0, calMs);
+    };
+
+    utterance.onend = () => {
+      clearWordTimers();
+      if (!RA.paused && startSentIdx === sentences.length - 1 && RA.playing) {
+        if (idx + 1 < RA.chunks.length) {
+          _buildAndQueueUtterance(idx + 1);
+          RA.noStartTimer = setTimeout(() => {
+            if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+              RA.synth.cancel();
+              startReading(idx + 1, 0, true);
+            }
+          }, 1500);
+        } else {
+          setStatus('Done');
+          setPlayBtn(false);
+          RA.playing = false;
+          stopKeepAlive();
+          stopTimeTicker();
         }
-        return;
       }
+    };
 
-      const { text: pText, offset: pOffset } = phrases[pi];
-      let speakText = pText;
-      let speakOffset = pOffset;
-      // First phrase may be trimmed to resume from charOffset mid-phrase.
-      if (pi === startPhraseIdx && charOffset > pOffset) {
-        speakText = pText.substring(charOffset - pOffset);
-        speakOffset = charOffset;
-      }
-      if (!speakText.trim()) { queuePhrase(pi + 1); return; }
+    utterance.onerror = (e) => {
+      clearWordTimers();
+      if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
+    };
 
-      const utt = new SpeechSynthesisUtterance(normalizeTTSText(speakText));
-      utt.rate = RA.rate;
+    RA.utterance = utterance;
+    RA.synth.speak(utterance);
+
+    // Watchdog: if onstart hasn't fired after 700ms the utterance was silently
+    // dropped (Chrome bug). Retry once with a fresh cancel/speak cycle.
+    if (!_isRetry) {
+      RA.noStartTimer = setTimeout(() => {
+        if (RA.playing && !RA.paused) startReading(idx, charOffset, true);
+      }, 700);
+    }
+
+    // Queue the remaining sentences of this chunk immediately so there is
+    // no gap within the paragraph. The last one's onend chains the next chunk.
+    for (let i = startSentIdx + 1; i < sentences.length; i++) {
+      const sOffset = offsets[i];
+      const isLast  = i === sentences.length - 1;
+
+      const utt = new SpeechSynthesisUtterance(normalizeTTSText(sentences[i]));
+      utt.rate  = RA.rate;
       utt.pitch = RA.pitch;
       utt.voice = getBestVoice();
 
       utt.onstart = () => {
-        if (pi === startPhraseIdx) clearTimeout(RA.noStartTimer);
         RA.uttStartTime  = Date.now();
-        RA.uttCharOffset = speakOffset;
-        scheduleWordHighlights(idx, speakOffset, speakOffset + speakText.length);
-        // Pre-queue next phrase NOW (while this one plays) to eliminate the
-        // inter-utterance gap.  cancel() on pause will kill this lookahead.
-        if (pi + 1 < phrases.length) queuePhrase(pi + 1);
+        RA.uttCharOffset = sOffset;
+        scheduleWordHighlights(idx, sOffset, sOffset + sentences[i].length);
       };
 
       utt.onboundary = (event) => {
         if (event.name !== 'word') return;
-        const globalOffset = speakOffset + event.charIndex;
+        const globalOffset = sOffset + event.charIndex;
         RA.lastBoundaryChar = globalOffset;
         const calMs = computeCalibratedMsPerChar(globalOffset);
         clearWordTimers();
         highlightWord(idx, globalOffset);
-        scheduleWordHighlights(idx, globalOffset, speakOffset + speakText.length, 0, calMs);
+        scheduleWordHighlights(idx, globalOffset, sOffset + sentences[i].length, 0, calMs);
       };
 
       utt.onend = () => {
         clearWordTimers();
-        if (RA.paused || !RA.playing) return;
-        if (pi + 1 >= phrases.length) {
-          // Last phrase of this chunk — chain to next chunk.
-          trackWords(fullText);
+        if (!RA.paused && isLast && RA.playing) {
           if (idx + 1 < RA.chunks.length) {
-            startReading(idx + 1, 0);
+            _buildAndQueueUtterance(idx + 1);
+            RA.noStartTimer = setTimeout(() => {
+              if (RA.playing && !RA.paused && RA.chunkIndex === idx) {
+                RA.synth.cancel();
+                startReading(idx + 1, 0, true);
+              }
+            }, 1500);
           } else {
             setStatus('Done');
             setPlayBtn(false);
@@ -1640,7 +1733,6 @@ if (!window.__readAloud) {
             stopTimeTicker();
           }
         }
-        // else: next phrase was already queued in onstart — nothing to do.
       };
 
       utt.onerror = (e) => {
@@ -1648,21 +1740,8 @@ if (!window.__readAloud) {
         if (e.error !== 'interrupted') console.warn('ReadAloud TTS error:', e.error);
       };
 
-      RA.utterance = utt;
       RA.synth.speak(utt);
     }
-
-    // Watchdog: if onstart hasn't fired after 700ms the utterance was silently
-    // dropped (Chrome bug).  Retry once with a fresh cancel/speak cycle.
-    if (!_isRetry) {
-      RA.noStartTimer = setTimeout(() => {
-        if (RA.playing && !RA.paused) {
-          startReading(idx, charOffset, true);
-        }
-      }, 700);
-    }
-
-    queuePhrase(startPhraseIdx);
   }
 
   // Skip forward or backward by `seconds` seconds using estimated char position.
