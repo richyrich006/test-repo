@@ -1772,10 +1772,76 @@ if (!window.__readAloud) {
     return allChunks;
   }
 
+  // ─── Page-type guard ──────────────────────────────────────────────────────
+  // Returns true when the current page is definitely not readable article
+  // content and the player should not auto-inject.
+
+  const BLOCKED_HOSTNAMES = new Set([
+    // Google auth / account flows
+    'accounts.google.com',
+    'myaccount.google.com',
+    // Microsoft auth
+    'login.microsoftonline.com',
+    'login.live.com',
+    'account.microsoft.com',
+    'account.live.com',
+    // Apple
+    'appleid.apple.com',
+    'idmsa.apple.com',
+    // Facebook / Meta
+    'www.facebook.com',
+    // Generic auth services
+    'auth0.com',
+    'okta.com',
+    'onelogin.com',
+    'ping.force.com',
+    'sso.google.com',
+  ]);
+
+  const BLOCKED_PATH_RE = /^\/(login|signin|sign-in|sign_in|auth|oauth|oauth2|sso|saml|accounts?|account\/login|user\/login|session\/new|users\/sign_in)(\/|$|\?)/i;
+
+  function isBlockedPage() {
+    const { hostname, pathname } = location;
+
+    // Exact hostname match
+    if (BLOCKED_HOSTNAMES.has(hostname)) return true;
+
+    // Subdomain match (e.g. auth.example.com, login.example.com)
+    if (/^(auth|login|signin|sso|account|accounts|idp|identity)\./i.test(hostname)) return true;
+
+    // URL path patterns that indicate a login/auth flow
+    if (BLOCKED_PATH_RE.test(pathname)) return true;
+
+    // Page has a password field → it's a login form, not an article
+    if (document.querySelector('input[type="password"]')) return true;
+
+    return false;
+  }
+
+  // Returns true when the extracted paragraphs don't add up to enough real
+  // content to be worth reading (catches auth pickers, 404 pages, etc.).
+  function hasEnoughContent(paragraphs) {
+    // Need at least 5 paragraphs of actual content
+    if (paragraphs.length < 5) return false;
+
+    // Total word count must be substantial (< 120 words ≈ < 1 minute of reading)
+    const totalWords = paragraphs.reduce((n, p) => n + p.split(/\s+/).filter(Boolean).length, 0);
+    if (totalWords < 120) return false;
+
+    // Average paragraph must look like a sentence, not just a name/email/label
+    const avgLen = paragraphs.reduce((n, p) => n + p.length, 0) / paragraphs.length;
+    if (avgLen < 60) return false;
+
+    return true;
+  }
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   async function activate(silent = false) {
     if (RA.active) { teardown(); return; }
+
+    // Never inject on auth/login/account-picker pages
+    if (isBlockedPage()) return;
 
     // Load persisted speed + voice before doing anything else
     await loadSettings();
@@ -1820,6 +1886,11 @@ if (!window.__readAloud) {
       if (!silent) showToast('ReadAloud: No readable content found on this page.');
       return;
     }
+
+    // When auto-activating silently, require enough content to be confident
+    // this is a real article — prevents the player from appearing on thin
+    // pages like account pickers, 404s, search results, and login flows.
+    if (silent && !hasEnoughContent(paragraphs)) return;
 
     RA.chunks = paragraphs;
     // Load persisted position for this URL; clamp in case article shrank
