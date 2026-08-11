@@ -128,6 +128,20 @@ export const categories: Category[] = [
     description:
       'The best-documented harm in the whole sector: peer-reviewed research ties PE ownership of nursing homes to lower staffing and higher resident mortality.',
   },
+  {
+    id: 'auto',
+    name: 'Auto & Car Care',
+    emoji: '🚗',
+    description:
+      'A handful of PE-backed platforms now own most of the national tire, repair, collision and car-wash chains — and they buy independent shops constantly, usually rebranding them quietly.',
+  },
+  {
+    id: 'deathcare',
+    name: 'Funerals & Death Care',
+    emoji: '⚱️',
+    description:
+      'High margins, predictable demand and grieving customers who do not comparison-shop. PE-backed firms now own roughly a quarter of chain-owned US funeral homes.',
+  },
 ];
 
 export const firms: Firm[] = [
@@ -420,6 +434,58 @@ export const firms: Firm[] = [
     name: 'Bain Capital & Summit Partners',
     description: 'Joint owners of US Renal Care, the third-largest dialysis provider in the country — a sector where patients cannot simply switch providers.',
   },
+  {
+    slug: 'baypine',
+    name: 'BayPine, TSG & Golden Gate',
+    description: 'Joint owners of Mavis Tire Express Services, one of the largest tire and auto-service chains in the country and an aggressive buyer of independent shops.',
+  },
+  {
+    slug: 'percheron',
+    name: 'Percheron Capital',
+    description: 'Owns Big Brand Tire & Service, one of several PE platforms consolidating independent tire and repair shops.',
+  },
+  {
+    slug: 'clearlake',
+    name: 'Clearlake Capital',
+    description: 'Owns Crash Champions, which absorbed Service King to form one of the largest collision-repair chains in the US.',
+  },
+  {
+    slug: 'partners-group',
+    name: 'Partners Group',
+    description: 'Bought EyeCare Partners in 2019 at more than $2B — one of the largest optometry and ophthalmology roll-ups in the country.',
+  },
+  {
+    slug: 'welsh-carson',
+    name: 'Welsh, Carson, Anderson & Stowe',
+    description:
+      'Healthcare-focused PE firm. The FTC sued Welsh Carson in 2023 over US Anesthesia Partners, alleging a roll-up strategy that consolidated anesthesia practices across Texas and drove up prices — a landmark case against a PE firm itself, not just its portfolio company.',
+  },
+  {
+    slug: 'enhanced-equity',
+    name: 'Enhanced Equity Funds',
+    description: 'Owns Priority Ambulance, which operates roughly 400 medical transport vehicles.',
+  },
+  {
+    slug: 'hig-capital',
+    name: 'H.I.G. Capital',
+    description:
+      'Owned Wellpath, one of the largest prison and jail healthcare contractors in the country, which filed for bankruptcy in 2024 after years of lawsuits over care in custody.',
+  },
+  {
+    slug: 'investindustrial',
+    name: 'Investindustrial',
+    description: 'Bought TreeHouse Foods, the largest US private-label food manufacturer, for $2.9B in 2026 — the company behind a great many store-brand products.',
+  },
+  {
+    slug: 'everstory',
+    name: 'Everstory Partners',
+    description: 'PE-backed death-care roll-up with roughly 450 cemetery and funeral locations after buying 72 cemeteries and 11 funeral homes from Park Lawn in 2023.',
+  },
+  {
+    slug: 'durational',
+    name: 'Durational Capital Management',
+    description: 'Took the Bojangles fast-food chain private in 2019 with The Jordan Company.',
+  },
 ];
 
 export const brands: Brand[] = [
@@ -595,6 +661,45 @@ export const brands: Brand[] = [
   { name: 'Citrix / Cloud Software Group', category: 'media', firm: 'vista-equity', since: '2022', note: 'Taken private with Elliott and merged with TIBCO under roughly $15–16B of new debt, followed by mass layoffs and steep licensing price hikes.', change: 'Merged with TIBCO under roughly $15–16B of new debt, followed by mass layoffs and sharp licensing price increases for customers who are slow and expensive to migrate away.' },
   { name: 'Zendesk', category: 'media', firm: 'permira', since: '2022', note: '$10.2B take-private led by Hellman & Friedman and Permira.' },
   { name: 'Coupa Software', category: 'media', firm: 'thoma-bravo', since: '2022', note: '$6.2B take-private.' },
+
+  // ── Second expansion pass ──────────────────────────────────────────────────
+
+  // Auto & car care — the six-or-so platforms behind most national chains
+  { name: 'Mavis Tire Express Services', category: 'auto', firm: 'baypine', note: 'One of the most active acquirers of independent tire and repair shops. Bought shops are rebranded or folded into a region, so the acquisition is usually invisible to customers.', change: 'Independent two-to-five-bay shops are absorbed in private deals and rebranded, which is why so few of these acquisitions are ever reported locally.' },
+  { name: 'Sun Auto Tire & Service', category: 'auto', firm: 'leonard-green', note: 'Leonard Green’s tire and repair platform, also built by buying independents.' },
+  { name: 'Big Brand Tire & Service', category: 'auto', firm: 'percheron' },
+  { name: 'Christian Brothers Automotive', category: 'auto', firm: 'roark-capital', note: 'Roark’s auto-service franchise, alongside its restaurant and fitness empires.' },
+  { name: 'Mister Car Wash', category: 'auto', firm: 'leonard-green', note: 'The largest US car-wash chain; taken private again after a period on the public markets. Whistle Express and Tidal Wave are also PE-backed.', change: 'Car washing has shifted to subscription memberships, the model PE favors because it converts an occasional purchase into recurring revenue that customers forget to cancel.' },
+  { name: 'Caliber Collision', category: 'auto', firm: 'hellman-friedman', note: 'One of the largest collision-repair chains in North America.' },
+  { name: 'Crash Champions (incl. Service King)', category: 'auto', firm: 'clearlake', note: 'Absorbed Service King to form a collision-repair chain of well over 500 locations.' },
+
+  // Health — vision, staffing, transport, custody
+  { name: 'MyEyeDr', category: 'health', firm: 'goldman-pia', since: '2019', note: 'Bought by Goldman Sachs at roughly $2.7B enterprise value; grows by acquiring independent optometry practices.', change: 'Acquired practices typically keep their optometrist’s name on the door, so patients rarely learn ownership changed.' },
+  { name: 'EyeCare Partners', category: 'health', firm: 'partners-group', since: '2019', note: 'Acquired at more than $2B; one of the largest eye-care roll-ups in the US.' },
+  { name: 'US Anesthesia Partners', category: 'health', firm: 'welsh-carson', note: 'Anesthesia roll-up at the center of a landmark FTC case.', change: 'The FTC sued in 2023 alleging the roll-up consolidated anesthesia practices across Texas and drove up prices — patients under anesthesia have no ability to shop for a provider.' },
+  { name: 'TeamHealth', category: 'health', firm: 'blackstone', since: '2016', note: 'Physician staffing giant bought for $6.1B.', change: 'Named repeatedly in surprise-billing investigations: patients treated at in-network hospitals were billed out-of-network by the staffing company employing the doctor. Congress passed the No Surprises Act in 2020 in response.' },
+  { name: 'Air Methods (air ambulance)', category: 'health', firm: 'american-securities', change: 'Brookings found the highest air-ambulance charges concentrated in PE-owned carriers, with transported patients surprise-billed tens of thousands of dollars for a flight they could not consent to or shop for.' },
+  { name: 'Global Medical Response / AMR (ambulance)', category: 'health', firm: 'kkr', note: 'One of the largest ground and air medical transport operators in the country.' },
+  { name: 'Priority Ambulance', category: 'health', firm: 'enhanced-equity', note: 'Roughly 400 medical transport vehicles.' },
+  { name: 'Wellpath (prison & jail healthcare)', category: 'health', firm: 'hig-capital', note: 'One of the largest correctional healthcare contractors in the US.', change: 'Faced years of litigation over the standard of care provided to people in custody and filed for bankruptcy in 2024.' },
+
+  // Groceries
+  { name: 'TreeHouse Foods (store-brand manufacturer)', category: 'groceries', firm: 'investindustrial', since: '2026', note: 'The largest US private-label manufacturer, bought for $2.9B. It makes a great many supermarket own-brand products, so it is hard to avoid by reading labels.' },
+  { name: 'Tops Markets', category: 'groceries', firm: 'morgan-stanley-cp', note: 'Bought out by Morgan Stanley Private Equity and Graycliff Partners.', change: 'The roughly 170-store Northeastern chain went into bankruptcy following its leveraged buyout — one of a long run of PE-owned grocers (A&P, Pathmark, Fairway, Haggen, Marsh, Winn-Dixie’s former parent) to do so.' },
+
+  // Restaurants
+  { name: 'Fogo de Chão', category: 'restaurants', firm: 'bain-capital', since: '2023' },
+  { name: 'Bojangles', category: 'restaurants', firm: 'durational', since: '2019', note: 'Taken private with The Jordan Company.' },
+  { name: "Zaxby's", category: 'restaurants', firm: 'goldman-pia', since: '2020', note: 'Goldman Sachs took a substantial stake in the chain.' },
+
+  // Fitness
+  { name: 'Crunch Fitness', category: 'fitness', firm: 'tpg' },
+
+  // Travel & leisure
+  { name: 'Invited (formerly ClubCorp golf clubs)', category: 'travel', firm: 'apollo', since: '2017', note: 'Roughly 200 golf and country clubs.' },
+
+  // Death care
+  { name: 'Everstory Partners (cemeteries & funeral homes)', category: 'deathcare', firm: 'everstory', note: 'Around 450 locations after buying 72 cemeteries and 11 funeral homes from Park Lawn in 2023.', change: 'PE-backed firms now own roughly 1,000 of the approximately 3,800 chain-owned US funeral homes. Grieving families rarely comparison-shop, and acquired homes usually keep the original family name on the sign.' },
 ];
 
 // Derived helpers -------------------------------------------------------------
@@ -616,3 +721,32 @@ export function brandsByCategory(id: string): Brand[] {
 }
 
 export const LAST_VERIFIED = 'August 2026';
+
+// Fail the build rather than ship a broken link: every brand must point at a
+// real firm and category, and every firm and category must have brands, or it
+// renders an empty page.
+(() => {
+  const firmSlugs = new Set(firms.map((f) => f.slug));
+  const catIds = new Set(categories.map((c) => c.id));
+  const problems: string[] = [];
+
+  for (const b of brands) {
+    if (!firmSlugs.has(b.firm)) problems.push(`"${b.name}" references unknown firm "${b.firm}"`);
+    if (!catIds.has(b.category)) problems.push(`"${b.name}" references unknown category "${b.category}"`);
+  }
+  for (const f of firms) {
+    if (!brands.some((b) => b.firm === f.slug)) problems.push(`firm "${f.slug}" has no brands`);
+  }
+  for (const c of categories) {
+    if (!brands.some((b) => b.category === c.id)) problems.push(`category "${c.id}" has no brands`);
+  }
+  const seen = new Set<string>();
+  for (const b of brands) {
+    if (seen.has(b.name)) problems.push(`duplicate brand "${b.name}"`);
+    seen.add(b.name);
+  }
+
+  if (problems.length) {
+    throw new Error(`data/brands.ts is inconsistent:\n  - ${problems.join('\n  - ')}`);
+  }
+})();
