@@ -18,6 +18,13 @@ export interface Firm {
   description: string;
 }
 
+/** A citation backing a `change` claim. `label` is the publisher or document
+ *  name shown to the reader; `url` must be a real, publicly reachable page. */
+export interface Source {
+  label: string;
+  url: string;
+}
+
 export interface Brand {
   name: string;
   category: string; // category id
@@ -27,6 +34,10 @@ export interface Brand {
   /** What measurably changed after the buyout. Only set when it can be
    *  tied to reporting, company statements, court filings or research. */
   change?: string;
+  /** Citations for `change`. Prefer primary sources — regulator press
+   *  releases, court filings, company statements, peer-reviewed research —
+   *  over aggregators. Never add a URL you have not seen resolve. */
+  sources?: Source[];
 }
 
 export interface Category {
@@ -494,7 +505,7 @@ export const brands: Brand[] = [
   { name: "Dunkin'", category: 'restaurants', firm: 'roark-capital', since: '2020', note: 'Part of Roark’s Inspire Brands.' },
   { name: 'Baskin-Robbins', category: 'restaurants', firm: 'roark-capital', since: '2020', note: 'Part of Inspire Brands.' },
   { name: "Arby's", category: 'restaurants', firm: 'roark-capital', since: '2011', note: 'The original Inspire Brands chain.' },
-  { name: 'Buffalo Wild Wings', category: 'restaurants', firm: 'roark-capital', since: '2018', note: 'Part of Inspire Brands.', change: 'Widely reported among the chains whose portions shrank — customers and trade press have documented smaller wings for the same price.' },
+  { name: 'Buffalo Wild Wings', category: 'restaurants', firm: 'roark-capital', since: '2018', note: 'Part of Inspire Brands.', change: 'Widely reported among the chains whose portions shrank — customers and trade press have documented smaller wings for the same price.', sources: [{ label: 'FoodNavigator', url: 'https://www.foodnavigator.com/Article/2025/09/22/shrinkflation-backfires-brands-risk-customer-loyalty-in-cost-saving-strategy/' }] },
   { name: 'Sonic Drive-In', category: 'restaurants', firm: 'roark-capital', since: '2018', note: 'Part of Inspire Brands.' },
   { name: "Jimmy John's", category: 'restaurants', firm: 'roark-capital', since: '2019', note: 'Part of Inspire Brands.' },
   { name: 'Cinnabon', category: 'restaurants', firm: 'roark-capital', note: 'Part of GoTo Foods (formerly Focus Brands).' },
@@ -507,7 +518,7 @@ export const brands: Brand[] = [
   { name: 'Nothing Bundt Cakes', category: 'restaurants', firm: 'roark-capital', since: '2021' },
   { name: "Jersey Mike's", category: 'restaurants', firm: 'blackstone', since: '2025', note: 'Blackstone acquired majority control in a ~$8B deal.' },
   { name: 'Tropical Smoothie Cafe', category: 'restaurants', firm: 'blackstone', since: '2024' },
-  { name: 'Panera Bread', category: 'restaurants', firm: 'jab-holding', since: '2017', change: 'Portions shrank while prices rose — the CEO admitted in 2025 that customers were paying significantly more for a smaller sandwich with lower-quality ingredients. Cafes switched from daily fresh-baked bread to par-baked frozen dough, the advertised “No No List” of excluded ingredients came down, and staffing was cut. Sales fell and the company announced a turnaround to reverse the cuts.' },
+  { name: 'Panera Bread', category: 'restaurants', firm: 'jab-holding', since: '2017', change: 'CEO Paul Carbone said in 2025: “In some instances, we shrunk portions, so guests would walk into our cafe to buy a sandwich that has gone up significantly in price, with lower-quality ingredients, in a smaller size.” Romaine was swapped for iceberg, cherry tomatoes stopped being sliced, cafes moved from daily fresh-baked bread to par-baked frozen dough, the advertised “No No List” came down, and staffing was cut. Sales fell 5% to $6.1B and Panera slipped from the top US fast-casual brand to third. The 2025 “Panera RISE” turnaround is explicitly about reversing those cuts.', sources: [{ label: 'CNBC', url: 'https://www.cnbc.com/2025/11/18/panera-bread-turnaround-plan.html' }, { label: 'Food Institute', url: 'https://foodinstitute.com/focus/death-by-a-thousand-paper-cuts-panera-ceo-charts-big-changes-ahead/' }, { label: 'ConsumerAffairs', url: 'https://www.consumeraffairs.com/news/paneras-shrinkflation-hangover-can-panera-rise-win-back-customers-112125.html' }] },
   { name: 'Pret A Manger', category: 'restaurants', firm: 'jab-holding', since: '2018' },
   { name: 'Krispy Kreme', category: 'restaurants', firm: 'jab-holding', since: '2016', note: 'Listed on Nasdaq but JAB remains controlling shareholder.' },
   { name: "Peet's Coffee", category: 'restaurants', firm: 'jab-holding', since: '2012', note: 'Part of JAB’s JDE Peet’s.' },
@@ -555,13 +566,13 @@ export const brands: Brand[] = [
   // ── Pets & Veterinary ──────────────────────────────────────────────────────
   { name: 'PetSmart', category: 'pets', firm: 'bc-partners', since: '2015' },
   { name: 'Petco', category: 'pets', firm: 'cvc-capital', since: '2015', note: 'CVC Capital & CPP Investments.', change: 'Announced closures of underperforming stores and took analyst downgrades on falling sales and profit, with persistent customer complaints about pricing well above mass-market retailers.' },
-  { name: 'National Veterinary Associates (NVA)', category: 'pets', firm: 'ethos-veterinary', since: '2025', note: 'JAB built NVA to 1,000+ clinics, then combined it with Ethos in 2025. Most clinics keep their original local names, so clients rarely notice the change.', change: 'Part of a sector-wide roll-up: corporate and PE ownership of US vet clinics went from roughly 8% in 2011 to about half by 2025, and acquired clinics commonly raise prices within 12–24 months. Clinics keep their original names, so most clients never learn the owner changed.' },
+  { name: 'National Veterinary Associates (NVA)', category: 'pets', firm: 'ethos-veterinary', since: '2025', note: 'JAB built NVA to 1,000+ clinics, then combined it with Ethos in 2025. Most clinics keep their original local names, so clients rarely notice the change.', change: 'Part of a sector-wide roll-up: corporate and PE ownership of US vet clinics went from roughly 8% in 2011 to about half by 2025, and acquired clinics commonly raise prices within 12–24 months. Clinics keep their original names, so most clients never learn the owner changed.', sources: [{ label: 'CT Acquisitions', url: 'https://ctacquisitions.com/guides/private-equity-veterinary-2026/' }, { label: 'Transitions Elite', url: 'https://transitionselite.com/veterinary-practice-consolidators/' }] },
   { name: 'PetVet Care Centers', category: 'pets', firm: 'kkr', since: '2018' },
   { name: 'Thrive Pet Healthcare', category: 'pets', firm: 'tsg-consumer' },
 
   // ── Health & Personal Care ─────────────────────────────────────────────────
   { name: '1-800 Contacts', category: 'health', firm: 'kkr', since: '2020', change: 'The FTC brought an antitrust case over agreements with rival sellers that restricted search advertising and, the agency argued, kept contact-lens prices higher than they would otherwise have been.' },
-  { name: 'Aspen Dental', category: 'health', firm: 'leonard-green', note: 'Ares & Leonard Green-backed dental chain.', change: 'A long regulatory record: settlements with the Pennsylvania (2010), New York (2015) and Indiana (2015) attorneys general; a $3.5M Massachusetts settlement in 2023 over bait-and-switch tactics; and a California settlement over violating the state ban on corporate practice of dentistry and false advertising. Class actions allege patients were pressured into unnecessary treatment and expensive financing.' },
+  { name: 'Aspen Dental', category: 'health', firm: 'leonard-green', note: 'Ares & Leonard Green-backed dental chain.', change: 'A long regulatory record: settlements with the Pennsylvania (2010), New York (2015) and Indiana (2015) attorneys general; a $3.5M Massachusetts settlement in 2023 over bait-and-switch tactics; and a California settlement over violating the state ban on corporate practice of dentistry and false advertising. Class actions allege patients were pressured into unnecessary treatment and expensive financing.', sources: [{ label: 'California Attorney General', url: 'https://oag.ca.gov/news/press-releases/attorney-general-bonta-announces-settlement-aspen-dental-over-corporate-practice' }, { label: 'PBS Frontline', url: 'https://www.pbs.org/wgbh/frontline/article/aspen-dental-facing-class-action-lawsuit/' }, { label: 'Private Equity Stakeholder Project', url: 'https://pestakeholder.org/news/pe-owned-aspen-dental-faces-yet-another-investigation-for-deceptive-practices-2/' }] },
   { name: 'Heartland Dental', category: 'health', firm: 'kkr', since: '2018', note: 'Largest US dental support organization.' },
   { name: 'CityMD / Summit Health', category: 'health', firm: 'warburg-pincus', note: 'Urgent-care roll-up (merged into VillageMD/Walgreens orbit — verify current structure).' },
   { name: 'Olaplex', category: 'health', firm: 'advent-international', since: '2020', note: 'Public, but Advent controls the company.' },
@@ -582,7 +593,7 @@ export const brands: Brand[] = [
   { name: 'Primrose Schools', category: 'kids', firm: 'roark-capital', since: '2021' },
   { name: 'Learning Care Group (La Petite, Childtime)', category: 'kids', firm: 'american-securities' },
   { name: 'Urban Air Adventure Park', category: 'kids', firm: 'unleashed-brands' },
-  { name: 'Varsity Brands (cheer & school spirit)', category: 'kids', firm: 'kkr', since: '2024', note: 'Bought by KKR from Bain; long criticized for monopolizing competitive cheer.', change: 'Paid an $82.5M antitrust settlement approved in 2024, after an earlier $43.5M settlement, over claims it monopolized cheer competitions, camps and apparel and charged families inflated prices. Bain Capital and Charlesbank were named alongside the company.' },
+  { name: 'Varsity Brands (cheer & school spirit)', category: 'kids', firm: 'kkr', since: '2024', note: 'Bought by KKR from Bain; long criticized for monopolizing competitive cheer.', change: 'Paid an $82.5M antitrust settlement approved in 2024, after an earlier $43.5M settlement, over claims it monopolized cheer competitions, camps and apparel and charged families inflated prices. Bain Capital and Charlesbank were named alongside the company.', sources: [{ label: 'Sportico', url: 'https://www.sportico.com/law/news/2023/varsity-antitrust-cheer-settlement-1234717352/' }, { label: 'Berger Montague (case page)', url: 'https://bergermontague.com/cases/fusion-elite-all-stars-et-al-v-varsity-brands-llc-et-al/' }, { label: 'Top Class Actions', url: 'https://topclassactions.com/legal-industry/parents-varsity-brands-settle-cheerleading-antitrust-lawsuit-for-82-5m/' }] },
   { name: 'Bugaboo (strollers)', category: 'kids', firm: 'bain-capital', since: '2018' },
 
   // ── Entertainment & Travel ─────────────────────────────────────────────────
@@ -592,8 +603,8 @@ export const brands: Brand[] = [
   { name: 'Shutterfly / Snapfish', category: 'travel', firm: 'apollo', since: '2019' },
 
   // ── Home Services & Other ──────────────────────────────────────────────────
-  { name: 'Securus (prison phone calls)', category: 'services', firm: 'platinum-equity', note: 'Charges incarcerated people and families steep rates; long-running divestment campaigns target it.', change: 'The FCC capped prison call rates in 2024 at about $0.06/minute in state prisons. Securus sought an exemption, was denied, and challenged the caps in court. In October 2025 the FCC voted to raise the caps to roughly $0.10–$0.18/minute, with video up to $0.41/minute in small jails, plus an 11–20% facility add-on — costs borne by families, most of them low income.' },
-  { name: 'ViaPath / GTL (prison services)', category: 'services', firm: 'american-securities', change: 'Half of the prison-telecom duopoly whose limited competition regulators and advocates blame for persistently high call costs; benefited alongside Securus when the FCC raised rate caps in October 2025.' },
+  { name: 'Securus (prison phone calls)', category: 'services', firm: 'platinum-equity', note: 'Charges incarcerated people and families steep rates; long-running divestment campaigns target it.', change: 'The FCC capped prison call rates in 2024 at about $0.06/minute in state prisons. Securus sought an exemption, was denied, and challenged the caps in court. In October 2025 the FCC voted to raise the caps to roughly $0.10–$0.18/minute, with video up to $0.41/minute in small jails, plus an 11–20% facility add-on — costs borne by families, most of them low income.', sources: [{ label: 'Stateline', url: 'https://stateline.org/2025/11/11/fcc-allows-prisons-jails-to-charge-more-for-phone-and-video-calls/' }, { label: 'Prison Legal News (2024 caps)', url: 'https://www.prisonlegalnews.org/news/2024/oct/15/fcc-slashes-prison-and-jail-phone-rates-caps-video-call-cost-eliminates-site-commission-kickbacks/' }, { label: 'Prison Legal News (2025 increase)', url: 'https://www.prisonlegalnews.org/news/2025/nov/1/fcc-votes-dramatic-hike-prison-phone-call-rates/' }] },
+  { name: 'ViaPath / GTL (prison services)', category: 'services', firm: 'american-securities', change: 'Half of the prison-telecom duopoly whose limited competition regulators and advocates blame for persistently high call costs; benefited alongside Securus when the FCC raised rate caps in October 2025.', sources: [{ label: 'Stateline', url: 'https://stateline.org/2025/11/11/fcc-allows-prisons-jails-to-charge-more-for-phone-and-video-calls/' }] },
 
   // ── Media & Tech ───────────────────────────────────────────────────────────
   { name: 'Yahoo / AOL / TechCrunch / Engadget', category: 'media', firm: 'apollo', since: '2021' },
@@ -608,15 +619,15 @@ export const brands: Brand[] = [
   { name: 'Carvel', category: 'restaurants', firm: 'roark-capital', note: 'Part of GoTo Foods.' },
 
   // Retail & apparel
-  { name: "Claire's", category: 'retail', firm: 'ames-watson', since: '2025', note: 'Apollo bought it for $3.1B in 2007 in a leveraged buyout; after two bankruptcies the stores sold for about $140M in 2025 — roughly 4% of the original price.', change: 'Apollo’s $3.1B leveraged buyout in 2007 was followed by bankruptcies in 2018 and 2025. The store business sold for about $140 million in 2025 — roughly four cents on the dollar — with a much smaller store fleet.' },
-  { name: 'Torrid', category: 'retail', firm: 'sycamore-partners', note: 'Public, but Sycamore holds roughly 55% of the shares.' },
+  { name: "Claire's", category: 'retail', firm: 'ames-watson', since: '2025', note: 'Apollo bought it for $3.1B in 2007 in a leveraged buyout; after two bankruptcies the stores sold for about $140M in 2025 — roughly 4% of the original price.', change: 'Apollo’s $3.1B leveraged buyout in 2007 was followed by bankruptcies in 2018 and 2025. The store business sold for about $140 million in 2025 — roughly four cents on the dollar — with a much smaller store fleet.', sources: [{ label: 'Digital Commerce 360', url: 'https://www.digitalcommerce360.com/2025/08/22/claires-to-be-acquired-out-of-bankruptcy-by-private-equity/' }, { label: 'CoStar', url: 'https://www.costar.com/article/2123949723/new-claires-owner-to-attempt-rebound-with-smaller-store-fleet' }, { label: 'Private Equity Stakeholder Project', url: 'https://pestakeholder.org/news/how-the-pe-playbook-pierced-claires/' }] },
+  { name: 'Torrid', category: 'retail', firm: 'sycamore-partners', note: 'Public, but Sycamore holds roughly 55% of the shares.', sources: [{ label: 'Yahoo Finance (ownership breakdown)', url: 'https://finance.yahoo.com/news/torrid-holdings-inc-nyse-curv-133809030.html' }] },
 
   // Fitness
-  { name: 'Club Pilates', category: 'fitness', firm: 'xponential', change: 'Parent Xponential agreed in 2026 to pay about $39.75M — a $17M FTC settlement returning money to franchisees, the largest ever in a franchise case, plus $22.75M to 500+ franchisees. The FTC said it misrepresented studio costs, risks and time to open.' },
-  { name: 'Pure Barre', category: 'fitness', firm: 'xponential', change: 'Same Xponential settlements: roughly $39.75M total, including the largest franchisee payout the FTC has ever obtained, over misrepresented costs and risks.' },
-  { name: 'StretchLab', category: 'fitness', firm: 'xponential', change: 'Covered by the 2026 Xponential FTC and franchisee settlements totaling about $39.75M over misrepresented franchise costs and risks.' },
-  { name: 'YogaSix', category: 'fitness', firm: 'xponential', change: 'Covered by the 2026 Xponential FTC and franchisee settlements totaling about $39.75M over misrepresented franchise costs and risks.' },
-  { name: 'CycleBar', category: 'fitness', firm: 'xponential', change: 'Covered by the 2026 Xponential FTC and franchisee settlements totaling about $39.75M over misrepresented franchise costs and risks.' },
+  { name: 'Club Pilates', category: 'fitness', firm: 'xponential', change: 'Parent Xponential agreed in 2026 to pay about $39.75M — a $17M FTC settlement returning money to franchisees, the largest ever in a franchise case, plus $22.75M to 500+ franchisees. The FTC said it misrepresented studio costs, risks and time to open.', sources: [{ label: 'FTC', url: 'https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-secures-settlement-against-xponential-fitness-franchise-rule-violations' }, { label: 'Franchise Times', url: 'https://www.franchisetimes.com/franchise_news/xponential-fitness-agrees-to-pay-millions-in-ftc-franchisee-settlements/article_1aaeaf38-00e9-41e5-a7fe-4eb76c617b7a.html' }] },
+  { name: 'Pure Barre', category: 'fitness', firm: 'xponential', change: 'Same Xponential settlements: roughly $39.75M total, including the largest franchisee payout the FTC has ever obtained, over misrepresented costs and risks.', sources: [{ label: 'FTC', url: 'https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-secures-settlement-against-xponential-fitness-franchise-rule-violations' }, { label: 'Franchise Times', url: 'https://www.franchisetimes.com/franchise_news/xponential-fitness-agrees-to-pay-millions-in-ftc-franchisee-settlements/article_1aaeaf38-00e9-41e5-a7fe-4eb76c617b7a.html' }] },
+  { name: 'StretchLab', category: 'fitness', firm: 'xponential', change: 'Covered by the 2026 Xponential FTC and franchisee settlements totaling about $39.75M over misrepresented franchise costs and risks.', sources: [{ label: 'FTC', url: 'https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-secures-settlement-against-xponential-fitness-franchise-rule-violations' }, { label: 'Franchise Times', url: 'https://www.franchisetimes.com/franchise_news/xponential-fitness-agrees-to-pay-millions-in-ftc-franchisee-settlements/article_1aaeaf38-00e9-41e5-a7fe-4eb76c617b7a.html' }] },
+  { name: 'YogaSix', category: 'fitness', firm: 'xponential', change: 'Covered by the 2026 Xponential FTC and franchisee settlements totaling about $39.75M over misrepresented franchise costs and risks.', sources: [{ label: 'FTC', url: 'https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-secures-settlement-against-xponential-fitness-franchise-rule-violations' }, { label: 'Franchise Times', url: 'https://www.franchisetimes.com/franchise_news/xponential-fitness-agrees-to-pay-millions-in-ftc-franchisee-settlements/article_1aaeaf38-00e9-41e5-a7fe-4eb76c617b7a.html' }] },
+  { name: 'CycleBar', category: 'fitness', firm: 'xponential', change: 'Covered by the 2026 Xponential FTC and franchisee settlements totaling about $39.75M over misrepresented franchise costs and risks.', sources: [{ label: 'FTC', url: 'https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-secures-settlement-against-xponential-fitness-franchise-rule-violations' }, { label: 'Franchise Times', url: 'https://www.franchisetimes.com/franchise_news/xponential-fitness-agrees-to-pay-millions-in-ftc-franchisee-settlements/article_1aaeaf38-00e9-41e5-a7fe-4eb76c617b7a.html' }] },
   { name: "Barry's Bootcamp", category: 'fitness', firm: 'north-castle' },
   { name: 'Life Time', category: 'fitness', firm: 'tpg', since: '2015', note: 'Taken private for ~$4B by TPG and Leonard Green; relisted in 2021 with both firms still major holders.' },
 
@@ -628,15 +639,15 @@ export const brands: Brand[] = [
   { name: 'Blackstone single-family rentals', category: 'housing', firm: 'blackstone', note: 'Blackstone founded Invitation Homes after the foreclosure crisis and still holds tens of thousands of rental houses.' },
 
   // Elder care
-  { name: 'PE-owned nursing homes (sector-wide)', category: 'eldercare', firm: 'blackstone', note: 'Not one chain but a pattern: peer-reviewed research links PE ownership to ~10–11% higher resident mortality, lower staffing and more federal violations. Ownership is often buried in holding companies — check a facility on Medicare’s Care Compare before choosing one.', change: 'NBER and Weill Cornell research found staffing fell and short-term mortality rose roughly 10–11% after PE acquisition, with more ER visits and more hospitalizations for largely preventable causes — an estimated 20,150 additional deaths over twelve years.' },
+  { name: 'PE-owned nursing homes (sector-wide)', category: 'eldercare', firm: 'blackstone', note: 'Not one chain but a pattern: peer-reviewed research links PE ownership to ~10–11% higher resident mortality, lower staffing and more federal violations. Ownership is often buried in holding companies — check a facility on Medicare’s Care Compare before choosing one.', change: 'NBER and Weill Cornell research found staffing fell and short-term mortality rose roughly 10–11% after PE acquisition, with more ER visits and more hospitalizations for largely preventable causes — an estimated 20,150 additional deaths over twelve years.', sources: [{ label: 'NBER working paper w28474', url: 'https://www.nber.org/papers/w28474' }, { label: 'NBER Digest', url: 'https://www.nber.org/digest/202104/how-patients-fare-when-private-equity-funds-acquire-nursing-homes' }, { label: 'California Health Care Foundation', url: 'https://www.chcf.org/resource/higher-death-rates-costs-nursing-homes-private-equity/' }] },
   { name: 'Elara Caring (home health & hospice)', category: 'eldercare', firm: 'blue-wolf-kelso' },
   { name: 'Enhabit Home Health & Hospice', category: 'eldercare', firm: 'kinderhook', since: '2026', note: '$1.1B acquisition covering roughly 249 home-health and 117 hospice locations in 34 states.' },
 
   // Health
   { name: 'US Renal Care (dialysis)', category: 'health', firm: 'summit-bain-renal', note: 'Third-largest dialysis provider. Dialysis patients need treatment three times a week and cannot realistically switch providers — the definition of a captive market.', change: 'Dialysis patients need treatment roughly three times a week and realistically cannot switch providers — a captive market, and precisely the kind of position that makes price and staffing decisions consequential.' },
   { name: 'Center for Social Dynamics (autism therapy)', category: 'health', firm: 'goldman-pia', note: 'One of many PE-backed applied behavior analysis chains rolling up autism services.' },
-  { name: 'VetCor', category: 'pets', firm: 'harvest-partners', note: 'Veterinary roll-up co-owned with Cressey & Company; clinics keep local names.', change: 'Another locally branded clinic network in the same roll-up wave that has pushed corporate ownership to roughly half of US vet practices.' },
-  { name: 'Mission Pet Health / Southern Veterinary Partners', category: 'pets', firm: 'southern-vet', since: '2025', note: 'Formed by merger in 2025; another large network of locally branded clinics.', change: 'Formed by a 2025 merger of two large clinic networks — further consolidation in a market where vet costs have risen far faster than inflation and 81% of vets reported clients growing more price-sensitive in 2025.' },
+  { name: 'VetCor', category: 'pets', firm: 'harvest-partners', note: 'Veterinary roll-up co-owned with Cressey & Company; clinics keep local names.', change: 'Another locally branded clinic network in the same roll-up wave that has pushed corporate ownership to roughly half of US vet practices.', sources: [{ label: 'CT Acquisitions', url: 'https://ctacquisitions.com/guides/private-equity-veterinary-2026/' }, { label: 'Transitions Elite', url: 'https://transitionselite.com/veterinary-practice-consolidators/' }] },
+  { name: 'Mission Pet Health / Southern Veterinary Partners', category: 'pets', firm: 'southern-vet', since: '2025', note: 'Formed by merger in 2025; another large network of locally branded clinics.', change: 'Formed by a 2025 merger of two large clinic networks — further consolidation in a market where vet costs have risen far faster than inflation and 81% of vets reported clients growing more price-sensitive in 2025.', sources: [{ label: 'CT Acquisitions', url: 'https://ctacquisitions.com/guides/private-equity-veterinary-2026/' }, { label: 'Transitions Elite', url: 'https://transitionselite.com/veterinary-practice-consolidators/' }] },
 
   // Home services
   { name: 'Apex Service Partners (HVAC & plumbing)', category: 'services', firm: 'apollo', note: 'Apollo-backed roll-up valued around $10B, buying up local HVAC and plumbing companies that keep their original names.' },
@@ -650,10 +661,10 @@ export const brands: Brand[] = [
 
   // Media & tech
   { name: 'Chicago Tribune', category: 'media', firm: 'alden-global', since: '2021', note: 'Alden cut the newsroom sharply after taking control of Tribune Publishing.' },
-  { name: 'New York Daily News', category: 'media', firm: 'alden-global', since: '2021', note: 'The union reported layoffs of 28% of its members in early 2026.', change: 'The NewsGuild reported Alden laid off 28% of its union members in early 2026. Since Alden took over in 2021 the paper has become largely remote, with layoffs roughly every six months.' },
-  { name: 'The Denver Post', category: 'media', firm: 'alden-global', note: 'The paper whose own editorial board publicly revolted against Alden’s cuts.', change: 'Cuts under Alden were severe enough that the paper’s own editorial board publicly revolted against its owner — an almost unheard-of act by a newsroom against the people who sign its checks.' },
+  { name: 'New York Daily News', category: 'media', firm: 'alden-global', since: '2021', note: 'The union reported layoffs of 28% of its members in early 2026.', change: 'The NewsGuild reported Alden laid off 28% of its union members in early 2026. Since Alden took over in 2021 the paper has become largely remote, with layoffs roughly every six months.', sources: [{ label: 'NewsGuild of New York', url: 'https://www.nyguild.org/post/statement-from-the-daily-news-union-the-newsguild-of-new-york-as-alden-global-capital-begins-mass-layoffs' }, { label: 'NewsGuild-CWA', url: 'https://newsguild.org/daily-news-union-pushes-back-as-alden-global-capital-begins-mass-layoffs/' }] },
+  { name: 'The Denver Post', category: 'media', firm: 'alden-global', note: 'The paper whose own editorial board publicly revolted against Alden’s cuts.', change: 'Cuts under Alden were severe enough that the paper’s own editorial board publicly revolted against its owner — an almost unheard-of act by a newsroom against the people who sign its checks.', sources: [{ label: 'Columbia Journalism Review', url: 'https://www.cjr.org/special_report/alden-global-capital-medianews-tribune-company.php' }] },
   { name: 'The Baltimore Sun', category: 'media', firm: 'alden-global' },
-  { name: 'San Jose Mercury News / East Bay Times', category: 'media', firm: 'alden-global', note: 'Combined Bay Area newsrooms shrank from roughly 380 staffers to around 160.', change: 'Alden merged the Oakland Tribune, Contra Costa Times and Daily Review into the East Bay Times; combined newsroom staffing fell from roughly 380 to about 160.' },
+  { name: 'San Jose Mercury News / East Bay Times', category: 'media', firm: 'alden-global', note: 'Combined Bay Area newsrooms shrank from roughly 380 staffers to around 160.', change: 'Alden merged the Oakland Tribune, Contra Costa Times and Daily Review into the East Bay Times; combined newsroom staffing fell from roughly 380 to about 160.', sources: [{ label: 'Columbia Journalism Review', url: 'https://www.cjr.org/special_report/alden-global-capital-medianews-tribune-company.php' }, { label: 'Statista (Alden overview)', url: 'https://www.statista.com/topics/11086/alden-global-capital-impact-on-local-news/' }] },
   { name: 'The San Diego Union-Tribune', category: 'media', firm: 'alden-global', since: '2023' },
   { name: 'Orange County Register', category: 'media', firm: 'alden-global' },
   { name: 'Boston Herald', category: 'media', firm: 'alden-global' },
@@ -674,8 +685,8 @@ export const brands: Brand[] = [
   { name: 'Crash Champions (incl. Service King)', category: 'auto', firm: 'clearlake', note: 'Absorbed Service King to form a collision-repair chain of well over 500 locations.' },
 
   // Health — vision, staffing, transport, custody
-  { name: 'MyEyeDr', category: 'health', firm: 'goldman-pia', since: '2019', note: 'Bought by Goldman Sachs at roughly $2.7B enterprise value; grows by acquiring independent optometry practices.', change: 'Acquired practices typically keep their optometrist’s name on the door, so patients rarely learn ownership changed.' },
-  { name: 'EyeCare Partners', category: 'health', firm: 'partners-group', since: '2019', note: 'Acquired at more than $2B; one of the largest eye-care roll-ups in the US.' },
+  { name: 'MyEyeDr', category: 'health', firm: 'goldman-pia', since: '2019', note: 'Bought by Goldman Sachs at roughly $2.7B enterprise value; grows by acquiring independent optometry practices.', change: 'Acquired practices typically keep their optometrist’s name on the door, so patients rarely learn ownership changed.', sources: [{ label: 'CT Acquisitions', url: 'https://ctacquisitions.com/guides/optometry-ma-multiples-2026/' }, { label: 'Optometry Times', url: 'https://www.optometrytimes.com/view/how-private-equity-affects-optometry' }] },
+  { name: 'EyeCare Partners', category: 'health', firm: 'partners-group', since: '2019', note: 'Acquired at more than $2B; one of the largest eye-care roll-ups in the US.', sources: [{ label: 'CT Acquisitions', url: 'https://ctacquisitions.com/guides/optometry-ma-multiples-2026/' }] },
   { name: 'US Anesthesia Partners', category: 'health', firm: 'welsh-carson', note: 'Anesthesia roll-up at the center of a landmark FTC case.', change: 'The FTC sued in 2023 alleging the roll-up consolidated anesthesia practices across Texas and drove up prices — patients under anesthesia have no ability to shop for a provider.' },
   { name: 'TeamHealth', category: 'health', firm: 'blackstone', since: '2016', note: 'Physician staffing giant bought for $6.1B.', change: 'Named repeatedly in surprise-billing investigations: patients treated at in-network hospitals were billed out-of-network by the staffing company employing the doctor. Congress passed the No Surprises Act in 2020 in response.' },
   { name: 'Air Methods (air ambulance)', category: 'health', firm: 'american-securities', change: 'Brookings found the highest air-ambulance charges concentrated in PE-owned carriers, with transported patients surprise-billed tens of thousands of dollars for a flight they could not consent to or shop for.' },
@@ -684,7 +695,7 @@ export const brands: Brand[] = [
   { name: 'Wellpath (prison & jail healthcare)', category: 'health', firm: 'hig-capital', note: 'One of the largest correctional healthcare contractors in the US.', change: 'Faced years of litigation over the standard of care provided to people in custody and filed for bankruptcy in 2024.' },
 
   // Groceries
-  { name: 'TreeHouse Foods (store-brand manufacturer)', category: 'groceries', firm: 'investindustrial', since: '2026', note: 'The largest US private-label manufacturer, bought for $2.9B. It makes a great many supermarket own-brand products, so it is hard to avoid by reading labels.' },
+  { name: 'TreeHouse Foods (store-brand manufacturer)', category: 'groceries', firm: 'investindustrial', since: '2026', note: 'The largest US private-label manufacturer, bought for $2.9B. It makes a great many supermarket own-brand products, so it is hard to avoid by reading labels.', sources: [{ label: 'CT Acquisitions', url: 'https://ctacquisitions.com/food-sector-mergers-and-acquisitions/' }] },
   { name: 'Tops Markets', category: 'groceries', firm: 'morgan-stanley-cp', note: 'Bought out by Morgan Stanley Private Equity and Graycliff Partners.', change: 'The roughly 170-store Northeastern chain went into bankruptcy following its leveraged buyout — one of a long run of PE-owned grocers (A&P, Pathmark, Fairway, Haggen, Marsh, Winn-Dixie’s former parent) to do so.' },
 
   // Restaurants
@@ -744,6 +755,17 @@ export const LAST_VERIFIED = 'August 2026';
   for (const b of brands) {
     if (seen.has(b.name)) problems.push(`duplicate brand "${b.name}"`);
     seen.add(b.name);
+
+    for (const src of b.sources ?? []) {
+      if (!/^https:\/\/\S+$/.test(src.url)) {
+        problems.push(`"${b.name}" has a malformed source URL: ${src.url}`);
+      }
+      if (!src.label.trim()) problems.push(`"${b.name}" has a source with no label`);
+    }
+    // A citation with nothing to cite is a bug in the data, not a nuance.
+    if (b.sources?.length && !b.change && !b.note) {
+      problems.push(`"${b.name}" has sources but no claim to support`);
+    }
   }
 
   if (problems.length) {

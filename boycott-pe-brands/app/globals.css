@@ -287,6 +287,29 @@ a.card:hover {
   margin-bottom: 0.15rem;
 }
 
+.sources {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  margin-top: 0.6rem;
+  color: var(--ink-soft);
+}
+
+.sources-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  margin-right: 0.4rem;
+}
+
+.sources a {
+  color: var(--accent-dark);
+}
+
+.sources-missing {
+  font-style: italic;
+}
+
 /* Entries we have not sourced yet: present, but visibly quieter than a
    documented one so an empty slot never reads as an accusation. */
 .changed-empty {

@@ -49,6 +49,35 @@ when it's a fair guess — and a single fabricated claim would discredit every
 sourced one next to it. An empty slot costs nothing; a wrong claim costs the
 whole project.
 
+### The `sources` field
+
+```ts
+sources: [
+  { label: 'FTC', url: 'https://www.ftc.gov/news-events/…' },
+  { label: 'CNBC', url: 'https://www.cnbc.com/…' },
+]
+```
+
+`label` is what the reader sees — use the publisher, not the headline. Prefer
+primary sources (regulator press releases, court filings, company statements,
+peer-reviewed papers) over aggregators and listicles.
+
+**Never add a URL you have not seen resolve.** A plausible-looking dead or
+wrong link is worse than no link: it invites the reader to assume every other
+citation is invented too. Entries with a `change` but no `sources` render an
+explicit "Not yet cited" prompt rather than hiding the gap.
+
+Link rot is the main maintenance burden here. Check it with:
+
+```bash
+npm run check:sources
+```
+
+It probes every citation, pairs failures with the brand they belong to, and
+exits non-zero if any are dead — so it can gate CI. Publishers that block bots
+return 403/405 and are reported as "verify by hand" rather than counted as
+broken.
+
 New pages are generated automatically — categories and firm profiles are built
 from these arrays via `generateStaticParams`.
 
