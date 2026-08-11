@@ -9,7 +9,7 @@ export default function SubmitForm() {
   const [firm, setFirm] = useState('');
   const [category, setCategory] = useState('');
   const [source, setSource] = useState('');
-  const [alternatives, setAlternatives] = useState('');
+  const [changed, setChanged] = useState('');
   const [notes, setNotes] = useState('');
 
   const body = [
@@ -17,7 +17,9 @@ export default function SubmitForm() {
     `**Private equity owner:** ${firm || '(required)'}`,
     `**Category:** ${category || '(unspecified)'}`,
     `**Source / link to reporting:** ${source || '(please add one — submissions without a source can’t be published)'}`,
-    `**Suggested non-PE alternatives:** ${alternatives || '(none suggested)'}`,
+    '',
+    '**What changed after the buyout:**',
+    changed || '(not specified)',
     '',
     '**Notes:**',
     notes || '(none)',
@@ -42,10 +44,10 @@ export default function SubmitForm() {
           placeholder="https://…"
         />
         <Field
-          label="Non-PE alternatives to suggest"
-          value={alternatives}
-          onChange={setAlternatives}
-          placeholder="e.g. local independent sub shops"
+          label="What changed after the buyout"
+          value={changed}
+          onChange={setChanged}
+          placeholder="e.g. portions shrank, fresh baking moved to frozen, staffing cut"
         />
         <label className="sans" style={{ fontSize: '0.9rem', fontWeight: 700 }}>
           Notes

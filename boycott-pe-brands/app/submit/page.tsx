@@ -43,8 +43,9 @@ export default function SubmitPage() {
             <li>The specific PE firm, and the year it took control if you know it.</li>
             <li>A link to reporting that states the ownership.</li>
             <li>
-              At least one realistic alternative. &quot;Shop local&quot; is fine, but a
-              named alternative is far more useful.
+              What specifically changed after the buyout, and how you know —
+              prices, portions, staffing, ingredients, fees, closures, lawsuits.
+              Specifics with a source beat &quot;it got worse&quot; every time.
             </li>
             <li>
               For corrections: what the entry says now, what it should say, and the

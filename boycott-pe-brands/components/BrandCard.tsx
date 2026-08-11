@@ -20,10 +20,16 @@ export default function BrandCard({ brand, showCategory = true }: { brand: Brand
         ) : null}
       </div>
       {brand.note && <p className="brand-note">{brand.note}</p>}
-      {brand.alternatives && brand.alternatives.length > 0 && (
-        <div className="alts">
-          <b>Buy instead</b>
-          {brand.alternatives.join(' · ')}
+      {brand.change ? (
+        <div className="changed">
+          <b>What changed</b>
+          {brand.change}
+        </div>
+      ) : (
+        <div className="changed changed-empty">
+          <b>What changed</b>
+          No documented change on file yet.{' '}
+          <Link href="/submit/">Know of one? Send a source →</Link>
         </div>
       )}
     </div>

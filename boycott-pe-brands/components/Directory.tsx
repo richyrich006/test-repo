@@ -19,7 +19,8 @@ export default function Directory() {
         return (
           b.name.toLowerCase().includes(q) ||
           (firm?.name.toLowerCase().includes(q) ?? false) ||
-          (b.note?.toLowerCase().includes(q) ?? false)
+          (b.note?.toLowerCase().includes(q) ?? false) ||
+          (b.change?.toLowerCase().includes(q) ?? false)
         );
       })
       .sort((a, b) => a.name.localeCompare(b.name));

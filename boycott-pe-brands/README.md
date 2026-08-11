@@ -30,9 +30,24 @@ brand is one object:
   firm: 'blackstone',           // must match a firm slug
   since: '2025',
   note: 'Blackstone acquired majority control in a ~$8B deal.',
-  alternatives: ['Local independent sub shops'],
+  change: 'What measurably changed after the buyout.',  // optional
 }
 ```
+
+### The `change` field
+
+`change` is the heart of the directory: what actually got worse, specifically,
+after the buyout — prices, portions, staffing, ingredients, fees, closures,
+lawsuits, regulatory findings.
+
+**Only fill it in when the claim is tied to reporting, a company statement, a
+court filing, or peer-reviewed research.** Roughly a quarter of entries have
+one; the rest render a muted "no documented change on file yet" prompt that
+invites a sourced submission. That gap is deliberate. Asserting that a real
+business degraded its product, without evidence, is defamatory in tone even
+when it's a fair guess — and a single fabricated claim would discredit every
+sourced one next to it. An empty slot costs nothing; a wrong claim costs the
+whole project.
 
 New pages are generated automatically — categories and firm profiles are built
 from these arrays via `generateStaticParams`.
