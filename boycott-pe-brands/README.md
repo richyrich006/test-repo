@@ -62,10 +62,22 @@ static host. No server or database required.
 
 ### Deploying to GitHub Pages
 
-Push `out/` to a `gh-pages` branch, or add a workflow that runs `npm run build`
-and uploads `out/` as the Pages artifact. If you host under a repository
-subpath rather than a custom domain, set `basePath` in `next.config.mjs` to
-match.
+`.github/workflows/deploy-pages.yml` builds and deploys this site
+automatically on every push that touches `boycott-pe-brands/`.
+
+**One-time setup:** in the repository, go to **Settings → Pages → Build and
+deployment → Source** and select **GitHub Actions**. Until that's done the
+workflow will fail at the "configure-pages" step. Once enabled, the site is
+served at `https://<user>.github.io/test-repo/`.
+
+Because Pages serves the repo under the `/test-repo/` subpath, the workflow
+builds with `PAGES_BASE_PATH=/test-repo`, which `next.config.mjs` turns into
+Next's `basePath`. Local builds leave it empty, so `npm run dev` still works at
+the root. If you move to a custom domain, drop that env var from the workflow.
+
+Use `Link` from `next/link` for internal navigation rather than raw `<a href>`
+— `basePath` is applied to `Link` automatically, and a hand-written `href` will
+break under the subpath.
 
 ## Disclaimer
 

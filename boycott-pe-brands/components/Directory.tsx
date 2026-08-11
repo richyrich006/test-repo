@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { brands, categories, firmBySlug } from '@/data/brands';
 import BrandCard from './BrandCard';
@@ -62,7 +63,7 @@ export default function Directory() {
       {results.length === 0 && (
         <p>
           No matches. Don’t see a PE-owned brand you know about?{' '}
-          <a href="/submit/">Submit it</a>.
+          <Link href="/submit/">Submit it</Link>.
         </p>
       )}
     </div>
