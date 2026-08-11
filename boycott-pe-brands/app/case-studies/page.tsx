@@ -71,6 +71,32 @@ const studies: Study[] = [
     ],
   },
   {
+    name: 'Panera Bread',
+    sub: 'JAB Holding · bought 2017 · still operating, mid-turnaround',
+    paras: [
+      'Panera is the clearest live example of the playbook applied to something people loved, because the company has admitted most of it. After JAB took it private in 2017, portions shrank while prices climbed, the advertised "No No List" of excluded ingredients came down, and cafes shifted from daily deliveries of fresh-baked bread to par-baked frozen dough finished in-store. Staffing was cut, and service got less consistent.',
+      'None of that is a hostile characterization — Panera\'s own CEO acknowledged in 2025 that customers were being asked to pay significantly more for a smaller sandwich made with lower-quality ingredients. Sales fell, and the company announced a turnaround explicitly aimed at reversing the cuts.',
+      'What makes it instructive is the sequence. Each individual change was small enough to deny and cheap enough to justify. Together they degraded the thing customers were actually paying for, and the company only reversed course after the damage showed up in the numbers. Employees and regulars were describing all of it publicly years before that.',
+    ],
+  },
+  {
+    name: "Claire's",
+    sub: 'Apollo · bought 2007 for $3.1B · two bankruptcies · sold for ~$140M in 2025',
+    paras: [
+      'Apollo took the accessories chain private in a $3.1 billion leveraged buyout in 2007. The debt outlasted the strategy: Claire\'s filed for bankruptcy in 2018, restructured, and filed again in 2025.',
+      'In August 2025 the brick-and-mortar business was bought out of bankruptcy by Ames Watson for about $140 million — roughly four cents on the dollar against the original purchase price, with a much smaller store fleet. Two generations of teenagers got their ears pierced there; what killed it was a capital structure, not a change in taste.',
+    ],
+  },
+  {
+    name: 'Progress Residential & HavenBrook Homes',
+    sub: 'Pretium Partners · ~97,000 single-family rental homes',
+    paras: [
+      'After the 2008 foreclosure crisis, investment firms bought up foreclosed houses in bulk. Pretium\'s Progress Residential became the largest institutional owner of single-family rentals in the country, with roughly 97,000 homes.',
+      'At Pretium-owned HavenBrook Homes in Minnesota, tenants reported going winters without heat, sewage backups, mold, and broken doors and windows that went unrepaired. The Minnesota attorney general sued over habitability conditions.',
+      'This is the same deferred-maintenance logic as a restaurant cutting prep staff, applied to somewhere people live. Following a tenant campaign, Progress later sold 345 Twin Cities homes to nonprofit owners — a reminder that these outcomes are contested, not inevitable.',
+    ],
+  },
+  {
     name: 'Petland-style vet roll-ups',
     sub: 'JAB (NVA), KKR (PetVet), Mars (VCA) · ongoing',
     paras: [

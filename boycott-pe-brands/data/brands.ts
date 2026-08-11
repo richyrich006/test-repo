@@ -2,8 +2,13 @@
 // Brand ownership database
 //
 // IMPORTANT: Private-equity ownership changes constantly (buyouts, exits,
-// IPOs, bankruptcies). Entries reflect widely reported ownership as of early
-// 2026 and should be re-verified before being treated as current fact.
+// IPOs, bankruptcies). Entries reflect widely reported ownership at the time
+// of the last review pass (see LAST_VERIFIED) and should be re-verified
+// before being treated as current fact.
+//
+// Some entries below are firms other than classic buyout shops — hedge funds
+// (Alden, Chatham) and family investment vehicles (JAB, BDT) that run the same
+// debt-and-extraction playbook. Where that distinction matters it is noted.
 // See the site-wide disclaimer in the footer.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -106,6 +111,20 @@ export const categories: Category[] = [
     emoji: '💻',
     description:
       'News outlets, publishers and consumer tech under PE ownership face layoffs, paywalls and data monetization.',
+  },
+  {
+    id: 'housing',
+    name: 'Housing & Rentals',
+    emoji: '🏘️',
+    description:
+      'After 2008, investment firms bought foreclosed homes by the tens of thousands. Institutional landlords are linked to above-market rent hikes, fee stacking and elevated eviction rates.',
+  },
+  {
+    id: 'eldercare',
+    name: 'Elder Care',
+    emoji: '🧓',
+    description:
+      'The best-documented harm in the whole sector: peer-reviewed research ties PE ownership of nursing homes to lower staffing and higher resident mortality.',
   },
 ];
 
@@ -288,6 +307,117 @@ export const firms: Firm[] = [
     name: 'Unleashed Brands (PE-backed)',
     description: 'PE-backed franchise roll-up of kids’ activity brands: Urban Air, Little Gym, Snapology and more.',
   },
+  {
+    slug: 'pretium-partners',
+    name: 'Pretium Partners',
+    description:
+      'Through Progress Residential, the largest institutional owner of single-family rental homes in the US — roughly 97,000 houses. Tenants at its HavenBrook Homes have reported months without heat, sewage backups, and mold; the Minnesota attorney general sued over habitability and the company later sold hundreds of Twin Cities homes to nonprofits.',
+  },
+  {
+    slug: 'amherst',
+    name: 'The Amherst Group',
+    description: 'Institutional single-family landlord with roughly 59,000 rental houses.',
+  },
+  {
+    slug: 'alden-global',
+    name: 'Alden Global Capital',
+    description:
+      'A hedge fund rather than a buyout firm, but it runs the same playbook on local news. Through MediaNews Group and Tribune Publishing it owns around 68 daily papers and 300+ weeklies, and is the second-largest newspaper owner in the country. Its pattern is repeated layoffs, newsroom consolidation and sale of newspaper real estate.',
+  },
+  {
+    slug: 'chatham-asset',
+    name: 'Chatham Asset Management',
+    description: 'Hedge fund that owns McClatchy — the Miami Herald, Kansas City Star, Sacramento Bee and about 28 other dailies — bought out of bankruptcy in 2020.',
+  },
+  {
+    slug: 'apax-partners',
+    name: 'Apax Partners',
+    description: 'London-based buyout firm behind two large home-services roll-ups: Wrench Group and the Authority Brands franchise platform.',
+  },
+  {
+    slug: 'morgan-stanley-cp',
+    name: 'Morgan Stanley Capital Partners',
+    description: 'Private equity arm of the bank; built Sila Services into a large East Coast HVAC and plumbing roll-up.',
+  },
+  {
+    slug: 'sun-capital',
+    name: 'Sun Capital Partners',
+    description: 'Buyout firm with a long retail and restaurant track record, including several portfolio bankruptcies; now backing the Redwood Services home-trades roll-up.',
+  },
+  {
+    slug: 'goldman-pia',
+    name: 'Goldman Sachs (Asset Management)',
+    description: 'The bank’s private investing arm backs Aptive Environmental pest control and, with NMS Capital, the Center for Social Dynamics autism-therapy chain.',
+  },
+  {
+    slug: 'eqt',
+    name: 'EQT',
+    description: 'Large Swedish buyout firm; owns Anticimex, a global pest-control roll-up.',
+  },
+  {
+    slug: 'thoma-bravo',
+    name: 'Thoma Bravo',
+    description:
+      'The most acquisitive software buyout firm in the world, with a reputation for buying mature software, cutting R&D and headcount, and raising subscription prices on locked-in customers.',
+  },
+  {
+    slug: 'vista-equity',
+    name: 'Vista Equity Partners',
+    description:
+      'Software-focused buyout firm. With Elliott it took Citrix private and merged it with TIBCO into Cloud Software Group — one of the largest software LBOs ever by debt, followed by deep layoffs and sharp licensing price increases.',
+  },
+  {
+    slug: 'permira',
+    name: 'Permira',
+    description: 'European buyout firm; co-led the $10.2B take-private of Zendesk with Hellman & Friedman.',
+  },
+  {
+    slug: 'ames-watson',
+    name: 'Ames Watson',
+    description: 'Bought Claire’s global store estate out of its second bankruptcy in 2025 for about $140 million — the latest owner of a chain Apollo had bought for $3.1 billion in 2007.',
+  },
+  {
+    slug: 'tpg',
+    name: 'TPG',
+    description: 'Major buyout firm; co-led the ~$4B take-private of Life Time Fitness with Leonard Green.',
+  },
+  {
+    slug: 'north-castle',
+    name: 'North Castle Partners',
+    description: 'Health-and-wellness focused PE firm; backer of Barry’s Bootcamp and other studio chains.',
+  },
+  {
+    slug: 'xponential',
+    name: 'Xponential Fitness (PE-backed)',
+    description:
+      'A PE-built roll-up of boutique studio franchises — Club Pilates, Pure Barre, StretchLab, YogaSix, CycleBar and more. Went public in 2021; franchisees have publicly disputed the economics of its model.',
+  },
+  {
+    slug: 'blue-wolf-kelso',
+    name: 'Blue Wolf Capital & Kelso',
+    description: 'Co-owners of Elara Caring, one of the largest home-health, personal-care and hospice providers in the US.',
+  },
+  {
+    slug: 'kinderhook',
+    name: 'Kinderhook Industries',
+    description: 'Agreed in 2026 to buy Enhabit, a home-health and hospice operator running roughly 249 home-health and 117 hospice locations across 34 states, for $1.1 billion.',
+  },
+  {
+    slug: 'ethos-veterinary',
+    name: 'Ethos Veterinary Health',
+    description:
+      'PE-backed veterinary group that acquired National Veterinary Associates in 2025, combining two of the largest clinic networks in the country. Most acquired clinics keep their original local names.',
+  },
+  {
+    slug: 'southern-vet',
+    name: 'Mission Pet Health / Southern Veterinary Partners',
+    description: 'PE-backed veterinary roll-up formed by the 2025 merger of Southern Veterinary Partners and Mission Veterinary Partners.',
+  },
+  {
+    slug: 'summit-bain-renal',
+    name: 'Bain Capital & Summit Partners',
+    description: 'Joint owners of US Renal Care, the third-largest dialysis provider in the country — a sector where patients cannot simply switch providers.',
+  },
 ];
 
 export const brands: Brand[] = [
@@ -357,7 +487,7 @@ export const brands: Brand[] = [
   // ── Pets & Veterinary ──────────────────────────────────────────────────────
   { name: 'PetSmart', category: 'pets', firm: 'bc-partners', since: '2015', alternatives: ['Local independent pet stores'] },
   { name: 'Petco', category: 'pets', firm: 'cvc-capital', since: '2015', note: 'CVC Capital & CPP Investments.', alternatives: ['Local independent pet stores'] },
-  { name: 'National Veterinary Associates (NVA)', category: 'pets', firm: 'jab-holding', since: '2019', note: '1,000+ vet clinics; many keep their original local names.', alternatives: ['Independently owned vet practices — ask who owns your clinic'] },
+  { name: 'National Veterinary Associates (NVA)', category: 'pets', firm: 'ethos-veterinary', since: '2025', note: 'JAB built NVA to 1,000+ clinics, then combined it with Ethos in 2025. Most clinics keep their original local names, so clients rarely notice the change.', alternatives: ['Independently owned vet practices — ask who owns your clinic'] },
   { name: 'PetVet Care Centers', category: 'pets', firm: 'kkr', since: '2018', alternatives: ['Independently owned vet practices'] },
   { name: 'Thrive Pet Healthcare', category: 'pets', firm: 'tsg-consumer', alternatives: ['Independently owned vet practices'] },
 
@@ -400,7 +530,69 @@ export const brands: Brand[] = [
   // ── Media & Tech ───────────────────────────────────────────────────────────
   { name: 'Yahoo / AOL / TechCrunch / Engadget', category: 'media', firm: 'apollo', since: '2021', alternatives: ['Independent and nonprofit newsrooms'] },
   { name: 'Simon & Schuster', category: 'media', firm: 'kkr', since: '2023', alternatives: ['Independent publishers and local bookstores', 'Bookshop.org'] },
-  { name: 'McClatchy (Miami Herald, KC Star…)', category: 'media', firm: 'apollo', note: 'Owned by Chatham Asset Management (hedge fund) with PE-style playbook — verify; local news roll-ups by Alden Global are similar.', alternatives: ['Subscribe to independent local news outlets'] },
+  { name: 'McClatchy (Miami Herald, KC Star, Sacramento Bee)', category: 'media', firm: 'chatham-asset', since: '2020', note: 'Bought out of bankruptcy by the hedge fund Chatham Asset Management; roughly 30 dailies.', alternatives: ['Subscribe to independent and nonprofit local newsrooms'] },
+
+  // ── Added August 2026 review pass ──────────────────────────────────────────
+
+  // Restaurants
+  { name: "Dave's Hot Chicken", category: 'restaurants', firm: 'roark-capital', since: '2025', note: 'Roark took a majority stake at a reported $1B valuation — its 21st restaurant chain.', alternatives: ['Local hot-chicken and fried-chicken spots'] },
+  { name: "McAlister's Deli", category: 'restaurants', firm: 'roark-capital', note: 'Part of GoTo Foods.', alternatives: ['Local delis'] },
+  { name: 'Carvel', category: 'restaurants', firm: 'roark-capital', note: 'Part of GoTo Foods.', alternatives: ['Local ice cream shops'] },
+
+  // Retail & apparel
+  { name: "Claire's", category: 'retail', firm: 'ames-watson', since: '2025', note: 'Apollo bought it for $3.1B in 2007 in a leveraged buyout; after two bankruptcies the stores sold for about $140M in 2025 — roughly 4% of the original price.', alternatives: ['Local jewelry and accessory shops', 'Independent piercing studios'] },
+  { name: 'Torrid', category: 'retail', firm: 'sycamore-partners', note: 'Public, but Sycamore holds roughly 55% of the shares.', alternatives: ['Independent plus-size boutiques', 'Secondhand'] },
+
+  // Fitness
+  { name: 'Club Pilates', category: 'fitness', firm: 'xponential', alternatives: ['Independent pilates studios'] },
+  { name: 'Pure Barre', category: 'fitness', firm: 'xponential', alternatives: ['Independent barre and dance studios'] },
+  { name: 'StretchLab', category: 'fitness', firm: 'xponential', alternatives: ['Licensed physical therapists and massage therapists'] },
+  { name: 'YogaSix', category: 'fitness', firm: 'xponential', alternatives: ['Independent local yoga studios'] },
+  { name: 'CycleBar', category: 'fitness', firm: 'xponential', alternatives: ['Independent spin studios', 'Riding an actual bicycle'] },
+  { name: "Barry's Bootcamp", category: 'fitness', firm: 'north-castle', alternatives: ['Independent local gyms and bootcamps'] },
+  { name: 'Life Time', category: 'fitness', firm: 'tpg', since: '2015', note: 'Taken private for ~$4B by TPG and Leonard Green; relisted in 2021 with both firms still major holders.', alternatives: ['YMCA (nonprofit)', 'Community rec centers'] },
+
+  // Housing & rentals
+  { name: 'Progress Residential', category: 'housing', firm: 'pretium-partners', note: 'The largest institutional owner of single-family rental homes in the US — about 97,000 houses.', alternatives: ['Rent from small local landlords', 'Housing co-ops and community land trusts'] },
+  { name: 'HavenBrook Homes', category: 'housing', firm: 'pretium-partners', note: 'Tenants reported no heat in winter, sewage backups and mold; sued by the Minnesota attorney general over habitability.', alternatives: ['Small local landlords', 'Nonprofit housing providers'] },
+  { name: 'FirstKey Homes', category: 'housing', firm: 'cerberus', note: 'Cerberus-backed single-family landlord with 50,000+ homes.', alternatives: ['Small local landlords'] },
+  { name: 'Amherst Residential', category: 'housing', firm: 'amherst', note: 'Roughly 59,000 single-family rental homes.', alternatives: ['Small local landlords'] },
+  { name: 'Blackstone single-family rentals', category: 'housing', firm: 'blackstone', note: 'Blackstone founded Invitation Homes after the foreclosure crisis and still holds tens of thousands of rental houses.', alternatives: ['Small local landlords', 'Community land trusts'] },
+
+  // Elder care
+  { name: 'PE-owned nursing homes (sector-wide)', category: 'eldercare', firm: 'blackstone', note: 'Not one chain but a pattern: peer-reviewed research links PE ownership to ~10–11% higher resident mortality, lower staffing and more federal violations. Ownership is often buried in holding companies — check a facility on Medicare’s Care Compare before choosing one.', alternatives: ['Nonprofit and religiously affiliated nursing homes', 'Facilities rated 4–5 stars on Medicare Care Compare'] },
+  { name: 'Elara Caring (home health & hospice)', category: 'eldercare', firm: 'blue-wolf-kelso', alternatives: ['Nonprofit hospice providers', 'Community home-health agencies'] },
+  { name: 'Enhabit Home Health & Hospice', category: 'eldercare', firm: 'kinderhook', since: '2026', note: '$1.1B acquisition covering roughly 249 home-health and 117 hospice locations in 34 states.', alternatives: ['Nonprofit hospice providers'] },
+
+  // Health
+  { name: 'US Renal Care (dialysis)', category: 'health', firm: 'summit-bain-renal', note: 'Third-largest dialysis provider. Dialysis patients need treatment three times a week and cannot realistically switch providers — the definition of a captive market.', alternatives: ['Nonprofit and hospital-run dialysis centers where available'] },
+  { name: 'Center for Social Dynamics (autism therapy)', category: 'health', firm: 'goldman-pia', note: 'One of many PE-backed applied behavior analysis chains rolling up autism services.', alternatives: ['Independent and nonprofit ABA providers', 'University-affiliated clinics'] },
+  { name: 'VetCor', category: 'pets', firm: 'harvest-partners', note: 'Veterinary roll-up co-owned with Cressey & Company; clinics keep local names.', alternatives: ['Independently owned vet practices'] },
+  { name: 'Mission Pet Health / Southern Veterinary Partners', category: 'pets', firm: 'southern-vet', since: '2025', note: 'Formed by merger in 2025; another large network of locally branded clinics.', alternatives: ['Independently owned vet practices'] },
+
+  // Home services
+  { name: 'Apex Service Partners (HVAC & plumbing)', category: 'services', firm: 'apollo', note: 'Apollo-backed roll-up valued around $10B, buying up local HVAC and plumbing companies that keep their original names.', alternatives: ['Independent local HVAC and plumbing contractors'] },
+  { name: 'Champions Group (HVAC)', category: 'services', firm: 'blackstone', alternatives: ['Independent local HVAC contractors'] },
+  { name: 'Wrench Group (HVAC & plumbing)', category: 'services', firm: 'apax-partners', alternatives: ['Independent local contractors'] },
+  { name: 'Authority Brands (Benjamin Franklin Plumbing, Mister Sparky…)', category: 'services', firm: 'apax-partners', note: 'Franchise platform spanning plumbing, HVAC, electrical and pest.', alternatives: ['Independent local tradespeople'] },
+  { name: 'Sila Services (HVAC & plumbing)', category: 'services', firm: 'morgan-stanley-cp', alternatives: ['Independent local contractors'] },
+  { name: 'Redwood Services (home trades)', category: 'services', firm: 'sun-capital', alternatives: ['Independent local contractors'] },
+  { name: 'Aptive Environmental (pest control)', category: 'services', firm: 'goldman-pia', alternatives: ['Independent local pest-control companies'] },
+  { name: 'Anticimex (pest control)', category: 'services', firm: 'eqt', alternatives: ['Independent local pest-control companies'] },
+
+  // Media & tech
+  { name: 'Chicago Tribune', category: 'media', firm: 'alden-global', since: '2021', note: 'Alden cut the newsroom sharply after taking control of Tribune Publishing.', alternatives: ['Independent and nonprofit local newsrooms', 'Chicago Sun-Times (nonprofit-owned)'] },
+  { name: 'New York Daily News', category: 'media', firm: 'alden-global', since: '2021', note: 'The union reported layoffs of 28% of its members in early 2026.', alternatives: ['Independent and nonprofit local newsrooms'] },
+  { name: 'The Denver Post', category: 'media', firm: 'alden-global', note: 'The paper whose own editorial board publicly revolted against Alden’s cuts.', alternatives: ['Colorado Sun (journalist-owned)'] },
+  { name: 'The Baltimore Sun', category: 'media', firm: 'alden-global', alternatives: ['Baltimore Banner (nonprofit)'] },
+  { name: 'San Jose Mercury News / East Bay Times', category: 'media', firm: 'alden-global', note: 'Combined Bay Area newsrooms shrank from roughly 380 staffers to around 160.', alternatives: ['Independent and nonprofit local newsrooms'] },
+  { name: 'The San Diego Union-Tribune', category: 'media', firm: 'alden-global', since: '2023', alternatives: ['Voice of San Diego (nonprofit)'] },
+  { name: 'Orange County Register', category: 'media', firm: 'alden-global', alternatives: ['Independent local newsrooms'] },
+  { name: 'Boston Herald', category: 'media', firm: 'alden-global', alternatives: ['Independent local newsrooms'] },
+  { name: 'St. Paul Pioneer Press', category: 'media', firm: 'alden-global', alternatives: ['Sahan Journal and other nonprofit Minnesota newsrooms'] },
+  { name: 'Citrix / Cloud Software Group', category: 'media', firm: 'vista-equity', since: '2022', note: 'Taken private with Elliott and merged with TIBCO under roughly $15–16B of new debt, followed by mass layoffs and steep licensing price hikes.', alternatives: ['Open-source remote-access tools'] },
+  { name: 'Zendesk', category: 'media', firm: 'permira', since: '2022', note: '$10.2B take-private led by Hellman & Friedman and Permira.', alternatives: ['Open-source or independently owned helpdesk software'] },
+  { name: 'Coupa Software', category: 'media', firm: 'thoma-bravo', since: '2022', note: '$6.2B take-private.', alternatives: ['Independently owned procurement software'] },
 ];
 
 // Derived helpers -------------------------------------------------------------
@@ -421,4 +613,4 @@ export function brandsByCategory(id: string): Brand[] {
   return brands.filter((b) => b.category === id);
 }
 
-export const LAST_VERIFIED = 'early 2026';
+export const LAST_VERIFIED = 'August 2026';

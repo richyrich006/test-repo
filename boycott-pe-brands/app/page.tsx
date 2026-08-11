@@ -19,8 +19,8 @@ export default function Home() {
             <Link href="/brands/" className="btn btn-primary">
               Search the Brand Directory
             </Link>
-            <Link href="/why-private-equity/" className="btn btn-outline">
-              Why Private Equity Is a Problem
+            <Link href="/warning-signs/" className="btn btn-outline">
+              How to Spot a Buyout
             </Link>
           </div>
         </div>
@@ -49,6 +49,13 @@ export default function Home() {
 
       <section className="section">
         <div className="container">
+          <div className="callout" style={{ marginTop: 0 }}>
+            <b>Noticed your usual place got worse?</b> Smaller portions, frozen
+            instead of fresh, fewer staff, new fees, repairs that never come —
+            these are the documented after-effects of a buyout, and customers and
+            workers usually spot them years before the ownership change is common
+            knowledge. <Link href="/warning-signs/">Learn the warning signs →</Link>
+          </div>
           <h2 className="section-title">Browse by category</h2>
           <p className="section-sub">
             Check the aisles you actually shop. Every category links to the brands

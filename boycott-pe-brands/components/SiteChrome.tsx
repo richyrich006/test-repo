@@ -12,6 +12,7 @@ export function Header() {
           <Link href="/brands/">Brand Directory</Link>
           <Link href="/firms/">PE Firms</Link>
           <Link href="/why-private-equity/">Why It Matters</Link>
+          <Link href="/warning-signs/">Warning Signs</Link>
           <Link href="/case-studies/">Case Studies</Link>
           <Link href="/take-action/">Take Action</Link>
           <Link href="/submit/">Submit a Brand</Link>
@@ -32,6 +33,7 @@ export function Footer() {
         <p style={{ marginTop: '0.6rem' }}>
           <Link href="/brands/">Directory</Link> ·{' '}
           <Link href="/why-private-equity/">Why it matters</Link> ·{' '}
+          <Link href="/warning-signs/">Warning signs</Link> ·{' '}
           <Link href="/case-studies/">Case studies</Link> ·{' '}
           <Link href="/take-action/">Take action</Link> ·{' '}
           <Link href="/submit/">Submit a brand</Link>
