@@ -147,6 +147,13 @@ export const categories: Category[] = [
       'A handful of PE-backed platforms now own most of the national tire, repair, collision and car-wash chains — and they buy independent shops constantly, usually rebranding them quietly.',
   },
   {
+    id: 'tools',
+    name: 'Tools & Hardware',
+    emoji: '🔨',
+    description:
+      'Tool brands are bought for their reputation, then built to a price. The name on the box often outlives the company that earned it.',
+  },
+  {
     id: 'deathcare',
     name: 'Funerals & Death Care',
     emoji: '⚱️',
@@ -493,6 +500,70 @@ export const firms: Firm[] = [
     description: 'PE-backed death-care roll-up with roughly 450 cemetery and funeral locations after buying 72 cemeteries and 11 funeral homes from Park Lawn in 2023.',
   },
   {
+    slug: 'authentic-brands',
+    name: 'Authentic Brands Group',
+    description:
+      'Owned by CVC Capital Partners, HPS Investment Partners, Leonard Green and General Atlantic. ABG buys famous names and licenses them out rather than making anything — it owns the trademark, and whoever pays for the license decides what the product actually is. That is why a brand you trusted for decades can change in quality overnight without changing its logo. Portfolio of 50+ names including Reebok, Brooks Brothers, Eddie Bauer and Champion.',
+  },
+  {
+    slug: 'marquee-brands',
+    name: 'Marquee Brands',
+    description:
+      'Brand-licensing firm backed by Neuberger Berman, with around $4.5B in annual retail sales. Buys heritage and celebrity names — Martha Stewart, Sur La Table, BCBG, Laura Ashley — and licenses them to manufacturers.',
+  },
+  {
+    slug: 'whp-global',
+    name: 'WHP Global',
+    description:
+      'Brand-management firm with roughly $7B in annual retail sales. Owns the Toys “R” Us and Babies “R” Us names — the same brand KKR and Bain loaded with debt and liquidated in 2018, now a licensing asset — plus Express, Bonobos, Rag & Bone and Anne Klein.',
+  },
+  {
+    slug: 'bluestar',
+    name: 'Bluestar Alliance',
+    description: 'Brand-licensing firm in the same mold as ABG and WHP, holding names including Hurley, Bebe, Brookstone and Scotch & Soda.',
+  },
+  {
+    slug: 'butterfly-equity',
+    name: 'Butterfly Equity',
+    description: 'Los Angeles food-and-beverage buyout firm. Took the Duckhorn wine portfolio private for $1.95B, and owns QDOBA, Bolthouse Fresh Foods, Chosen Foods and Orgain.',
+  },
+  {
+    slug: 'bansk',
+    name: 'Bansk Group',
+    description: 'Consumer PE firm founded by Bart Becht, former CEO of Coty. Buys beauty, personal care and household brands — Amika, Eva NYC, BYOMA.',
+  },
+  {
+    slug: 'yellow-wood',
+    name: 'Yellow Wood Partners',
+    description: 'Specialises in carve-outs — buying brands the big conglomerates no longer want. Bought Suave and Unilever’s Elida beauty portfolio and merged them into Evermark, roughly $1.9B in retail sales.',
+  },
+  {
+    slug: 'longrange',
+    name: 'LongRange Capital',
+    description:
+      'Bought Pizza Hut’s US business from Yum Brands for $1.5B. Also owns 24 Hour Fitness and Batesville, which supplies caskets and urns to funeral homes — pizza, gyms and coffins under one owner.',
+  },
+  {
+    slug: 'general-atlantic',
+    name: 'General Atlantic',
+    description: 'Growth-equity firm; majority owner of Torchy’s Tacos since 2017 and lead investor in a $400M round in 2020.',
+  },
+  {
+    slug: 'trew-capital',
+    name: 'TREW Capital Management',
+    description: 'Acquired Rubio’s Coastal Grill out of bankruptcy with a $40M credit bid, after the chain abruptly closed dozens of California restaurants.',
+  },
+  {
+    slug: 'new-mountain',
+    name: 'New Mountain Capital',
+    description: 'Backer of Radiology Partners, one of the largest physician-owned-in-name radiology groups in the US and a frequent example in surprise-billing coverage.',
+  },
+  {
+    slug: 'gryphon',
+    name: 'Gryphon Investors',
+    description: 'Owns Smile Brands, one of the larger dental support organisations in the country.',
+  },
+  {
     slug: 'durational',
     name: 'Durational Capital Management',
     description: 'Took the Bojangles fast-food chain private in 2019 with The Jordan Company.',
@@ -718,6 +789,129 @@ export const brands: Brand[] = [
 
   // Death care
   { name: 'Everstory Partners (cemeteries & funeral homes)', category: 'deathcare', firm: 'everstory', note: 'Around 450 locations after buying 72 cemeteries and 11 funeral homes from Park Lawn in 2023.', change: 'PE-backed firms now own roughly 1,000 of the approximately 3,800 chain-owned US funeral homes. Grieving families rarely comparison-shop, and acquired homes usually keep the original family name on the sign.' },
+
+  // ── Third expansion pass: brand-licensing groups and more sectors ──────────
+
+  // Authentic Brands Group — the licensing model at scale
+  { name: 'Reebok', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Brooks Brothers', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Nautica', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Juicy Couture', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Rockport', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Eddie Bauer', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Quiksilver', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Billabong', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Frye', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Aéropostale', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Forever 21', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Nine West', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Barneys New York', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Volcom', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Airwalk', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Prince (tennis)', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Spyder', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Sports Illustrated', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Champion', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Dockers', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Ted Baker', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Hunter Boots', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Lucky Brand', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Jones New York', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Roxy', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Tretorn', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Vince Camuto', category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: "Frederick's of Hollywood", category: 'retail', firm: 'authentic-brands', note: 'Licensed name: ABG owns the trademark and licenses it to manufacturers, so what is in the box can change without the brand changing.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Sperry', category: 'retail', firm: 'authentic-brands', since: '2024', note: 'Bought from Wolverine World Wide for about $130 million.', change: 'Sold off by its maker to a licensing company, which does not manufacture — production and quality decisions pass to whichever licensee holds the rights.', sources: [{ label: 'CNBC', url: 'https://www.cnbc.com/2024/01/11/wolverine-world-wide-sells-sperry-to-authentic-brands-group.html' }] },
+
+  // Marquee Brands
+  { name: 'Martha Stewart', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'BCBG', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Laura Ashley', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Isotoner', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Sur La Table', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Destination Maternity', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'A Pea in the Pod', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Motherhood Maternity', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Dakine', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Ben Sherman', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Body Glove', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Emeril Lagasse', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'America’s Test Kitchen', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Bruno Magli', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Hatch (maternity)', category: 'retail', firm: 'marquee-brands', note: 'Licensed name in the Marquee Brands portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+
+  // WHP Global
+  { name: 'Toys “R” Us', category: 'retail', firm: 'whp-global', note: 'The name survived the company. KKR and Bain’s buyout liquidated the retailer in 2018; WHP now licenses the brand.', change: 'The chain that employed 33,000 people is now a trademark licensed onto other companies’ shelves — the clearest illustration that a buyout can kill the business and keep the logo.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Babies “R” Us', category: 'retail', firm: 'whp-global', note: 'Licensed name in the WHP Global portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Anne Klein', category: 'retail', firm: 'whp-global', note: 'Licensed name in the WHP Global portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Express', category: 'retail', firm: 'whp-global', note: 'Licensed name in the WHP Global portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Bonobos', category: 'retail', firm: 'whp-global', note: 'Licensed name in the WHP Global portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Rag & Bone', category: 'retail', firm: 'whp-global', note: 'Licensed name in the WHP Global portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+  { name: 'Marc Jacobs', category: 'retail', firm: 'whp-global', note: 'Licensed name in the WHP Global portfolio.', sources: [{ label: 'Fortune', url: 'https://fortune.com/2025/11/30/brand-management-martha-stewart-dockers-brooks-brothers/' }] },
+
+  // Bluestar Alliance
+  { name: 'Hurley', category: 'retail', firm: 'bluestar', note: 'Licensed name in the Bluestar Alliance portfolio.' },
+  { name: 'Bebe', category: 'retail', firm: 'bluestar', note: 'Licensed name in the Bluestar Alliance portfolio.' },
+  { name: 'Brookstone', category: 'retail', firm: 'bluestar', note: 'Licensed name in the Bluestar Alliance portfolio.' },
+  { name: 'Scotch & Soda', category: 'retail', firm: 'bluestar', note: 'Licensed name in the Bluestar Alliance portfolio.' },
+  { name: 'Justice', category: 'retail', firm: 'bluestar', note: 'Licensed name in the Bluestar Alliance portfolio.' },
+  { name: 'Limited Too', category: 'retail', firm: 'bluestar', note: 'Licensed name in the Bluestar Alliance portfolio.' },
+
+  // Sycamore’s 2024 apparel additions
+  { name: "Chico's", category: 'retail', firm: 'sycamore-partners', since: '2024', note: 'Part of Chico’s FAS, taken private by Sycamore in 2024.' },
+  { name: 'White House Black Market', category: 'retail', firm: 'sycamore-partners', since: '2024', note: 'Part of Chico’s FAS, taken private by Sycamore in 2024.' },
+  { name: 'Soma', category: 'retail', firm: 'sycamore-partners', since: '2024', note: 'Part of Chico’s FAS, taken private by Sycamore in 2024.' },
+
+  // Butterfly Equity — food & drink
+  { name: 'The Duckhorn Portfolio', category: 'groceries', firm: 'butterfly-equity', since: '2024', note: 'Taken private in a $1.95B deal.', change: 'A publicly listed winery group with eight-plus labels taken private by a buyout firm — the debt used to buy a vineyard has to come out of the wine.', sources: [{ label: 'Food Manufacturing', url: 'https://www.foodmanufacturing.com/capital-investment/news/22922748/wine-company-duckhorn-portfolio-acquired-by-private-equity-firm-in-195b-deal' }] },
+  { name: 'Decoy wines', category: 'groceries', firm: 'butterfly-equity', since: '2024', note: 'Part of the Duckhorn portfolio taken private by Butterfly Equity.', sources: [{ label: 'Food Manufacturing', url: 'https://www.foodmanufacturing.com/capital-investment/news/22922748/wine-company-duckhorn-portfolio-acquired-by-private-equity-firm-in-195b-deal' }] },
+  { name: 'Kosta Browne', category: 'groceries', firm: 'butterfly-equity', since: '2024', note: 'Part of the Duckhorn portfolio taken private by Butterfly Equity.', sources: [{ label: 'Food Manufacturing', url: 'https://www.foodmanufacturing.com/capital-investment/news/22922748/wine-company-duckhorn-portfolio-acquired-by-private-equity-firm-in-195b-deal' }] },
+  { name: 'Sonoma-Cutrer', category: 'groceries', firm: 'butterfly-equity', since: '2024', note: 'Part of the Duckhorn portfolio taken private by Butterfly Equity.', sources: [{ label: 'Food Manufacturing', url: 'https://www.foodmanufacturing.com/capital-investment/news/22922748/wine-company-duckhorn-portfolio-acquired-by-private-equity-firm-in-195b-deal' }] },
+  { name: 'QDOBA', category: 'restaurants', firm: 'butterfly-equity' },
+  { name: 'Bolthouse Fresh Foods', category: 'groceries', firm: 'butterfly-equity' },
+  { name: 'Chosen Foods', category: 'groceries', firm: 'butterfly-equity' },
+  { name: 'Orgain', category: 'groceries', firm: 'butterfly-equity' },
+  { name: 'MaryRuth Organics', category: 'groceries', firm: 'butterfly-equity' },
+  { name: 'Milk Specialties', category: 'groceries', firm: 'butterfly-equity' },
+
+  // Beauty & personal care
+  { name: 'Amika', category: 'health', firm: 'bansk', since: '2025', note: 'Premium haircare brand; Bansk took a majority stake.', sources: [{ label: 'WWD', url: 'https://wwd.com/beauty-industry-news/beauty-features/bansk-group-buy-amika-eva-nyc-1235179198/' }] },
+  { name: 'Eva NYC', category: 'health', firm: 'bansk', since: '2025', note: 'Acquired alongside Amika in Bansk’s haircare deal.', sources: [{ label: 'WWD', url: 'https://wwd.com/beauty-industry-news/beauty-features/bansk-group-buy-amika-eva-nyc-1235179198/' }] },
+  { name: 'BYOMA', category: 'health', firm: 'bansk', since: '2025', note: 'Bought from Yellow Wood Partners — passed between two buyout firms in under three years.', sources: [{ label: 'WWD', url: 'https://wwd.com/beauty-industry-news/skin-care/byoma-majority-stake-bansk-group-1238124699/' }] },
+  { name: 'Suave', category: 'health', firm: 'yellow-wood', since: '2023', note: 'Carved out of Unilever and merged into Yellow Wood’s Evermark platform.' },
+  { name: 'TIGI', category: 'health', firm: 'yellow-wood', since: '2023', note: 'Part of the Elida Beauty portfolio carved out of Unilever.' },
+  { name: 'Caress', category: 'health', firm: 'yellow-wood', since: '2023', note: 'Part of the Elida Beauty portfolio carved out of Unilever.' },
+  { name: "Dr. Scholl's", category: 'health', firm: 'yellow-wood', note: 'Carved out of Bayer.' },
+
+  // LongRange Capital
+  { name: 'Pizza Hut (US)', category: 'restaurants', firm: 'longrange', since: '2026', note: 'Yum Brands sold the US business for $1.5B.', change: 'Market share had already slid from 19% to 15% since 2019 while Domino’s climbed to 30%. A declining chain sold into a leveraged structure is the setup that preceded most of the bankruptcies on this site.', sources: [{ label: 'NBC News', url: 'https://www.nbcnews.com/business/consumer/pizza-hut-private-equity-24-hour-fitness-rcna350333' }] },
+  { name: '24 Hour Fitness', category: 'fitness', firm: 'longrange', note: 'Same owner as Pizza Hut and Batesville caskets.', change: 'Filed for bankruptcy in 2020 and closed more than 100 clubs under its previous private equity owners.', sources: [{ label: 'NBC News', url: 'https://www.nbcnews.com/business/consumer/pizza-hut-private-equity-24-hour-fitness-rcna350333' }] },
+  { name: 'Batesville (caskets & urns)', category: 'deathcare', firm: 'longrange', note: 'Supplies caskets and urns to funeral homes — bought by the same firm that owns Pizza Hut and 24 Hour Fitness.', sources: [{ label: 'NBC News', url: 'https://www.nbcnews.com/business/consumer/pizza-hut-private-equity-24-hour-fitness-rcna350333' }] },
+
+  // Restaurants
+  { name: 'Torchy’s Tacos', category: 'restaurants', firm: 'general-atlantic', since: '2017', note: 'General Atlantic became majority owner in 2017 and led a $400M round in 2020.', sources: [{ label: 'Nation’s Restaurant News', url: 'https://www.nrn.com/fast-casual/torchy-s-tacos-receives-investment-from-general-atlantic' }] },
+  { name: 'Rubio’s Coastal Grill', category: 'restaurants', firm: 'trew-capital', since: '2024', note: 'Acquired out of bankruptcy with a $40M credit bid.', change: 'Abruptly closed 48 California restaurants in 2024, then filed for Chapter 11 — the second bankruptcy in four years.', sources: [{ label: 'QSR Magazine', url: 'https://www.qsrmagazine.com/growth/finance/rubios-to-be-sold-to-new-private-equity-owner/' }] },
+
+  // Tools & hardware
+  { name: 'Apex Tool Group', category: 'tools', firm: 'bain-capital', since: '2013', note: 'Bought from Danaher and Eaton for about $1.6B. Bain has since tried to sell it more than once.', change: 'A tools business bought at $1.6B and shopped around at $2–2.5B — the brands are the asset being traded, not the workshops that made them.', sources: [{ label: 'Bain Capital', url: 'https://www.baincapital.com/news/bain-capital-private-equity-completes-acquisition-apex-tool-group-leading-global-tools' }] },
+  { name: 'GearWrench', category: 'tools', firm: 'bain-capital', since: '2013', note: 'Part of Bain-owned Apex Tool Group.', sources: [{ label: 'Bain Capital', url: 'https://www.baincapital.com/news/bain-capital-private-equity-completes-acquisition-apex-tool-group-leading-global-tools' }] },
+  { name: 'Crescent tools', category: 'tools', firm: 'bain-capital', since: '2013', note: 'Part of Bain-owned Apex Tool Group.', sources: [{ label: 'Bain Capital', url: 'https://www.baincapital.com/news/bain-capital-private-equity-completes-acquisition-apex-tool-group-leading-global-tools' }] },
+  { name: 'Metabo HPT / HiKoki', category: 'tools', firm: 'kkr', since: '2017', note: 'KKR bought Hitachi’s power tool business and Metabo; Hitachi Power Tools was renamed Metabo HPT in North America.', change: 'A century-old tool name was retired for a new one after the buyout — customers looking for Hitachi tools now have to know they became Metabo HPT.', sources: [{ label: 'Pro Tool Reviews', url: 'https://www.protoolreviews.com/hitachi-power-tools-sold-kkr-equity/' }] },
+
+  // Healthcare & vet
+  { name: 'Radiology Partners', category: 'health', firm: 'new-mountain', note: 'One of the largest radiology groups in the US; a recurring name in surprise-billing coverage.' },
+  { name: 'Smile Brands', category: 'health', firm: 'gryphon', note: 'Dental support organisation operating practices under local names.' },
+  { name: 'Blue River PetCare', category: 'pets', firm: 'jab-holding', note: 'JAB’s second veterinary platform; clinics keep their original local names.' },
+
+  // More Alden newspapers
+  { name: 'Hartford Courant', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'Orlando Sentinel', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'South Florida Sun Sentinel', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'The Virginian-Pilot', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'The Morning Call', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'Daily Press (Virginia)', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'Capital Gazette', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
+  { name: 'The Press-Enterprise', category: 'media', firm: 'alden-global', note: 'Part of Alden’s Tribune Publishing / MediaNews group.' },
 ];
 
 // Derived helpers -------------------------------------------------------------
