@@ -319,10 +319,10 @@ export const firms: Firm[] = [
       'Owns Learning Care Group daycare chains and ViaPath (formerly GTL), the other half of the prison-phone duopoly.',
   },
   {
-    slug: 'cornell-capital',
-    name: 'Cornell Capital',
+    slug: 'centre-lane',
+    name: 'Centre Lane Partners',
     description:
-      'Owned Instant Brands (Instant Pot, Pyrex, Corelle), which it loaded with debt — including a dividend recapitalization — before the company went bankrupt in 2023.',
+      'Bought Instant Brands’ housewares business out of bankruptcy in 2023 for a combined ~$350M and renamed it Corelle Brands — consolidating Pyrex, Corelle, CorningWare, Snapware, Visions, Chicago Cutlery and Instant Pot alongside its existing Anchor Hocking, putting much of the surviving American glassware and tabletop industry under one owner. Its handling of the Charleroi, Pennsylvania glass plant drew a request from Senator Bob Casey for a federal investigation. (The previous owner, Cornell Capital, ran the dividend recapitalization that preceded the bankruptcy.)',
   },
   {
     slug: 'hellman-friedman',
@@ -559,7 +559,14 @@ export const brands: Brand[] = [
   { name: 'Weber Grills', category: 'home', firm: 'bdt-msd', since: '2023', note: 'Taken private by BDT after a rocky IPO.' },
   { name: 'Culligan', category: 'home', firm: 'bdt-msd', since: '2021' },
   { name: 'At Home', category: 'home', firm: 'hellman-friedman', since: '2021', note: 'Filed for Chapter 11 bankruptcy in 2025.', change: 'Taken private by Hellman & Friedman in 2021 and filed for Chapter 11 bankruptcy in 2025.' },
-  { name: 'Instant Pot / Pyrex / Corelle', category: 'home', firm: 'cornell-capital', note: 'Instant Brands went bankrupt in 2023 after a PE dividend recap; brands now under successor owners.', change: 'Instant Brands took on new debt in 2021 to fund a dividend to its PE owners; when rates rose the debt service became unmanageable and the company filed for Chapter 11 in 2023 — a profitable, popular product line undone by borrowing done in its name.' },
+  { name: 'Instant Pot', category: 'home', firm: 'centre-lane', since: '2023', note: 'Bought out of the Instant Brands bankruptcy by Centre Lane, which renamed the group Corelle Brands in 2024.', change: 'Under previous owner Cornell Capital, Instant Brands took on new debt in 2021 to fund a dividend to its owners. When rates rose the debt service became unmanageable and the company filed for Chapter 11 in June 2023 — a profitable, genuinely popular product undone by borrowing done in its name.', sources: [{ label: 'PR Newswire (court approval)', url: 'https://www.prnewswire.com/news-releases/instant-brands-receives-court-approval-to-sell-business-to-centre-lane-partners-301947078.html' }] },
+  { name: 'Pyrex', category: 'home', firm: 'centre-lane', since: '2023', note: 'US Pyrex. The European “pyrex” brand is a separate company.', change: 'Centre Lane’s handling of the Charleroi, Pennsylvania plant that makes Pyrex — the town’s largest employer, with roughly 300 jobs — drew bipartisan objection and a request from Senator Bob Casey for a federal investigation into the private equity owners. The plant’s fate stayed in doubt into 2025.', sources: [{ label: 'Manufacturing Dive', url: 'https://www.manufacturingdive.com/news/anchor-hocking-charleroi-pennsylvania-glass-pyrex-plant-closure-senators/728703/' }, { label: 'Financial Regulation News', url: 'https://financialregnews.com/sen-casey-requests-federal-investigation-into-private-equity-owners-of-pyrex/' }] },
+  { name: 'Corelle', category: 'home', firm: 'centre-lane', since: '2023', note: 'The group was renamed Corelle Brands after emerging from bankruptcy in February 2024.', change: 'Bought out of bankruptcy in two transactions totaling about $350M. Legislators publicly challenged the acquisition over its consequences for American glassware manufacturing.', sources: [{ label: 'Buyouts Insider', url: 'https://www.buyoutsinsider.com/legislators-take-aim-at-centre-lanes-corelle-brands-acquisition/' }, { label: 'Observer-Reporter', url: 'https://www.observer-reporter.com/news/local-news/2025/jul/24/back-in-business/' }] },
+  { name: 'CorningWare', category: 'home', firm: 'centre-lane', since: '2023', note: 'Part of the housewares portfolio Centre Lane bought out of the Instant Brands bankruptcy.', sources: [{ label: 'PR Newswire (court approval)', url: 'https://www.prnewswire.com/news-releases/instant-brands-receives-court-approval-to-sell-business-to-centre-lane-partners-301947078.html' }] },
+  { name: 'Snapware', category: 'home', firm: 'centre-lane', since: '2023', note: 'Part of the housewares portfolio Centre Lane bought out of the Instant Brands bankruptcy.', sources: [{ label: 'PR Newswire (court approval)', url: 'https://www.prnewswire.com/news-releases/instant-brands-receives-court-approval-to-sell-business-to-centre-lane-partners-301947078.html' }] },
+  { name: 'Visions cookware', category: 'home', firm: 'centre-lane', since: '2023', note: 'Part of the housewares portfolio Centre Lane bought out of the Instant Brands bankruptcy.', sources: [{ label: 'PR Newswire (court approval)', url: 'https://www.prnewswire.com/news-releases/instant-brands-receives-court-approval-to-sell-business-to-centre-lane-partners-301947078.html' }] },
+  { name: 'Chicago Cutlery', category: 'home', firm: 'centre-lane', since: '2023', note: 'Part of the housewares portfolio Centre Lane bought out of the Instant Brands bankruptcy.', sources: [{ label: 'PR Newswire (court approval)', url: 'https://www.prnewswire.com/news-releases/instant-brands-receives-court-approval-to-sell-business-to-centre-lane-partners-301947078.html' }] },
+  { name: 'Anchor Hocking', category: 'home', firm: 'centre-lane', note: 'Centre Lane’s existing glassware business, which took over the Charleroi Pyrex plant.', change: 'Anchor Hocking took over the Charleroi glass plant in 2024. The threatened closure of the plant, and the fate of its roughly 300 jobs, became a national story about private equity and American manufacturing.', sources: [{ label: 'Manufacturing Dive', url: 'https://www.manufacturingdive.com/news/anchor-hocking-charleroi-pennsylvania-glass-pyrex-plant-closure-senators/728703/' }] },
   { name: 'TruGreen', category: 'home', firm: 'cdr' },
   { name: 'Neighborly (Mr. Rooter, Molly Maid, etc.)', category: 'home', firm: 'roark-capital', note: 'Roark’s home-services franchise empire: 30+ brands.' },
 
@@ -715,6 +722,21 @@ export const brands: Brand[] = [
 
 // Derived helpers -------------------------------------------------------------
 
+/** URL slug for a brand, derived from its name so entries need no manual id.
+ *  Uniqueness is enforced by the validation block below. */
+export function brandSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function brandBySlug(slug: string): Brand | undefined {
+  return brands.find((b) => brandSlug(b.name) === slug);
+}
+
 export function firmBySlug(slug: string): Firm | undefined {
   return firms.find((f) => f.slug === slug);
 }
@@ -752,9 +774,18 @@ export const LAST_VERIFIED = 'August 2026';
     if (!brands.some((b) => b.category === c.id)) problems.push(`category "${c.id}" has no brands`);
   }
   const seen = new Set<string>();
+  const slugs = new Map<string, string>();
   for (const b of brands) {
     if (seen.has(b.name)) problems.push(`duplicate brand "${b.name}"`);
     seen.add(b.name);
+
+    // Slugs are URLs; a collision would silently shadow one brand's page.
+    const slug = brandSlug(b.name);
+    if (!slug) problems.push(`"${b.name}" produces an empty slug`);
+    if (slugs.has(slug)) {
+      problems.push(`"${b.name}" and "${slugs.get(slug)}" both slug to "${slug}"`);
+    }
+    slugs.set(slug, b.name);
 
     for (const src of b.sources ?? []) {
       if (!/^https:\/\/\S+$/.test(src.url)) {

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Brand, categoryById, firmBySlug } from '@/data/brands';
+import { Brand, brandSlug, categoryById, firmBySlug } from '@/data/brands';
 
 export default function BrandCard({ brand, showCategory = true }: { brand: Brand; showCategory?: boolean }) {
   const firm = firmBySlug(brand.firm);
@@ -8,7 +8,11 @@ export default function BrandCard({ brand, showCategory = true }: { brand: Brand
 
   return (
     <div className="brand-card">
-      <h3>{brand.name}</h3>
+      <h3>
+        <Link href={`/brands/${brandSlug(brand.name)}/`} className="brand-link">
+          {brand.name}
+        </Link>
+      </h3>
       <div className="brand-meta">
         Owned by <Link href={`/firms/${brand.firm}/`}>{firm?.name ?? brand.firm}</Link>
         {brand.since ? ` since ${brand.since}` : ''}

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Newsletter from '@/components/Newsletter';
 import { brands, categories, firms } from '@/data/brands';
 
 export default function Home() {
@@ -91,6 +92,12 @@ export default function Home() {
           <p style={{ marginTop: '1.2rem' }}>
             <Link href="/firms/">See all {firms.length} firms →</Link>
           </p>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <Newsletter />
         </div>
       </section>
 

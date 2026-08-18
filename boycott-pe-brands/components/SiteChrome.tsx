@@ -15,7 +15,8 @@ export function Header() {
           <Link href="/warning-signs/">Warning Signs</Link>
           <Link href="/case-studies/">Case Studies</Link>
           <Link href="/take-action/">Take Action</Link>
-          <Link href="/submit/">Submit a Brand</Link>
+          <Link href="/submit/">Submit</Link>
+          <Link href="/contact/">Contact</Link>
         </nav>
       </div>
     </header>
@@ -36,7 +37,8 @@ export function Footer() {
           <Link href="/warning-signs/">Warning signs</Link> ·{' '}
           <Link href="/case-studies/">Case studies</Link> ·{' '}
           <Link href="/take-action/">Take action</Link> ·{' '}
-          <Link href="/submit/">Submit a brand</Link>
+          <Link href="/submit/">Submit a brand</Link> ·{' '}
+          <Link href="/contact/">Contact</Link>
         </p>
         <p className="disclaimer">
           Disclaimer: This site is an expression of opinion and consumer activism.
